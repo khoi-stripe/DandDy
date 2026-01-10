@@ -1,1 +1,15397 @@
-const KeyboardNav={currentFocusIndex:0,isActive:!0,mode:"cards",getGridColumns(){const e=this.getCharacterCards();if(e.length<2)return 1;const t=e[0].getBoundingClientRect().top;let a=1;for(let n=1;n<e.length;n++){const i=e[n].getBoundingClientRect().top;if(!(Math.abs(i-t)<5))break;a++}return a},getCharacterCards:()=>Array.from(document.querySelectorAll(".character-card")),getFocusableElements:()=>Array.from(document.querySelectorAll("#searchInput, #sortBy, .character-card, #importBtn, #newCharacterBtn")),getCurrentlyFocusedElement:()=>document.activeElement,isInFormElement(){const e=this.getCurrentlyFocusedElement();return e&&("INPUT"===e.tagName||"TEXTAREA"===e.tagName||"SELECT"===e.tagName||"BUTTON"===e.tagName)},updateFocus(e=!1){const t=this.getCharacterCards();if(0!==t.length&&(t.forEach(e=>{e.classList.remove("is-keyboard-focused")}),t[this.currentFocusIndex])){const a=t[this.currentFocusIndex];if(a.classList.add("is-keyboard-focused"),!e){const e=a.getAttribute("data-id");e&&viewCharacter(e,{fromKeyboard:!0,skipKeyboardSync:!0})}a.scrollIntoView({behavior:"smooth",block:"nearest",inline:"nearest"})}},moveUp(){if(!this.isActive)return;if(0===this.getCharacterCards().length)return;const e=this.getGridColumns();this.currentFocusIndex=Math.max(0,this.currentFocusIndex-e),this.updateFocus()},moveDown(){if(!this.isActive)return;const e=this.getCharacterCards();if(0===e.length)return;const t=this.getGridColumns();this.currentFocusIndex=Math.min(e.length-1,this.currentFocusIndex+t),this.updateFocus()},moveLeft(){if(!this.isActive)return;0!==this.getCharacterCards().length&&(this.currentFocusIndex=Math.max(0,this.currentFocusIndex-1),this.updateFocus())},moveRight(){if(!this.isActive)return;const e=this.getCharacterCards();0!==e.length&&(this.currentFocusIndex=Math.min(e.length-1,this.currentFocusIndex+1),this.updateFocus())},select(){if(!this.isActive)return;const e=this.getCharacterCards();if(0===e.length)return;const t=e[this.currentFocusIndex];t&&t.click()},focusSearch(){const e=document.getElementById("searchInput");e&&(e.focus(),e.select())},focusFirstCard(){if(0===this.getCharacterCards().length)return;this.currentFocusIndex=0,this.updateFocus();const e=document.activeElement;!e||"INPUT"!==e.tagName&&"TEXTAREA"!==e.tagName&&"SELECT"!==e.tagName||e.blur()},reset(){this.currentFocusIndex=0,this.updateFocus(!0)},clearAll(){this.getCharacterCards().forEach(e=>e.classList.remove("is-keyboard-focused"))}},ModalManager={_formSnapshots:new Map,FORM_MODALS:["editDetailsModal","spellEditModal","portraitPromptModal"],init(){document.addEventListener("click",e=>{if(!e.target||"function"!=typeof e.target.closest)return;const t=e.target.closest(".modal.show");t&&e.target===t&&this.requestClose(t.id)})},snapshotForm(e){const t=document.getElementById(e);if(!t)return;const a=t.querySelectorAll("input, textarea, select"),n={};a.forEach(e=>{e.id&&(n[e.id]=e.value)}),this._formSnapshots.set(e,n)},isDirty(e){if(this._manuallyDirty.has(e))return!0;const t=document.getElementById(e);if(!t)return!1;const a=this._formSnapshots.get(e);if(!a)return!1;const n=t.querySelectorAll("input, textarea, select");for(const e of n)if(e.id&&void 0!==a[e.id]&&e.value!==a[e.id])return!0;return!1},clearSnapshot(e){this._formSnapshots.delete(e),this._manuallyDirty.delete(e)},_manuallyDirty:new Set,markDirty(e){this._manuallyDirty.add(e)},requestClose(e){this.FORM_MODALS.includes(e)&&this.isDirty(e)?this.showDiscardConfirmation(e):this.closeModal(e)},showDiscardConfirmation(e){const t=document.getElementById(e);if(!t)return;let a=t.querySelector(".modal-discard-confirm");a||(a=document.createElement("div"),a.className="modal-discard-confirm",a.innerHTML='\n                <div class="modal-discard-content">\n                    <p class="terminal-text">You have unsaved changes.</p>\n                    <p class="terminal-text-small terminal-text-dim">Discard changes and close?</p>\n                    <div class="modal-discard-actions">\n                        <button class="terminal-btn modal-discard-cancel">Keep editing</button>\n                        <button class="terminal-btn modal-discard-confirm-btn">Discard</button>\n                    </div>\n                </div>\n            ',t.querySelector(".modal-content").appendChild(a)),a.classList.add("show");const n=a.querySelector(".modal-discard-cancel");n&&n.focus();const i=()=>{a.classList.remove("show"),s()},l=()=>{a.classList.remove("show"),s(),this.closeModal(e,!0)},s=()=>{n?.removeEventListener("click",i),a.querySelector(".modal-discard-confirm-btn")?.removeEventListener("click",l)};n?.addEventListener("click",i),a.querySelector(".modal-discard-confirm-btn")?.addEventListener("click",l)},closeModal(e,t=!1){switch(this.clearSnapshot(e),e){case"importModal":closeImportModal();break;case"duplicateModal":closeDuplicateModal();break;case"editDetailsModal":closeEditDetailsModal();break;case"spellEditModal":closeSpellEditModal();break;case"authModal":cancelAuthFlow();break;case"migrationModal":closeMigrationModal();break;case"passwordResetModal":closePasswordResetModal();break;case"portraitPromptModal":closePortraitPromptModal();break;case"managerSettingsModal":closeManagerSettings();break;default:const t=document.getElementById(e);t&&animateModalClose(t,{removeOnClose:!1})}}},DEBUG_MANAGER=!(!window.DanddyConfig||!window.DanddyConfig.DEBUG),CharacterStorage=window.CharacterStorage;function toSentenceCase(e){if(!e)return"";const t=String(e).toLowerCase();return t.charAt(0).toUpperCase()+t.slice(1)}const PINNED_STORAGE_KEY="danddy_pinned_characters";let _pinnedCharacterIdsCache=[],_pinnedCacheLoaded=!1;function getPinnedCharacterIds(){return _pinnedCharacterIdsCache}async function loadPinnedCharacterIds(){if(window.AuthService&&AuthService.isAuthenticated())try{const e=AuthService.getToken(),{API_BASE_URL:t}=window.DanddyConfig||{},a=await fetch(`${t}/auth/pinned`,{headers:{Authorization:`Bearer ${e}`,"Content-Type":"application/json"}});if(a.ok){const e=await a.json();return _pinnedCharacterIdsCache=e.pinned_character_ids||[],_pinnedCacheLoaded=!0,DEBUG_MANAGER&&console.log("\ud83d\udccc Loaded pinned characters from cloud:",_pinnedCharacterIdsCache),_pinnedCharacterIdsCache}401===a.status&&(console.warn("\ud83d\udccc Session expired, using localStorage for pinned characters"),window.AuthService?.handleUnexpectedLogout?.("pinned_load_401"))}catch(e){console.warn("\ud83d\udccc Failed to load pinned from cloud, falling back to localStorage:",e)}try{const e=localStorage.getItem(PINNED_STORAGE_KEY);_pinnedCharacterIdsCache=e?JSON.parse(e):[]}catch{_pinnedCharacterIdsCache=[]}return _pinnedCacheLoaded=!0,DEBUG_MANAGER&&console.log("\ud83d\udccc Loaded pinned characters from localStorage:",_pinnedCharacterIdsCache),_pinnedCharacterIdsCache}async function savePinnedCharacterIds(e){const t=e||[];if(_pinnedCharacterIdsCache=t,window.AuthService&&AuthService.isAuthenticated())try{const e=AuthService.getToken(),{API_BASE_URL:a}=window.DanddyConfig||{},n=await fetch(`${a}/auth/pinned`,{method:"PUT",headers:{Authorization:`Bearer ${e}`,"Content-Type":"application/json"},body:JSON.stringify({pinned_character_ids:t})});if(n.ok)return void(DEBUG_MANAGER&&console.log("\ud83d\udccc Saved pinned characters to cloud:",t));401===n.status&&(console.warn("\ud83d\udccc Session expired, saving pinned to localStorage instead"),window.AuthService?.handleUnexpectedLogout?.("pinned_save_401"))}catch(e){console.warn("\ud83d\udccc Failed to save pinned to cloud, saving to localStorage:",e)}try{localStorage.setItem(PINNED_STORAGE_KEY,JSON.stringify(t)),DEBUG_MANAGER&&console.log("\ud83d\udccc Saved pinned characters to localStorage:",t)}catch(e){console.warn("Failed to save pinned characters:",e)}}function isCharacterPinned(e){return getPinnedCharacterIds().includes(String(e))}async function togglePinCharacter(e){const t=String(e),a=[...getPinnedCharacterIds()],n=a.indexOf(t);let i;return n>=0?(a.splice(n,1),i=!1,DEBUG_MANAGER&&console.log(`\ud83d\udccc Unpinned character: ${t}`)):(a.push(t),i=!0,DEBUG_MANAGER&&console.log(`\ud83d\udccc Pinned character: ${t}`)),savePinnedCharacterIds(a),AppState.applyFilters(),UI.render(),AppState.selectedCharacterId===t&&viewCharacter(t,{force:!0}),i}window.togglePinCharacter=togglePinCharacter,window.isCharacterPinned=isCharacterPinned,window.loadPinnedCharacterIds=loadPinnedCharacterIds;const AppState={characters:[],filteredCharacters:[],searchTerm:"",sortMode:"dateModified",selectedCharacterId:null,loading:!1,async init(){window.StorageService&&StorageService.getSortMode&&(this.sortMode=StorageService.getSortMode()),await loadPinnedCharacterIds(),await this.loadCharacters()},async loadCharacters(){try{this.loading=!0,void 0!==UI&&UI&&"function"==typeof UI.setLoadingState&&UI.setLoadingState(!0),this.characters=await(CharacterStorage.getAllLite?CharacterStorage.getAllLite():CharacterStorage.getAll()),DEBUG_MANAGER&&(console.log("\ud83d\udcda LOAD: Loaded",this.characters.length,"characters from storage"),console.log("\ud83d\udcda LOAD: Full character list with IDs:"),this.characters.forEach((e,t)=>{console.log(`  ${t+1}. ${e.name} (ID: ${e.id})`)}));const e=this.characters.filter(e=>!e.name||!e.name.trim());e.length>0&&(console.warn("\u26a0\ufe0f CHARACTERS WITH MISSING NAMES:",e.length),console.warn("  IDs:",e.map(e=>e.id)),console.warn("  These may be incomplete characters from failed creation attempts."));const t=this.characters.filter(e=>e.name&&e.name.trim()).map(e=>e.name),a=t.filter((e,a)=>t.indexOf(e)!==a);a.length>0&&(console.warn("\u26a0\ufe0f DUPLICATE NAMES DETECTED:",[...new Set(a)]),[...new Set(a)].forEach(e=>{const t=this.characters.filter(t=>t.name===e);console.warn(`  "${e}" appears ${t.length} times with IDs:`,t.map(e=>e.id))})),this.applyFilters(),this.loading=!1,void 0!==UI&&UI&&"function"==typeof UI.setLoadingState&&UI.setLoadingState(!1),UI.render()}catch(e){console.error("Failed to load characters:",e),this.loading=!1,showNotification("Failed to load characters"),void 0!==UI&&UI&&"function"==typeof UI.setLoadingState&&UI.setLoadingState(!1),UI.render()}},applyFilters(){let e=[...this.characters];if(this.searchTerm){const t=this.searchTerm.toLowerCase();e=e.filter(e=>e.name?.toLowerCase().includes(t)||e.class?.toLowerCase().includes(t)||e.race?.toLowerCase().includes(t))}const t=e=>{if(!e)return 0;const t=e.metadata&&(e.metadata.exportDate||e.metadata.exportedAt),a=e.updatedAt||e.createdAt||t||0,n=new Date(a).getTime();return Number.isFinite(n)?n:0};if("pinned"===this.sortMode){const t=getPinnedCharacterIds();return e.sort((e,a)=>{const n=t.includes(String(e.id))?1:0,i=t.includes(String(a.id))?1:0;if(n!==i)return i-n;const l=(e.name||"").toLowerCase(),s=(a.name||"").toLowerCase();return l===s?(e.id||"").toString().localeCompare((a.id||"").toString()):l.localeCompare(s)}),void(this.filteredCharacters=e)}"alphabetical"===this.sortMode?e.sort((e,t)=>{const a=(e.name||"").toLowerCase(),n=(t.name||"").toLowerCase();return a===n?(e.id||"").toString().localeCompare((t.id||"").toString()):a.localeCompare(n)}):"dateModified"===this.sortMode?e.sort((e,a)=>{const n=t(e),i=t(a);return n===i?(e.name||"").localeCompare(a.name||""):i-n}):"inCampaign"===this.sortMode&&e.sort((e,t)=>{const a=e.campaignId?1:0,n=t.campaignId?1:0;return a!==n?n-a:(e.name||"").localeCompare(t.name||"")}),this.filteredCharacters=e}};let latestViewCharacterRequestId=0;const PanelManager=window.PanelManager={views:{"grid-sheet":["character-grid","character-sheet"],"sheet-campaign":["character-sheet","campaign"]},getCurrentView(){const e=document.querySelector(".split-layout");return e?.dataset.view||"grid-sheet"},setView(e){const t=document.querySelector(".split-layout");t&&(this.views[e]?(t.dataset.view=e,DEBUG_MANAGER&&console.log(`\ud83d\udcd0 Panel view: ${e}`)):console.warn(`Unknown panel view: ${e}`))},isPanelVisible(e){const t=this.getCurrentView();return(this.views[t]||[]).includes(e)}},CharacterNavBar=window.CharacterNavBar={show(){const e=document.getElementById("characterNavBar"),t=document.querySelector(".sheet__content");e&&t&&(this.update(AppState.selectedCharacterId),requestAnimationFrame(()=>{e.classList.add("is-visible");const a=e.offsetHeight;t.style.paddingTop=`${a+8}px`}))},hide:()=>new Promise(e=>{const t=document.getElementById("characterNavBar"),a=document.querySelector(".sheet__content");t&&a?(t.classList.remove("is-visible"),setTimeout(()=>{a.style.paddingTop="0",setTimeout(e,250)},250)):e()}),update(e){const t=document.getElementById("navPrevName"),a=document.getElementById("navNextName"),n=document.getElementById("navCount"),i=n?.querySelector(".nav-count-value");if(!t||!a||!i)return;const l=AppState.filteredCharacters;if(!l||0===l.length)return t.textContent="",a.textContent="",void(i.textContent="");const s=l.findIndex(t=>t.id===e),o=s>=0?s+1:1,r=l.length,c=l[s<=0?l.length-1:s-1],d=l[s>=l.length-1?0:s+1];t.textContent=c?c.name:"",a.textContent=d?d.name:"",i.textContent=o+"/"+r},navigatePrev(){const e=AppState.filteredCharacters;if(!e||0===e.length)return;const t=AppState.selectedCharacterId,a=e.findIndex(e=>e.id===t),n=e[a<=0?e.length-1:a-1];n&&viewCharacter(n.id,{skipKeyboardSync:!1,updateUrl:!0})},navigateNext(){const e=AppState.filteredCharacters;if(!e||0===e.length)return;const t=AppState.selectedCharacterId,a=e.findIndex(e=>e.id===t),n=e[a>=e.length-1?0:a+1];n&&viewCharacter(n.id,{skipKeyboardSync:!1,updateUrl:!0})},init(){const e=document.getElementById("navPrev"),t=document.getElementById("navNext"),a=document.getElementById("navCount");e&&e.addEventListener("click",()=>this.navigatePrev()),t&&t.addEventListener("click",()=>this.navigateNext()),a&&a.addEventListener("click",()=>ExpandedView.collapse())}},ExpandedView=window.ExpandedView={_campaignLoadRequestId:0,isExpanded:()=>"sheet-campaign"===PanelManager.getCurrentView(),toggle(){if(this.isExpanded())this.collapse();else{if(window.innerWidth<=1024)return;this.expand()}},_updateColumnWidths(){const e=document.querySelector(".split-layout"),t=document.querySelector(".sheet__layout");if(e&&t){const a=e.offsetWidth/2-66;t.style.setProperty("--sheet-column-width",`${a}px`)}},_scheduleColumnWidthUpdate(){this._resizeRaf&&cancelAnimationFrame(this._resizeRaf),this._resizeRaf=requestAnimationFrame(()=>{this._resizeRaf=null,this._updateColumnWidths()})},_onResize:null,_resizeRaf:null,_setupResizeListener(){this._onResize||(this._onResize=()=>{this.isExpanded()&&this._scheduleColumnWidthUpdate()},window.addEventListener("resize",this._onResize))},_removeResizeListener(){this._onResize&&(window.removeEventListener("resize",this._onResize),this._onResize=null),this._resizeRaf&&(cancelAnimationFrame(this._resizeRaf),this._resizeRaf=null)},_savedSheetScroll:0,_savedCampaignScroll:0,expand(){const e=document.querySelector(".split-layout"),t=document.querySelector(".sheet__content"),a=document.querySelector(".character-sheet");t&&(this._savedSheetScroll=t.scrollTop),this._updateColumnWidths(),e?.classList.add("is-expanding"),this._setupResizeListener(),e?.classList.add("is-sheet-expanded"),PanelManager.setView("sheet-campaign"),this._loadCampaignPanel(),this._updateUrl(!0),setTimeout(()=>{e?.classList.remove("is-expanding"),a&&(a.scrollTop=this._savedSheetScroll),CharacterNavBar.show()},400),DEBUG_MANAGER&&console.log("\ud83d\udcd0 Expanded view: ON")},async collapse(){const e=document.querySelector(".split-layout"),t=document.querySelector(".sheet__content"),a=document.querySelector(".character-sheet");a&&(this._savedSheetScroll=a.scrollTop),await CharacterNavBar.hide(),e?.classList.add("is-collapsing"),PanelManager.setView("grid-sheet"),setTimeout(()=>{e?.classList.remove("is-sheet-expanded","is-collapsing","is-expanding");const a=document.querySelector(".sheet__layout");a&&a.style.removeProperty("--sheet-column-width"),t&&(t.scrollTop=this._savedSheetScroll),this._removeResizeListener()},400),this._updateUrl(!1),DEBUG_MANAGER&&console.log("\ud83d\udcd0 Expanded view: OFF")},toggleDescription(e){const t=e.closest(".campaign-area-info");if(!t)return;const a="true"===t.dataset.expanded;t.dataset.expanded=!a,e.textContent=a?"More":"Less"},_initDescriptionTruncation(){const e=document.querySelector(".campaign-area-info");if(!e)return;const t=e.querySelector(".campaign-desc-text");t&&requestAnimationFrame(()=>{const a=t.style.display,n=t.style.webkitLineClamp,i=t.style.overflow;t.style.display="block",t.style.webkitLineClamp="unset",t.style.overflow="visible";const l=t.scrollHeight;t.style.display=a,t.style.webkitLineClamp=n,t.style.overflow=i;l>t.clientHeight+2?e.classList.add("is-truncatable"):e.classList.remove("is-truncatable")})},async _loadCampaignPanel(){const e=++this._campaignLoadRequestId,t=document.querySelector(".sidebar__content")||document.querySelector(".sheet__sidebar")||document.getElementById("campaignPanel");if(!t)return void console.warn("Campaign panel element not found");const a=AppState.selectedCharacterId;if(!a)return void(t.innerHTML=this._renderNoCampaign());const n=window.AuthService&&AuthService.isAuthenticated(),i=AppState.characters?.find(e=>String(e.id)===String(a));let l=i?.campaignId||i?.campaign_id;if(!n)return void(t.innerHTML=this._renderCampaignPanelContent(a,null,0,[]));let s=null;if(!l)try{if(s=await CampaignUI.getCharacterCampaign(a),e!==this._campaignLoadRequestId)return void console.log("\ud83d\udccb Campaign load aborted (newer request in progress)");s&&(l=s.campaign.id,console.log("\ud83d\udccb Found campaign via membership lookup:",l))}catch(e){console.warn("Could not check campaign membership:",e)}if(!l){let n=0,i=0;try{const[t,a]=await Promise.all([CampaignAPI.getPendingInvitations().catch(()=>[]),CampaignUI.fetchPastCampaignsCount().catch(()=>0)]);if(e!==this._campaignLoadRequestId)return void console.log("\ud83d\udccb Campaign load aborted (newer request in progress)");n=t?.length||0,i=a||0}catch(e){console.warn("Could not fetch data:",e)}return t.innerHTML=this._renderCampaignPanelContent(a,null,n,[],i),void(void 0!==MobileView&&MobileView.refreshCampaignSection&&MobileView.refreshCampaignSection())}t.innerHTML=this._renderCampaignSkeleton();try{let n,i,o=[];const r=window.AuthService?.getCurrentUser()?.id;if(s){n={campaign:s.campaign,members:s.members};const t=n.campaign.dm_id===r,[a,c,d]=await Promise.all([CampaignAPI.getCampaignJournalEntries(l,CampaignUI._journalFilterUserId).catch(e=>(console.warn("Could not fetch journal entries:",e),[])),CampaignUI.fetchPastCampaignsCount().catch(()=>0),t?CampaignAPI.getCampaignPendingInvitations(l).catch(()=>[]):Promise.resolve([])]);if(e!==this._campaignLoadRequestId)return void console.log("\ud83d\udccb Campaign load aborted (newer request in progress)");i=a,o=d}else{const t=await CampaignAPI.getCampaign(l);if(e!==this._campaignLoadRequestId)return void console.log("\ud83d\udccb Campaign load aborted (newer request in progress)");const a=t.dm_id===r,[s,c,d,m]=await Promise.all([CampaignAPI.getCampaignMembers(l),CampaignAPI.getCampaignJournalEntries(l,CampaignUI._journalFilterUserId).catch(e=>(console.warn("Could not fetch journal entries:",e),[])),CampaignUI.fetchPastCampaignsCount().catch(()=>0),a?CampaignAPI.getCampaignPendingInvitations(l).catch(()=>[]):Promise.resolve([])]);if(e!==this._campaignLoadRequestId)return void console.log("\ud83d\udccb Campaign load aborted (newer request in progress)");n={campaign:t,members:s},i=c,o=m}n.pendingInvites=o,t.innerHTML=this._renderCampaignPanelContent(a,n,0,i,CampaignUI._pastCampaignsCount),this._initDescriptionTruncation()}catch(n){console.error("Failed to load campaign:",n),e===this._campaignLoadRequestId&&(t.innerHTML=this._renderCampaignPanelContent(a,null))}void 0!==MobileView&&MobileView.refreshCampaignSection&&MobileView.refreshCampaignSection()},_renderNoCampaign:()=>'\n            <div class="campaign-panel-placeholder">\n                <div class="campaign-panel-placeholder-text">\n                    No character selected.\n                </div>\n            </div>\n        ',_renderCampaignPanelContent(e,t=null,a=0,n=[],i=null){const l=null!==i?i:CampaignUI._pastCampaignsCount,s=this._renderJournalSection(e,n,t);return this._renderCampaignArea(e,t,a,l,s)},_renderCampaignSkeleton:()=>'\n            <div class="campaign-area campaign-skeleton">\n                <div class="campaign-area-header">\n                    <h3 class="campaign-area-title">[ Campaign ]</h3>\n                </div>\n                <div class="campaign-area-info">\n                    <div class="skeleton-line skeleton-line--title"></div>\n                    <div class="skeleton-line skeleton-line--text"></div>\n                </div>\n                <div class="campaign-area-party sheet-section">\n                    <div class="sheet-header">\n                        <div class="sheet-header-title">[ PARTY ]</div>\n                    </div>\n                    <div class="sheet-collapsible-content">\n                        <div class="party-list">\n                            <div class="skeleton-party-card character-card">\n                                <div class="skeleton-thumbnail"></div>\n                                <div class="card-details">\n                                    <div class="skeleton-line skeleton-card-name"></div>\n                                    <div class="skeleton-line skeleton-card-info"></div>\n                                </div>\n                            </div>\n                            <div class="skeleton-party-card character-card">\n                                <div class="skeleton-thumbnail"></div>\n                                <div class="card-details">\n                                    <div class="skeleton-line skeleton-card-name"></div>\n                                    <div class="skeleton-line skeleton-card-info"></div>\n                                </div>\n                            </div>\n                            <div class="skeleton-party-card character-card">\n                                <div class="skeleton-thumbnail"></div>\n                                <div class="card-details">\n                                    <div class="skeleton-line skeleton-card-name"></div>\n                                    <div class="skeleton-line skeleton-card-info"></div>\n                                </div>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n                <div class="journal-section sheet-section sheet-section--collapsible campaign-skeleton">\n                    <button class="sheet-header sheet-header--collapsible" aria-expanded="true">\n                        <div class="sheet-header-title">[ Journal ]</div>\n                        <span class="sheet-header-toggle">^</span>\n                    </button>\n                    <div class="sheet-collapsible-content">\n                        <div class="journal-list">\n                            <div class="skeleton-journal-entry">\n                                <div class="skeleton-line skeleton-journal-date"></div>\n                                <div class="skeleton-line skeleton-journal-title"></div>\n                                <div class="skeleton-line skeleton-journal-content"></div>\n                            </div>\n                            <div class="skeleton-journal-entry">\n                                <div class="skeleton-line skeleton-journal-date"></div>\n                                <div class="skeleton-line skeleton-journal-title"></div>\n                                <div class="skeleton-line skeleton-journal-content"></div>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        ',_renderCampaignArea(e,t,a=0,n=0,i=""){if(!t){return a>0?`\n                    <div class="campaign-area">\n                        <div class="campaign-area-header">\n                            <h3 class="campaign-area-title">[ Campaign ]</h3>\n                        </div>\n                        <p class="campaign-area-invitation-notice">${a} pending invitation${a>1?"s":""}</p>\n                        <div class="campaign-area-actions campaign-area-actions--split">\n                            <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJoinModal()">JOIN CAMPAIGN</button>\n                            <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openCreateModal()">CREATE NEW</button>\n                        </div>\n                        ${i}\n                    </div>\n                `:`\n                <div class="campaign-area">\n                    <div class="campaign-area-header">\n                        <h3 class="campaign-area-title">[ Campaign ]</h3>\n                    </div>\n                    <p class="campaign-area-invitation-notice">No active campaign.</p>\n                    <div class="campaign-area-actions campaign-area-actions--single">\n                        <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openCreateModal()">CREATE NEW</button>\n                    </div>\n                    ${i}\n                </div>\n            `}const{campaign:l,members:s,pendingInvites:o}=t,r=window.AuthService?.getCurrentUser()?.id,c=l.dm_id===r;let d="";if(s&&s.length>0){const e=[...s].sort((e,t)=>e.is_creator&&!t.is_creator?-1:!e.is_creator&&t.is_creator?1:0);CampaignUI._cachedPartyMembers=e;const t=e=>{const t=e.character,a=(e.user_id,[]);e.user_id===r&&a.push('<span class="party-card-tag party-card-tag--you">You</span>'),e.is_creator&&a.push('<span class="party-card-tag party-card-tag--admin">Admin</span>');const n=a.length>0?`<div class="party-card-tags">${a.join("")}</div>`:"";if(t){const e=`onclick="CampaignUI.viewPartyMemberSheet(${t.id})"`,a="party-card--clickable",i=Utils.escapeHtml(t.name||"Unnamed"),l=`Lvl ${t.level||"?"} ${t.character_class||""}`.trim(),s=t.original_portrait_url||t.originalPortraitUrl||null;let o="";return o=s?`<div class="card-thumbnail card-thumbnail--image">\n                            <img src="${Utils.escapeHtml(s)}" alt="${i}" loading="lazy" onload="this.classList.add('is-loaded')" />\n                        </div>`:'<div class="card-thumbnail party-card-placeholder">\u2694</div>',`\n                        <div class="party-card character-card ${a}" ${e}>\n                            ${n}\n                            ${o}\n                            <div class="card-details">\n                                <div class="card-name">${i}</div>\n                                <div class="card-info">${l}</div>\n                            </div>\n                        </div>\n                    `}return`\n                        <div class="party-card character-card party-card--no-char">\n                            ${n}\n                            <div class="card-thumbnail">?</div>\n                            <div class="card-details">\n                                <div class="card-name">No character</div>\n                                <div class="card-info">Not assigned</div>\n                            </div>\n                        </div>\n                    `};d=e.map(t).join("")}else d='<div class="party-empty">No party members yet</div>';const m=new Set((s||[]).map(e=>e.user_id).filter(Boolean)),p=(o||[]).filter(e=>!e.user_id||!m.has(e.user_id));if(c&&p.length>0){d+=p.map(e=>`\n                    <div class="party-card character-card party-card--invited">\n                        <div class="card-thumbnail">\u25c7</div>\n                        <div class="card-details">\n                            <div class="card-name">${e.username?`@${Utils.escapeHtml(e.username)}`:Utils.escapeHtml(e.email)}</div>\n                            <div class="card-info">Invited</div>\n                        </div>\n                    </div>\n                `).join("")}const u=c?`<a href="#" class="campaign-action-link" onclick="CampaignUI.openManageModal(${l.id}); return false;"><span class="campaign-action-icon">\u270e</span> Manage</a>`:`<a href="#" class="campaign-action-link campaign-action-link--danger" onclick="CampaignUI.leaveCampaign(${l.id}); return false;"><span class="campaign-action-icon">\u21a9</span> Leave</a>`;return`\n            <div class="campaign-area" data-campaign-id="${l.id}">\n                <div class="campaign-area-info">\n                    <div class="campaign-info-header">\n                        <div class="campaign-info-header-content">\n                            <span class="campaign-eyebrow">CAMPAIGN</span>\n                            <span class="campaign-name">${Utils.escapeHtml(l.name)}</span>\n                        </div>\n                        ${u}\n                    </div>\n                    ${l.description?`<div class="campaign-desc-text">${Utils.escapeHtml(l.description)}</div>`:""}\n                </div>\n                <div class="campaign-area-party sheet-section sheet-section--collapsible">\n                    <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">\n                        <div class="sheet-header-title">[ PARTY (${s?.length||0}) ]</div>\n                        <span class="sheet-header-toggle">^</span>\n                    </button>\n                    <div class="sheet-collapsible-content">\n                        <div class="party-list">\n                            ${d}\n                        </div>\n                    </div>\n                </div>\n                ${i}\n            </div>\n        `},_renderJournalSection(e,t=[],a=null){const n=window.AuthService?.getCurrentUser()?.id,i=t.length>0?t.map(e=>{const t=e.user_id===n,a=e.character_name?`<span class="journal-entry-author">${Utils.escapeHtml(e.character_name)}</span>`:"";return`\n                <div class="journal-entry ${t?"":"journal-entry--other"}" data-entry-id="${e.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">\n                    <div class="journal-entry-header">\n                        <span class="journal-entry-meta">${a}<span class="journal-entry-date">${this._formatDate(e.entry_date)}</span></span>\n                        <span class="journal-entry-title">${e.title||"Untitled"}</span>\n                    </div>\n                    <div class="journal-entry-preview">\n                        ${this._truncateText(e.content,100)}\n                    </div>\n                    <div class="journal-entry-full">\n                        ${Utils.escapeHtml(e.content||"").replace(/\n/g,"<br>")}\n                        ${this._formatCharacterUpdate(e.character_update)}\n                    </div>\n                    ${t?`\n                    <div class="journal-entry-actions">\n                        <button class="journal-entry-edit terminal-btn-icon" onclick="CampaignUI.editJournalEntry(${e.id})" title="Edit entry">\n                            \u270e\n                        </button>\n                        <button class="journal-entry-delete terminal-btn-icon" onclick="CampaignUI.deleteJournalEntry(${e.id})" title="Delete entry">\n                            \xd7\n                        </button>\n                    </div>\n                    `:""}\n                </div>\n            `}).join(""):'\n                <div class="journal-empty">\n                    <div class="journal-empty-text">No journal entries yet</div>\n                    <div class="journal-empty-hint">Record your adventures!</div>\n                </div>\n            ';let l="",s="";if(a&&a.campaign&&a.members){const{campaign:e,members:t}=a,n=CampaignUI._journalFilterUserId,i=t.filter(e=>e.character).map(e=>({userId:e.user_id,label:e.character?.name||(e.username?`@${e.username}`:e.user_email)||"Unknown",isSelected:n===e.user_id})).sort((e,t)=>e.label.localeCompare(t.label)).map(({userId:e,label:t,isSelected:a})=>`\n                    <button class="selector-option ${a?"is-selected":""}" \n                            type="button" \n                            role="option" \n                            data-value="${e}" \n                            aria-selected="${a?"true":"false"}" \n                            onclick="CampaignUI.selectJournalFilter('${e}', '${Utils.escapeHtml(t).replace(/'/g,"\\'")}')">\n                        <span class="selector-option-label">${Utils.escapeHtml(t)}</span>\n                    </button>\n                `).join(""),o=null===n,r=t.find(e=>e.user_id===n),c=r?.character?.name||"All";l=`\n                <div class="journal-filter selector-shell selector-shell--listbox">\n                    <button class="terminal-btn-small selector-trigger journal-filter-trigger" \n                            type="button" \n                            id="journalFilter-trigger"\n                            aria-haspopup="listbox" \n                            aria-expanded="false" \n                            onclick="CharacterSheet.toggleSelectorMenu(this)">\n                        <span class="selector-trigger-label" id="journalFilter-label">${o?"All":Utils.escapeHtml(c)}</span>\n                        <span class="selector-caret">\u25bc</span>\n                    </button>\n                    <div class="selector-menu" role="listbox" aria-label="Filter journal entries">\n                        <button class="selector-option ${o?"is-selected":""}" \n                                type="button" \n                                role="option" \n                                data-value="all" \n                                aria-selected="${o?"true":"false"}" \n                                onclick="CampaignUI.selectJournalFilter('all', 'All')">\n                            <span class="selector-option-label">All</span>\n                        </button>\n                        ${i}\n                    </div>\n                </div>\n            `,s='\n                <button class="journal-settings-btn terminal-btn-icon" onclick="CampaignUI.openJournalSettingsModal()" title="Journal settings">\n                    \u2699\ufe0e\n                </button>\n            '}const o=!!a?.campaign?.id?'<a href="#" class="journal-add-link" onclick="CampaignUI.openJournalEntryModal(); return false;">+ Update</a>':"";return`\n            <div class="journal-section sheet-section sheet-section--collapsible" data-campaign-id="${a?.campaign?.id||""}">\n                <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">\n                    <div class="sheet-header-title">[ Journal ]</div>\n                    <span class="sheet-header-toggle">^</span>\n                </button>\n                <div class="sheet-collapsible-content">\n                    <div class="journal-controls">\n                        <div class="journal-controls-left">\n                            ${l}\n                            ${s}\n                        </div>\n                        ${o}\n                    </div>\n                    <div class="journal-entries">\n                        ${i}\n                    </div>\n                </div>\n            </div>\n        `},_formatDate(e){if(!e)return"";return new Date(e).toLocaleDateString("en-US",{month:"short",day:"numeric"})},_truncateText:(e,t)=>e?e.length<=t?e:e.substring(0,t).trim()+"...":"",_formatCharacterUpdate(e){if(!e)return"";const t=[];if(e.xp_gained&&0!==e.xp_gained){const a=e.xp_gained>0?"+":"";t.push(`${a}${e.xp_gained} XP`)}if(e.hp_change&&0!==e.hp_change){const a=e.hp_change>0?"+":"";t.push(`${a}${e.hp_change} HP`)}if(e.gold_change&&0!==e.gold_change){const a=e.gold_change>0?"+":"";t.push(`${a}${e.gold_change} GP`)}if(e.items_acquired&&e.items_acquired.length>0&&t.push(`+${e.items_acquired.join(", ")}`),e.items_lost&&e.items_lost.length>0&&t.push(`\u2212${e.items_lost.join(", ")}`),0===t.length&&(!e.conditions||0===e.conditions.length))return"";let a=t.length>0?`<span class="journal-update-stats">${t.join(" \u2022 ")}</span>`:"";if(e.conditions&&e.conditions.length>0){const t={poisoned:"Disadvantage on attack rolls and ability checks.",exhausted:"Levels of exhaustion cause cumulative penalties.",diseased:"Various effects depending on the disease.",cursed:"Supernatural affliction with varying effects."};a+=`<span class="journal-update-conditions">${e.conditions.map(e=>{const a=t[e.toLowerCase()]||"Status condition";return`<span class="condition-tag condition-${e.toLowerCase()} has-tooltip" data-tooltip="${Utils.escapeHtml(a)}">${e.toUpperCase()}</span>`}).join("")}</span>`}return`<div class="journal-entry-updates">${a}</div>`},_updateUrl(e){const t=new URL(window.location.href);e?t.searchParams.set("view","expanded"):t.searchParams.delete("view"),window.history.replaceState({},"",t.toString())},restore(){if("expanded"===new URL(window.location.href).searchParams.get("view")){const e=document.querySelector(".split-layout"),t=e?.classList.contains("is-restoring-expanded");t?this._finishRestore():this.expand()}},async _finishRestore(){const e=document.querySelector(".split-layout");this._updateColumnWidths(),this._setupResizeListener(),await this._loadCampaignPanel(),e?.classList.remove("is-restoring-expanded"),setTimeout(()=>{CharacterNavBar.show()},100),DEBUG_MANAGER&&console.log("\ud83d\udcd0 Expanded view restored (no animation)")}},CampaignUI=window.CampaignUI={_currentCampaign:null,_pastCampaignsCount:0,async fetchPastCampaignsCount(e=null){try{const t=e||AppState.selectedCharacterId,a=await CampaignAPI.getPastCampaigns(t);return this._pastCampaignsCount=a?.length||0,this._pastCampaignsCount}catch(e){return console.warn("Could not fetch past campaigns count:",e),this._pastCampaignsCount=0,0}},_createCampaignPendingInvites:[],openCreateModal(){const e=document.getElementById("createCampaignModal");if(!e)return;document.getElementById("createCampaignName").value="",document.getElementById("createCampaignDesc").value="";const t=document.getElementById("createCampaignInviteUsername");t&&(t.value="");const a=document.getElementById("createCampaignInviteError");a&&(a.textContent="",a.style.display="none"),this._createCampaignPendingInvites=[],this._renderCreateCampaignInvites(),e.classList.add("show"),setTimeout(()=>{document.getElementById("createCampaignName")?.focus()},100)},closeCreateModal(){const e=document.getElementById("createCampaignModal");e&&animateModalClose(e,{removeOnClose:!1}),this._createCampaignPendingInvites=[]},addPendingInviteFromCreate(){const e=document.getElementById("createCampaignInviteUsername");let t=e?.value?.trim();const a=document.getElementById("createCampaignInviteError");if(!t)return;t.startsWith("@")||(t="@"+t);const n=t.toLowerCase();/^@[a-zA-Z0-9_]{3,30}$/.test(t)?this._createCampaignPendingInvites.includes(n)?a&&(a.textContent="This username is already in the list",a.style.display="block"):(a&&(a.style.display="none"),this._createCampaignPendingInvites.push(n),this._renderCreateCampaignInvites(),e.value="",e.focus()):a&&(a.textContent="Username must be 3-30 characters (letters, numbers, underscores)",a.style.display="block")},removePendingInviteFromCreate(e){this._createCampaignPendingInvites=this._createCampaignPendingInvites.filter(t=>t!==e),this._renderCreateCampaignInvites()},_renderCreateCampaignInvites(){const e=document.getElementById("createCampaignInvitesList");if(e){if(0===this._createCampaignPendingInvites.length)return e.style.display="none",void(e.innerHTML="");e.style.display="block",e.innerHTML=this._createCampaignPendingInvites.map(e=>`\n            <div class="share-collaborator-item share-collaborator-pending">\n                <span class="share-collaborator-email">${Utils.escapeHtml(e)}</span>\n                <span class="share-collaborator-status">PENDING</span>\n                <button type="button" class="share-collaborator-remove" onclick="CampaignUI.removePendingInviteFromCreate('${Utils.escapeHtml(e)}')" title="Remove">\xd7</button>\n            </div>\n        `).join("")}},async submitCreateCampaign(){const e=document.getElementById("createCampaignName"),t=document.getElementById("createCampaignDesc"),a=document.getElementById("createCampaignSubmitBtn"),n=e?.value?.trim(),i=t?.value?.trim()||null;if(!n)return void e?.focus();const l=a?.textContent;a&&(a.disabled=!0,a.textContent="Creating...");try{const e=await CampaignAPI.createCampaign({name:n,description:i}),t=AppState.selectedCharacterId;let a=null;if(console.log("\ud83c\udff0 Auto-assign: characterId =",t,"campaignId =",e.id),t&&!String(t).startsWith("demo_"))try{const a=parseInt(t,10);console.log("\ud83c\udff0 Assigning character",a,"to campaign",e.id),await CampaignAPI.assignCharacter(e.id,a),console.log("\ud83c\udff0 Character assigned successfully")}catch(e){console.warn("\ud83c\udff0 Could not auto-assign character:",e),e.message?.includes("already in another campaign")&&(a="Your character is already in another campaign. Leave that campaign first to join this one.")}else console.log("\ud83c\udff0 Skipping auto-assign: no character or demo character");const l=[];if(this._createCampaignPendingInvites.length>0){console.log("\ud83c\udff0 Sending",this._createCampaignPendingInvites.length,"invites...");for(const t of this._createCampaignPendingInvites)try{await CampaignAPI.inviteByUsernameOrEmail(e.id,t),console.log("\ud83c\udff0 Invited:",t)}catch(e){console.warn("\ud83c\udff0 Failed to invite",t,":",e),l.push({identifier:t,error:e.message||"Unknown error"})}}this.closeCreateModal(),showNotification("\u2713 Campaign created");let s=a;if(l.length>0){const e=`Could not invite: ${l.map(e=>e.identifier).join(", ")}`;s=s?`${s}\n\n${e}`:e}s&&showAlertDialog(s),await AppState.loadCharacters(),await ExpandedView._loadCampaignPanel()}catch(e){console.error("Failed to create campaign:",e),showAlertDialog(e.message||"Failed to create campaign. Please try again.")}finally{a&&(a.disabled=!1,a.textContent=l||"Create")}},_selectedInvitationId:null,async openJoinModal(){const e=document.getElementById("joinCampaignModal");if(!e)return;this._selectedInvitationId=null;const t=document.getElementById("joinCampaignError");t&&(t.textContent="",t.classList.add("is-hidden"));const a=document.getElementById("joinCampaignBtn");a&&(a.disabled=!0);const n=document.getElementById("joinCampaignInvitations");n&&(n.innerHTML='<div class="invitations-loading">Loading invitations...</div>'),e.classList.add("show");try{const e=await CampaignAPI.getPendingInvitations();this._renderInvitationsList(e)}catch(e){console.error("Failed to load invitations:",e),n&&(n.innerHTML='<div class="invitations-empty">No pending invitations</div>')}},_renderInvitationsList(e){const t=document.getElementById("joinCampaignInvitations");t&&(e&&0!==e.length?t.innerHTML=e.map(e=>{const t=e.invited_by_username?`@${Utils.escapeHtml(e.invited_by_username)}`:e.invited_by_email?Utils.escapeHtml(e.invited_by_email):null;return`\n            <div class="invitation-item" data-campaign-id="${e.campaign_id}" onclick="CampaignUI.selectInvitation(${e.campaign_id})">\n                <div class="invitation-radio"></div>\n                <div class="invitation-info">\n                    <div class="invitation-name">${Utils.escapeHtml(e.campaign_name)}</div>\n                    ${t?`<div class="invitation-inviter">Invited by ${t}</div>`:""}\n                    ${e.campaign_description?`<div class="invitation-desc">${Utils.escapeHtml(e.campaign_description)}</div>`:""}\n                </div>\n            </div>\n        `}).join(""):t.innerHTML='<div class="invitations-empty">No pending invitations</div>')},selectInvitation(e){this._selectedInvitationId=e;document.querySelectorAll("#joinCampaignInvitations .invitation-item").forEach(t=>{parseInt(t.dataset.campaignId,10)===e?t.classList.add("is-selected"):t.classList.remove("is-selected")});const t=document.getElementById("joinCampaignBtn");t&&(t.disabled=!1)},closeJoinModal(){const e=document.getElementById("joinCampaignModal");e&&animateModalClose(e,{removeOnClose:!1}),this._selectedInvitationId=null},async submitJoinCampaign(){const e=document.getElementById("joinCampaignError");if(this._selectedInvitationId){e&&e.classList.add("is-hidden");try{const e=AppState.selectedCharacterId,t=await CampaignAPI.acceptInvitation(this._selectedInvitationId,e);this.closeJoinModal(),showNotification(`\u2713 Joined "${t.campaign.name}"`),await AppState.loadCharacters(),await ExpandedView._loadCampaignPanel()}catch(t){console.error("Failed to join campaign:",t),e&&(e.textContent=t.message||"Failed to join campaign. Please try again.",e.classList.remove("is-hidden"))}}},showCampaignCreatedModal(e,t=null){const a=document.getElementById("campaignCreatedModal"),n=document.getElementById("campaignInviteCode");if(!a)return;n&&(n.textContent=e);let i=a.querySelector(".campaign-created-warning");if(t){if(!i){i=document.createElement("div"),i.className="campaign-created-warning terminal-text-small mt-md",i.style.cssText="color: var(--warning-color, #f0ad4e); padding: var(--spacing-sm); border: 1px solid currentColor; border-radius: 4px;";const e=a.querySelector(".modal-body");e&&e.appendChild(i)}i.textContent=t,i.classList.remove("is-hidden")}else i&&i.classList.add("is-hidden");a.classList.add("show")},closeCampaignCreatedModal(){const e=document.getElementById("campaignCreatedModal");e&&animateModalClose(e,{removeOnClose:!1})},copyInviteCode(){const e=document.getElementById("campaignInviteCode"),t=e?.textContent;t&&navigator.clipboard&&navigator.clipboard.writeText(t).then(()=>{const e=event.target.closest("button");if(e){const t=e.innerHTML;e.innerHTML='<span class="copy-icon">\u2713</span> Copied!',setTimeout(()=>{e.innerHTML=t},1500)}}).catch(e=>{console.error("Failed to copy:",e)})},_managingCampaign:null,_managingCampaignMembers:[],_dedupeMembers(e,t){const a=new Set,n=[];for(const t of e)t.user_id&&!a.has(t.user_id)?(a.add(t.user_id),n.push(t)):t.user_id||n.push(t);for(const e of t)e.user_id&&!a.has(e.user_id)?(a.add(e.user_id),n.push(e)):e.user_id||n.push(e);return n},async openManageModal(e){const t=window.AuthService?.getCurrentUser()?.id;try{const[a,n,i]=await Promise.all([CampaignAPI.getCampaign(e),CampaignAPI.getCampaignMembers(e),CampaignAPI.getCampaignPendingInvitations(e).catch(()=>[])]);this._managingCampaign=a,this._managingCampaignMembers=this._dedupeMembers(n,i);if(!(a.dm_id===t))return void console.warn("Only the campaign creator can manage this campaign.");const l=document.getElementById("manageCampaignModal");if(!l)return;document.getElementById("manageCampaignName").value=a.name||"",document.getElementById("manageCampaignDesc").value=a.description||"";const s=document.getElementById("manageCampaignInviteInput");s&&(s.value="");const o=document.getElementById("manageCampaignInviteError");o&&(o.textContent="",o.style.display="none");const r=document.getElementById("manageCampaignError");r&&(r.textContent="",r.classList.add("is-hidden")),this._renderManageCampaignMembers(),l.classList.add("show"),setTimeout(()=>{document.getElementById("manageCampaignName")?.focus()},100)}catch(e){console.error("Failed to load campaign for management:",e),showAlertDialog("Failed to load campaign details. Please try again.")}},_renderManageCampaignMembers(){const e=document.getElementById("manageCampaignMembersList");document.getElementById("manageCampaignMembersSection");if(!e)return;if(0===this._managingCampaignMembers.length)return void(e.innerHTML='<p class="terminal-text-dim">No members yet.</p>');window.AuthService?.getCurrentUser();e.innerHTML=this._managingCampaignMembers.map(e=>{const t="invited"===e.status,a=e.user_id===this._managingCampaign?.dm_id,n=a?"CREATOR":t?"PENDING":"MEMBER",i=t?"share-collaborator-pending":"",l=e.username?`@${Utils.escapeHtml(e.username)}`:Utils.escapeHtml(e.email||"Unknown"),s=!a;return`\n            <div class="share-collaborator-item ${i}" data-member-id="${e.id}">\n                <span class="share-collaborator-email">${l}</span>\n                <span class="share-collaborator-status">${n}</span>\n                ${s?`<button type="button" class="share-collaborator-remove" onclick="CampaignUI.removeMemberFromManageModal(${e.id}, ${t})" title="${t?"Cancel invite":"Remove from campaign"}">\xd7</button>`:""}\n            </div>\n        `}).join("")},async addInviteFromManageModal(){if(!this._managingCampaign)return;const e=document.getElementById("manageCampaignInviteInput"),t=document.getElementById("manageCampaignInviteError"),a=e?.value?.trim();if(!a)return void(t&&(t.textContent="Please enter a username or email",t.style.display="block"));const n=a.includes("@")?a:`@${a}`;try{await CampaignAPI.inviteByUsernameOrEmail(this._managingCampaign.id,n),e&&(e.value=""),t&&(t.textContent="",t.style.display="none");const a=await CampaignAPI.getCampaignPendingInvitations(this._managingCampaign.id).catch(()=>[]),i=await CampaignAPI.getCampaignMembers(this._managingCampaign.id);this._managingCampaignMembers=this._dedupeMembers(i,a),this._renderManageCampaignMembers(),e?.focus()}catch(e){console.error("Failed to send invitation:",e),t&&(t.textContent=e.message||"Failed to send invitation",t.style.display="block")}},async removeMemberFromManageModal(e,t){if(this._managingCampaign)try{t?await CampaignAPI.revokeInvitation(this._managingCampaign.id,e):await CampaignAPI.removeCampaignMember(this._managingCampaign.id,e);const a=await CampaignAPI.getCampaignPendingInvitations(this._managingCampaign.id).catch(()=>[]),n=await CampaignAPI.getCampaignMembers(this._managingCampaign.id);this._managingCampaignMembers=this._dedupeMembers(n,a),this._renderManageCampaignMembers()}catch(e){console.error("Failed to remove member:",e),showAlertDialog(e.message||"Failed to remove member. Please try again.")}},confirmEndCampaignFromModal(){this._managingCampaign&&this.confirmEndCampaignById(this._managingCampaign.id)},closeManageModal(){const e=document.getElementById("manageCampaignModal");if(e){const t=e.querySelector(".modal-content");t&&(t.style.height=""),animateModalClose(e,{removeOnClose:!1})}this._managingCampaign=null,this._managingCampaignMembers=[],this._originalManageModalContent=null},async submitManageCampaign(){if(!this._managingCampaign)return;const e=document.getElementById("manageCampaignName"),t=document.getElementById("manageCampaignDesc"),a=document.getElementById("manageCampaignError"),n=e?.value?.trim(),i=t?.value?.trim()||null;if(!n)return a&&(a.textContent="Campaign name is required",a.classList.remove("is-hidden")),void e?.focus();try{await CampaignAPI.updateCampaign(this._managingCampaign.id,{name:n,description:i}),this.closeManageModal(),await ExpandedView._loadCampaignPanel()}catch(e){console.error("Failed to update campaign:",e),a&&(a.textContent=e.message||"Failed to update campaign",a.classList.remove("is-hidden"))}},async leaveCampaign(e){if(await new Promise(e=>{showConfirmDialog("Are you sure you want to leave this campaign?\n\nYour character will be removed from the party, but your journal entries will be preserved.",()=>e(!0),()=>e(!1))}))try{await CampaignAPI.leaveCampaign(e),await AppState.loadCharacters(),UI.render(),await ExpandedView._loadCampaignPanel(),showAlertDialog("You have left the campaign.")}catch(e){console.error("Failed to leave campaign:",e),showAlertDialog(e.message||"Failed to leave campaign. Please try again.")}},confirmDeleteCampaign(e){showConfirmDialog("Are you sure you want to DELETE this campaign?\n\nThis action cannot be undone and will remove all members.",async()=>{try{await CampaignAPI.deleteCampaign(e),CampaignUI.closeManageModal(),await AppState.loadCharacters(),UI.render(),await ExpandedView._loadCampaignPanel(),showAlertDialog("Campaign deleted successfully.")}catch(e){console.error("Failed to delete campaign:",e),showAlertDialog(e.message||"Failed to delete campaign. Please try again.")}})},async confirmEndCampaignById(e){let t="this campaign";try{t=(await CampaignAPI.getCampaign(e)).name||t}catch(e){}showConfirmDialog(`End "${t}"?\n\nThe campaign will be marked as completed and moved to Past Adventures for all members. This cannot be undone.`,async()=>{try{await CampaignAPI.updateCampaign(e,{status:"completed"}),CampaignUI._currentCampaign=null,CampaignUI._managingCampaign=null,CampaignUI._pastCampaignsCount=0,CampaignUI._originalManageModalContent=null,CampaignUI.closeManageModal(),await AppState.loadCharacters(),UI.render(),await ExpandedView._loadCampaignPanel(),showAlertDialog("Campaign ended successfully. It can now be found in Past Adventures.")}catch(e){console.error("Failed to end campaign:",e),showAlertDialog(e.message||"Failed to end campaign. Please try again.")}})},_originalManageModalContent:null,confirmEndCampaign(){if(!this._managingCampaign)return;const e=document.getElementById("manageCampaignModal");if(!e)return;const t=e.querySelector(".modal-content");if(!t)return;this._originalManageModalContent=t.innerHTML;const a=this._managingCampaign.id,n=Utils.escapeHtml(this._managingCampaign.name||"this campaign");animateModalContentSwap(t,`\n            <div class="modal-header">\n                <h2 class="modal-title">End Campaign</h2>\n                <button class="modal-close" onclick="CampaignUI._restoreManageModal()">&times;</button>\n            </div>\n            <div class="modal-body">\n                <p class="terminal-text">End <strong>${n}</strong>?</p>\n                <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">\n                    The campaign will be marked as completed and moved to Past Adventures for all members. This cannot be undone.\n                </p>\n            </div>\n            <div class="modal-footer modal-footer-end">\n                <button class="terminal-btn" onclick="CampaignUI._restoreManageModal()">Back</button>\n                <button class="terminal-btn terminal-btn-primary" id="confirmEndCampaignBtn">End Campaign</button>\n            </div>\n        `,()=>{t.style.height="auto";const e=document.getElementById("confirmEndCampaignBtn");e?.addEventListener("click",async()=>{try{await CampaignAPI.updateCampaign(a,{status:"completed"}),CampaignUI._currentCampaign=null,CampaignUI._managingCampaign=null,CampaignUI._pastCampaignsCount=0,CampaignUI._originalManageModalContent=null,CampaignUI.closeManageModal(),await AppState.loadCharacters(),UI.render(),await ExpandedView._loadCampaignPanel(),showAlertDialog("Campaign ended successfully. It can now be found in Past Adventures.")}catch(e){console.error("Failed to end campaign:",e),showAlertDialog(e.message||"Failed to end campaign. Please try again.")}}),e?.focus()})},_restoreManageModal(){if(!this._originalManageModalContent)return void this.closeManageModal();const e=document.getElementById("manageCampaignModal");if(!e)return;const t=e.querySelector(".modal-content");if(!t)return;const a=this._managingCampaign;animateModalContentSwap(t,this._originalManageModalContent,()=>{if(t.style.height="",this._originalManageModalContent=null,a){const e=document.getElementById("manageCampaignName"),t=document.getElementById("manageCampaignDesc");e&&(e.value=a.name||""),t&&(t.value=a.description||"")}document.getElementById("manageCampaignName")?.focus()})},async getCharacterCampaign(e){try{const t=String(e),a=await CampaignAPI.getCampaigns();for(const e of a){const a=await CampaignAPI.getCampaignMembers(e.id),n=a.find(e=>String(e.character_id)===t);if(n)return{campaign:e,membership:n,members:a}}return null}catch(e){return console.error("Failed to get character campaign:",e),null}},_editingEntryId:null,_existingCharacterUpdate:null,async openJournalEntryModal(e=null){const t=document.getElementById("journalEntryModal");if(!t)return;this._editingEntryId=e;const a=document.getElementById("journalEntryModalTitle");a&&(a.textContent=e?"Edit Journal Entry":"Add Journal Entry");const n=document.getElementById("journalEntryTitle"),i=document.getElementById("journalEntryDate"),l=document.getElementById("journalEntryContent"),s=document.getElementById("journalEntryId");if(this._existingCharacterUpdate=null,e)try{const t=await CampaignAPI.getJournalEntry(e);n&&(n.value=t.title||""),l&&(l.value=t.content||""),i&&(i.value=t.entry_date||(new Date).toISOString().split("T")[0]),this._existingCharacterUpdate=t.character_update||null}catch(e){return console.error("Failed to load journal entry:",e),void showAlertDialog("Failed to load journal entry.")}else n&&(n.value=""),l&&(l.value=""),i&&(i.value=(new Date).toISOString().split("T")[0]);s&&(s.value=e||""),this._prepareCharacterUpdateFields(),this._existingCharacterUpdate&&this._populateCharacterUpdateFields(this._existingCharacterUpdate),t.classList.add("show"),setTimeout(()=>n?.focus(),100)},closeJournalEntryModal(){const e=document.getElementById("journalEntryModal");e&&animateModalClose(e,{removeOnClose:!1}),this._editingEntryId=null,this._existingCharacterUpdate=null,this.dismissJournalNotice()},_showJournalNotice(e){const t=document.getElementById("journalEntryNotice"),a=document.getElementById("journalEntryNoticeText"),n=document.getElementById("journalEntryForm"),i=document.getElementById("journalEntryFooter");t&&a&&n&&i&&(a.textContent=e,n.style.display="none",i.style.display="none",t.style.display="flex")},dismissJournalNotice(){const e=document.getElementById("journalEntryNotice"),t=document.getElementById("journalEntryForm"),a=document.getElementById("journalEntryFooter");e&&t&&a&&(e.style.display="none",t.style.display="",a.style.display="")},async saveJournalEntry(){const e=document.getElementById("journalEntryTitle"),t=document.getElementById("journalEntryDate"),a=document.getElementById("journalEntryContent"),n=e?.value?.trim()||"",i=t?.value||(new Date).toISOString().split("T")[0],l=a?.value?.trim()||"",s=AppState.selectedCharacterId;if(!s)return void this._showJournalNotice("No character selected.");const o=parseInt(document.getElementById("charUpdateXp")?.value)||0,r=document.getElementById("charUpdateGoldSign")?.value||"+",c=parseInt(document.getElementById("charUpdateGold")?.value)||0,d="-"===r?-c:c,m=document.getElementById("charUpdateItems")?.value?.trim()||"",p=m?m.split(",").map(e=>e.trim()).filter(Boolean):[],u=AppState.characters?.find(e=>e.id===s||e.cloudId===s),h=u?.hp_current||u?.hit_points_current||("number"==typeof u?.hitPoints?u.hitPoints:u?.hitPoints?.current)||0,g=parseInt(document.getElementById("charUpdateHp")?.value),v=(Number.isNaN(g)?h:g)-h,S=[];document.getElementById("charUpdatePoisoned")?.checked&&S.push("poisoned"),document.getElementById("charUpdateExhausted")?.checked&&S.push("exhausted"),document.getElementById("charUpdateDiseased")?.checked&&S.push("diseased"),document.getElementById("charUpdateCursed")?.checked&&S.push("cursed");const w=0!==o||0!==d||0!==v||p.length>0||S.length>0;if(l||w)try{if(this._editingEntryId)await CampaignAPI.updateJournalEntry(this._editingEntryId,{title:n||"Untitled",content:l,entry_date:i}),w&&await CampaignAPI.createCharacterUpdate(this._editingEntryId,{xp_gained:o,gold_change:d,hp_change:v,items_acquired:p,items_lost:[],conditions:S});else{const e={character_id:s,title:n||"Untitled",content:l,entry_date:i};w&&(e.character_update={xp_gained:o,gold_change:d,hp_change:v,items_acquired:p,items_lost:[],conditions:S}),await CampaignAPI.createJournalEntry(e)}const e=this._existingCharacterUpdate;this._editingEntryId=null,this.closeJournalEntryModal();let t=!1;if(o>0&&u){const a=u.experience_points||u.experiencePoints||0,n=a-(e?.xp_gained||0)+o,i=u.level||1,l=calculateLevelFromXP(n);if(l>i){const e=await showStandaloneLevelUpDialog(i,l,u.name);if("auto"===e){const e=calculateStatsForLevel({...u,level:l,experiencePoints:n,experience_points:n},l),a={level:l,hitPoints:{max:e.hpMax,current:e.hpMax,temp:u.hitPoints?.temp||0},proficiencyBonus:e.proficiencyBonus};e.spellSlots&&(a.spellSlots=e.spellSlots,a.spellSlotsUsed={}),e.hitDiceMax&&(a.hitDiceMax=e.hitDiceMax,a.hitDiceCurrent=null),e.classResources&&Object.keys(e.classResources).length>0&&(a.classResources=e.classResources),await CharacterStorage.update(s,a),t=!0,e.spellProgression&&setTimeout(async()=>{const e=await CharacterStorage.getById(s);e&&checkAndPromptForNewSpells(e,i,l)},400)}else"manual"===e&&(await CharacterStorage.update(s,{level:l}),t=!0)}}(w||t)&&(await AppState.loadCharacters(),s&&viewCharacter(s)),await ExpandedView._loadCampaignPanel();showNotification(t?"\u2713 Journal entry saved & LEVEL UP!":w?"\u2713 Journal entry saved & character updated":"\u2713 Journal entry saved")}catch(e){console.error("Failed to save journal entry:",e),showAlertDialog(e.message||"Failed to save journal entry.")}else this._showJournalNotice("Please add journal content or character updates.")},async editJournalEntry(e){await this.openJournalEntryModal(e)},toggleJournalEntry(e,t){if(t.target.closest(".journal-entry-edit")||t.target.closest(".journal-entry-delete"))return;if(!e.classList.contains("is-expanded")){const t=e.closest(".journal-entries")?.querySelectorAll(".journal-entry.is-expanded");t?.forEach(e=>e.classList.remove("is-expanded"))}e.classList.toggle("is-expanded")},async deleteJournalEntry(e){showConfirmDialog("Delete this journal entry?\n\nThis cannot be undone.",async()=>{try{await CampaignAPI.deleteJournalEntry(e),showNotification("Journal entry deleted"),await ExpandedView._loadCampaignPanel()}catch(e){console.error("Failed to delete journal entry:",e),showAlertDialog(e.message||"Failed to delete journal entry.")}})},_prepareCharacterUpdateFields(){const e=AppState.selectedCharacterId,t=AppState.characters?.find(t=>t.id===e||t.cloudId===e),a=document.getElementById("characterUpdateName");a&&t&&(a.textContent=t.name||"Character");const n=document.getElementById("charUpdateHp"),i=document.getElementById("charUpdateHpMax");if(t){const e=t.hitPoints||{current:0,max:0},a="number"==typeof e?e:e.max||0,l="number"==typeof e?e:e.current||a;n&&(n.value=l||""),i&&(i.textContent=a||"--")}const l=document.getElementById("charUpdateXp"),s=document.getElementById("charUpdateGold"),o=document.getElementById("charUpdateGoldSign"),r=document.getElementById("charUpdateGoldSign-label"),c=document.getElementById("charUpdateItems");l&&(l.value="0"),s&&(s.value="0"),o&&(o.value="+"),r&&(r.textContent="+");const d=document.querySelector(".gold-sign-selector");d&&d.querySelectorAll(".selector-option").forEach(e=>{const t="+"===e.dataset.value;e.classList.toggle("is-selected",t),e.setAttribute("aria-selected",t?"true":"false")}),c&&(c.value="");const m=t?.conditions||[];Object.entries({charUpdatePoisoned:"poisoned",charUpdateExhausted:"exhausted",charUpdateDiseased:"diseased",charUpdateCursed:"cursed"}).forEach(([e,t])=>{const a=document.getElementById(e);a&&(a.checked=m.includes(t))})},_populateCharacterUpdateFields(e){if(!e)return;const t=document.getElementById("charUpdateXp");t&&void 0!==e.xp_gained&&(t.value=e.xp_gained||0);const a=document.getElementById("charUpdateGold"),n=document.getElementById("charUpdateGoldSign"),i=document.getElementById("charUpdateGoldSign-label");if(a&&void 0!==e.gold_change){const t=e.gold_change,l=t<0;a.value=Math.abs(t),n&&(n.value=l?"-":"+"),i&&(i.textContent=l?"\u2212":"+");const s=document.querySelector(".gold-sign-selector");s&&s.querySelectorAll(".selector-option").forEach(e=>{const t=e.querySelector(".selector-option-label")?.textContent,a=l&&"\u2212"===t||!l&&"+"===t;e.classList.toggle("is-selected",a),e.setAttribute("aria-selected",a?"true":"false")})}const l=document.getElementById("charUpdateItems");l&&e.items_acquired?.length>0&&(l.value=e.items_acquired.join(", "));const s={charUpdatePoisoned:"poisoned",charUpdateExhausted:"exhausted",charUpdateDiseased:"diseased",charUpdateCursed:"cursed"};e.conditions?.length>0&&Object.entries(s).forEach(([t,a])=>{const n=document.getElementById(t);n&&(n.checked=e.conditions.includes(a))})},selectGoldSign(e){const t=document.getElementById("charUpdateGoldSign"),a=document.getElementById("charUpdateGoldSign-label"),n=document.getElementById("charUpdateGoldSign-trigger");t&&(t.value="\u2212"===e?"-":"+"),a&&(a.textContent=e);const i=document.querySelector(".gold-sign-selector");i&&i.querySelectorAll(".selector-option").forEach(t=>{const a=t.querySelector(".selector-option-label")?.textContent===e;t.classList.toggle("is-selected",a),t.setAttribute("aria-selected",a?"true":"false")}),n&&n.classList.contains("is-open")&&CharacterSheet.toggleSelectorMenu(n)},copyInviteCodeFromPanel(e){e&&navigator.clipboard&&navigator.clipboard.writeText(e).then(()=>{showNotification("\u2713 Invite code copied")}).catch(e=>{console.error("Failed to copy:",e)})},_journalFilterUserId:null,_currentCampaignId:null,_currentJournalVisibility:"public",async openJournalSettingsModal(){const e=document.getElementById("journalSettingsModal");if(!e)return;const t=document.querySelector(".journal-section"),a=t?.dataset?.campaignId;if(a){this._currentCampaignId=parseInt(a,10);try{const e=await CampaignAPI.getCampaignMembers(this._currentCampaignId),t=window.AuthService?.getCurrentUser()?.id,a=e.find(e=>e.user_id===t);if(a){this._currentJournalVisibility=a.journal_visibility||"private";const e=document.getElementById("journalVisibilityToggle");e&&(e.checked="public"===this._currentJournalVisibility)}}catch(e){console.error("Failed to fetch journal visibility:",e)}e.classList.add("show")}else console.warn("No campaign ID found for journal settings")},closeJournalSettingsModal(){const e=document.getElementById("journalSettingsModal");e&&animateModalClose(e,{removeOnClose:!1})},async toggleJournalVisibility(e){if(!this._currentCampaignId)return void console.warn("No campaign ID for visibility toggle");const t=e?"public":"private";try{await CampaignAPI.updateJournalVisibility(this._currentCampaignId,t),this._currentJournalVisibility=t;showNotification(e?"\u2713 Journal now shared with party":"\u2713 Journal now private")}catch(t){console.error("Failed to update journal visibility:",t),showAlertDialog(t.message||"Failed to update visibility setting.");const a=document.getElementById("journalVisibilityToggle");a&&(a.checked=!e)}},selectJournalFilter(e,t){const a=document.getElementById("journalFilter-label");a&&(a.innerHTML=Utils.escapeHtml(t));const n=document.getElementById("journalFilter-trigger");if(n){const t=n.closest(".selector-shell");if(t){t.querySelectorAll(".selector-option").forEach(t=>{const a=t.getAttribute("data-value")===e;t.classList.toggle("is-selected",a),t.setAttribute("aria-selected",a?"true":"false")})}n.classList.contains("is-open")&&CharacterSheet.toggleSelectorMenu(n)}this.setJournalFilter(e)},async setJournalFilter(e){this._journalFilterUserId="all"===e?null:parseInt(e,10);const t=document.querySelector(".journal-section"),a=t?.dataset?.campaignId;if(a)try{const e=await CampaignAPI.getCampaignJournalEntries(parseInt(a,10),this._journalFilterUserId);this._updateJournalEntries(e)}catch(e){console.error("Failed to fetch filtered journal entries:",e)}else console.warn("No campaign ID for journal filter")},_updateJournalEntries(e){const t=document.querySelector(".journal-entries");if(!t)return;const a=window.AuthService?.getCurrentUser()?.id;0!==e.length?t.innerHTML=e.map(e=>{const t=e.user_id===a,n=e.character_name?`<span class="journal-entry-author">${Utils.escapeHtml(e.character_name)}</span>`:"";return`\n                <div class="journal-entry ${t?"":"journal-entry--other"}" data-entry-id="${e.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">\n                    <div class="journal-entry-header">\n                        <span class="journal-entry-meta">${n}<span class="journal-entry-date">${ExpandedView._formatDate(e.entry_date)}</span></span>\n                        <span class="journal-entry-title">${e.title||"Untitled"}</span>\n                    </div>\n                    <div class="journal-entry-preview">\n                        ${ExpandedView._truncateText(e.content,100)}\n                    </div>\n                    <div class="journal-entry-full">\n                        ${Utils.escapeHtml(e.content||"").replace(/\n/g,"<br>")}\n                        ${ExpandedView._formatCharacterUpdate(e.character_update)}\n                    </div>\n                    ${t?`\n                    <div class="journal-entry-actions">\n                        <button class="journal-entry-edit terminal-btn-icon" onclick="CampaignUI.editJournalEntry(${e.id})" title="Edit entry">\n                            \u270e\n                        </button>\n                        <button class="journal-entry-delete terminal-btn-icon" onclick="CampaignUI.deleteJournalEntry(${e.id})" title="Delete entry">\n                            \xd7\n                        </button>\n                    </div>\n                    `:""}\n                </div>\n            `}).join(""):t.innerHTML='\n                <div class="journal-empty">\n                    <div class="journal-empty-text">No journal entries yet</div>\n                    <div class="journal-empty-hint">Record your adventures!</div>\n                </div>\n            '},togglePartyList(e){if(!e)return;const t=e.closest(".party-list");if(!t)return;const a=t.querySelector(".party-hidden");if(!a)return;"none"!==a.style.display?(a.style.display="none",e.textContent="See more"):(a.style.display="block",e.textContent="See less")},_partyMembersList:[],_currentPartyMemberIndex:0,_cachedPartyMembers:[],async viewPartyMemberSheet(e,t=null){const a=t||this._cachedPartyMembers||[];a.length>0&&(this._partyMembersList=a.filter(e=>e.character_id),this._currentPartyMemberIndex=this._partyMembersList.findIndex(t=>String(t.character_id)===String(e)),-1===this._currentPartyMemberIndex&&(this._currentPartyMemberIndex=0));const n=document.getElementById("partyMemberSheetModal");n&&n.remove();animateModalOpen('\n            <div id="partyMemberSheetModal" class="modal">\n                <div class="modal-content party-member-sheet-modal party-member-sheet-modal--loading">\n                    <div class="modal-body party-member-sheet-loading">\n                        <div class="panel-loading-cube-container">\n                            <div class="panel-loading-cube">\n                                <i></i><i></i><i></i><i></i><i></i><i></i>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        ',"partyMemberSheetModal");try{const t=await CampaignAPI._apiRequest(`/characters/${e}`);if(!t)throw new Error("Character not found");const a=window.DanddyCharacterMapper?window.DanddyCharacterMapper.fromBackendToBuilder(t):t,n=CharacterSheet.render(a,{context:"manager",showPortrait:!0,onRename:!1,onEdit:!1,onDelete:!1,onGeneratePortrait:!1,onPrint:!1,onShare:!1,onLeave:!1,isShared:!1,hasCollaborators:!1,hideOverflowMenu:!0,hideHeader:!0}),i=document.getElementById("partyMemberSheetModal");if(i){const e=i.querySelector(".modal-content");if(e){const i=t.owner_email?`<div class="party-member-modal-email">${Utils.escapeHtml(t.owner_email)}</div>`:"";let l="";if(this._partyMembersList.length>1){const e=this._partyMembersList[(this._currentPartyMemberIndex-1+this._partyMembersList.length)%this._partyMembersList.length],t=this._partyMembersList[(this._currentPartyMemberIndex+1)%this._partyMembersList.length],a=e?.character?.name||"Previous",n=t?.character?.name||"Next",i=this._currentPartyMemberIndex+1,s=this._partyMembersList.length;l=`\n                            <div class="party-member-nav">\n                                <button class="party-nav-btn party-nav-prev" onclick="CampaignUI.prevPartyMember()" title="${Utils.escapeHtml(a)}">\n                                    <span class="party-nav-arrow">\u2190</span>\n                                    <span class="party-nav-name">${Utils.escapeHtml(a)}</span>\n                                </button>\n                                <span class="party-nav-count">${i}/${s}</span>\n                                <button class="party-nav-btn party-nav-next" onclick="CampaignUI.nextPartyMember()" title="${Utils.escapeHtml(n)}">\n                                    <span class="party-nav-name">${Utils.escapeHtml(n)}</span>\n                                    <span class="party-nav-arrow">\u2192</span>\n                                </button>\n                            </div>\n                        `}e.innerHTML=`\n                        ${l}\n                        <div class="modal-header">\n                            <div class="party-member-modal-title-group">\n                                <h2 class="modal-title">${Utils.escapeHtml(a.name)}</h2>\n                                ${i}\n                            </div>\n                            <button class="modal-close" onclick="CampaignUI.closePartyMemberSheetModal()">&times;</button>\n                        </div>\n                        <div class="modal-body party-member-sheet-body">\n                            <div class="character-sheet">\n                                ${n}\n                            </div>\n                        </div>\n                    `,CharacterSheet.populatePortrait(a)}}}catch(e){console.error("Failed to load party member character:",e);const t=document.getElementById("partyMemberSheetModal");if(t){const a=t.querySelector(".modal-content");a&&(a.innerHTML=`\n                        <div class="modal-header">\n                            <h2 class="modal-title">Error</h2>\n                            <button class="modal-close" onclick="CampaignUI.closePartyMemberSheetModal()">&times;</button>\n                        </div>\n                        <div class="modal-body">\n                            <p class="terminal-text-dim">Failed to load character sheet.</p>\n                            <p class="terminal-text-small terminal-text-dim">${Utils.escapeHtml(e.message||"Unknown error")}</p>\n                        </div>\n                    `)}}},closePartyMemberSheetModal(){const e=document.getElementById("partyMemberSheetModal");e&&animateModalClose(e,{removeOnClose:!0}),this._partyMembersList=[],this._currentPartyMemberIndex=0},prevPartyMember(){if(this._partyMembersList.length<=1)return;this._currentPartyMemberIndex=(this._currentPartyMemberIndex-1+this._partyMembersList.length)%this._partyMembersList.length;const e=this._partyMembersList[this._currentPartyMemberIndex];e?.character_id&&this._updatePartyMemberContent(e.character_id)},nextPartyMember(){if(this._partyMembersList.length<=1)return;this._currentPartyMemberIndex=(this._currentPartyMemberIndex+1)%this._partyMembersList.length;const e=this._partyMembersList[this._currentPartyMemberIndex];e?.character_id&&this._updatePartyMemberContent(e.character_id)},async _updatePartyMemberContent(e){const t=document.getElementById("partyMemberSheetModal");if(!t)return;const a=t.querySelector(".party-member-sheet-body"),n=t.querySelector(".modal-header"),i=t.querySelector(".party-member-nav");let l=null;a&&(l=a.offsetHeight,a.style.minHeight=`${l}px`),a&&(a.innerHTML='\n                <div class="party-member-sheet-loading">\n                    <div class="panel-loading-cube-container">\n                        <div class="panel-loading-cube">\n                            <i></i><i></i><i></i><i></i><i></i><i></i>\n                        </div>\n                    </div>\n                </div>\n            ');try{const t=await CampaignAPI._apiRequest(`/characters/${e}`);if(!t)throw new Error("Character not found");const l=window.DanddyCharacterMapper?window.DanddyCharacterMapper.fromBackendToBuilder(t):t,s=CharacterSheet.render(l,{context:"manager",showPortrait:!0,onRename:!1,onEdit:!1,onDelete:!1,onGeneratePortrait:!1,onPrint:!1,onShare:!1,onLeave:!1,isShared:!1,hasCollaborators:!1,hideOverflowMenu:!0,hideHeader:!0});if(n){const e=n.querySelector(".party-member-modal-title-group");if(e){const a=t.owner_email?`<div class="party-member-modal-email">${Utils.escapeHtml(t.owner_email)}</div>`:"";e.innerHTML=`\n                        <h2 class="modal-title">${Utils.escapeHtml(l.name)}</h2>\n                        ${a}\n                    `}}if(i&&this._partyMembersList.length>1){const e=this._partyMembersList[(this._currentPartyMemberIndex-1+this._partyMembersList.length)%this._partyMembersList.length],t=this._partyMembersList[(this._currentPartyMemberIndex+1)%this._partyMembersList.length],a=e?.character?.name||"Previous",n=t?.character?.name||"Next",l=this._currentPartyMemberIndex+1,s=this._partyMembersList.length,o=i.querySelector(".party-nav-prev"),r=i.querySelector(".party-nav-next"),c=i.querySelector(".party-nav-count");if(o){o.title=a;const e=o.querySelector(".party-nav-name");e&&(e.textContent=a)}if(r){r.title=n;const e=r.querySelector(".party-nav-name");e&&(e.textContent=n)}c&&(c.textContent=`${l}/${s}`)}a&&(a.innerHTML=`\n                    <div class="character-sheet">\n                        ${s}\n                    </div>\n                `,a.style.minHeight=""),CharacterSheet.populatePortrait(l)}catch(e){console.error("Failed to load party member character:",e),a&&(a.innerHTML=`\n                    <p class="terminal-text-dim">Failed to load character sheet.</p>\n                    <p class="terminal-text-small terminal-text-dim">${Utils.escapeHtml(e.message||"Unknown error")}</p>\n                `,a.style.minHeight="")}},_pastCampaigns:[],_viewingPastCampaign:null,async openPastAdventuresModal(e=null){const t=document.getElementById("pastAdventuresModal");if(!t)return;const a=e||AppState.selectedCharacterId;this._viewingPastCampaign=null,this._showPastAdventuresListView();const n=document.getElementById("pastAdventuresList");n&&(n.innerHTML='<div class="past-adventures-loading">Loading past adventures...</div>'),t.classList.add("show");try{this._pastCampaigns=await CampaignAPI.getPastCampaigns(a),this._renderPastCampaignsList()}catch(e){console.error("Failed to load past campaigns:",e),n&&(n.innerHTML='<div class="past-adventures-empty">Failed to load past adventures.</div>')}},closePastAdventuresModal(){const e=document.getElementById("pastAdventuresModal");e&&animateModalClose(e,{removeOnClose:!1}),this._pastCampaigns=[],this._viewingPastCampaign=null},_showPastAdventuresListView(){const e=document.getElementById("pastAdventuresListView"),t=document.getElementById("pastAdventuresDetailView"),a=document.getElementById("pastAdventuresBreadcrumb"),n=document.getElementById("pastAdventuresTitle");e&&(e.style.display=""),t&&(t.style.display="none"),a&&(a.style.display="none"),n&&(n.textContent="Past Adventures",n.style.display="")},_showPastAdventuresDetailView(e){const t=document.getElementById("pastAdventuresListView"),a=document.getElementById("pastAdventuresDetailView"),n=document.getElementById("pastAdventuresBreadcrumb"),i=document.getElementById("pastAdventuresTitle");t&&(t.style.display="none"),a&&(a.style.display=""),n&&(n.style.display="flex"),i&&(i.textContent=e,i.style.display="")},_renderPastCampaignsList(){const e=document.getElementById("pastAdventuresList");e&&(this._pastCampaigns&&0!==this._pastCampaigns.length?e.innerHTML=this._pastCampaigns.map(e=>{const t=e.created_at?new Date(e.created_at).toLocaleDateString():"Unknown",a=e.ended_at?new Date(e.ended_at).toLocaleDateString():e.user_left_at?new Date(e.user_left_at).toLocaleDateString():"Unknown";let n="",i="";"left"===e.user_status?(n="Left",i="past-campaign-status--left"):"completed"===e.status?(n="Completed",i="past-campaign-status--completed"):"archived"===e.status&&(n="Archived",i="past-campaign-status--archived");const l=e.party_count||e.members.length;return`\n                <div class="past-campaign-card" onclick="CampaignUI.viewPastCampaign(${e.id})">\n                    <div class="past-campaign-header">\n                        <div class="past-campaign-name">${Utils.escapeHtml(e.name)}</div>\n                        <div class="past-campaign-status ${i}">${n}</div>\n                    </div>\n                    ${e.description?`<div class="past-campaign-desc">${Utils.escapeHtml(e.description)}</div>`:""}\n                    <div class="past-campaign-meta">\n                        <span class="past-campaign-dates">${t} \u2014 ${a}</span>\n                        <span class="past-campaign-party">${l} member${1!==l?"s":""}</span>\n                    </div>\n                </div>\n            `}).join(""):e.innerHTML='<div class="past-adventures-empty">No past adventures yet. Campaigns you leave or that conclude will appear here.</div>')},async viewPastCampaign(e){const t=this._pastCampaigns.find(t=>t.id===e);if(!t)return;this._viewingPastCampaign=t,this._showPastAdventuresDetailView(t.name);const a=document.getElementById("pastAdventuresDetailContent");if(a){a.innerHTML='\n            <div class="past-adventures-loading">\n                <div class="panel-loading-cube-container">\n                    <div class="panel-loading-cube">\n                        <i></i><i></i><i></i><i></i><i></i><i></i>\n                    </div>\n                </div>\n            </div>\n        ';try{const a=await CampaignAPI.getPastCampaignJournals(e);this._renderPastCampaignDetail(t,a)}catch(e){console.error("Failed to load past campaign details:",e),a.innerHTML=`\n                <div class="past-adventures-error">\n                    <p class="terminal-text-dim">Failed to load campaign details.</p>\n                    <p class="terminal-text-small terminal-text-dim">${Utils.escapeHtml(e.message||"Unknown error")}</p>\n                </div>\n            `}}},backToPastCampaignsList(){this._viewingPastCampaign=null,this._showPastAdventuresListView()},_renderPastCampaignDetail(e,t){const a=document.getElementById("pastAdventuresDetailContent");if(!a)return;const n=e.created_at?new Date(e.created_at).toLocaleDateString():"Unknown",i=e.ended_at?new Date(e.ended_at).toLocaleDateString():e.user_left_at?new Date(e.user_left_at).toLocaleDateString():"Ongoing",l=e.members&&e.members.length>0?e.members.map(e=>{const t=[];e.is_creator&&t.push('<span class="party-card-tag party-card-tag--admin">Admin</span>'),"left"===e.status&&t.push('<span class="party-card-tag party-card-tag--left">Left</span>');const a=t.length>0?`<div class="party-card-tags">${t.join("")}</div>`:"";if(e.character_name){const t=Utils.escapeHtml(e.character_name),n=`Lvl ${e.character_level||"?"} ${e.character_class||""}`.trim();let i="";return i=e.original_portrait_url?`<div class="card-thumbnail card-thumbnail--image">\n                            <img src="${Utils.escapeHtml(e.original_portrait_url)}" alt="${t}" loading="lazy" onload="this.classList.add('is-loaded')" />\n                        </div>`:'<div class="card-thumbnail party-card-placeholder">\u2694</div>',`\n                        <div class="party-card character-card party-card--past">\n                            ${a}\n                            ${i}\n                            <div class="card-details">\n                                <div class="card-name">${t}</div>\n                                <div class="card-info">${n}</div>\n                            </div>\n                        </div>\n                    `}return`\n                        <div class="party-card character-card party-card--no-char party-card--past">\n                            ${a}\n                            <div class="card-thumbnail">?</div>\n                            <div class="card-details">\n                                <div class="card-name">No character</div>\n                                <div class="card-info">Not assigned</div>\n                            </div>\n                        </div>\n                    `}).join(""):'<div class="party-empty">No party members</div>',s=t&&t.length>0?t.map(e=>{const t=e.character_name?`<span class="journal-entry-author">${Utils.escapeHtml(e.character_name)}</span>`:"";return`\n                <div class="journal-entry" data-entry-id="${e.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">\n                    <div class="journal-entry-header">\n                        <span class="journal-entry-meta">${t}<span class="journal-entry-date">${ExpandedView._formatDate(e.entry_date)}</span></span>\n                        <span class="journal-entry-title">${e.title||"Untitled"}</span>\n                    </div>\n                    <div class="journal-entry-preview">\n                        ${ExpandedView._truncateText(e.content,100)}\n                    </div>\n                    <div class="journal-entry-full">\n                        ${Utils.escapeHtml(e.content||"").replace(/\n/g,"<br>")}\n                    </div>\n                </div>\n                `}).join(""):'<div class="journal-empty">No journal entries for this campaign.</div>';a.innerHTML=`\n            <div class="past-campaign-detail">\n                \x3c!-- Campaign Info Section --\x3e\n                <div class="past-campaign-info-section">\n                    <div class="past-campaign-info-header">\n                        <div class="past-campaign-info-dates">\n                            <span class="terminal-text-dim">Campaign Period:</span> ${n} \u2014 ${i}\n                        </div>\n                    </div>\n                    ${e.description?`<div class="past-campaign-description">${Utils.escapeHtml(e.description)}</div>`:""}\n                </div>\n                \n                \x3c!-- Party Section --\x3e\n                <div class="past-campaign-section">\n                    <div class="sheet-header">\n                        <div class="sheet-header-title">[ PARTY (${e.party_count||0}) ]</div>\n                    </div>\n                    <div class="party-list past-campaign-party-list">\n                        ${l}\n                    </div>\n                </div>\n                \n                \x3c!-- Journal Section --\x3e\n                <div class="past-campaign-section">\n                    <div class="sheet-header">\n                        <div class="sheet-header-title">[ JOURNAL (${t.length}) ]</div>\n                    </div>\n                    <div class="journal-entries past-campaign-journal-list">\n                        ${s}\n                    </div>\n                </div>\n            </div>\n        `}},MOBILE_BREAKPOINT=768,MobileView={isMobile:()=>window.innerWidth<=768,_wasMobile:null,_touchStartX:0,_touchStartY:0,_mobileCampaignLoaded:!1,_mobileCampaignObserver:null,_touchCurrentX:0,_touchCurrentY:0,_isSwiping:!1,_swipeDirection:null,_pointerId:null,_minSwipeDistance:50,_directionLockThreshold:10,init(){this._wasMobile=this.isMobile(),window.addEventListener("resize",()=>this.handleResize()),this.initSwipeHandlers()},initSwipeHandlers(){const e=document.getElementById("characterGridPanel");e&&(e.addEventListener("pointerdown",e=>{("touch"===e.pointerType||"pen"===e.pointerType||this.isMobile())&&(this._touchStartX=e.clientX,this._touchStartY=e.clientY,this._touchCurrentX=e.clientX,this._touchCurrentY=e.clientY,this._isSwiping=!0,this._swipeDirection=null,this._pointerId=e.pointerId)},{passive:!0}),e.addEventListener("pointermove",t=>{if(!this._isSwiping)return;if(!this.isOpen())return;this._touchCurrentX=t.clientX,this._touchCurrentY=t.clientY;const a=this._touchCurrentX-this._touchStartX,n=this._touchCurrentY-this._touchStartY,i=Math.abs(a),l=Math.abs(n);null===this._swipeDirection&&(i>this._directionLockThreshold||l>this._directionLockThreshold)&&(i>1.5*l?(this._swipeDirection="horizontal",e.classList.add("is-swiping-horizontal")):l>1.5*i&&(this._swipeDirection="vertical")),"horizontal"===this._swipeDirection&&t.preventDefault()},{passive:!1}),e.addEventListener("pointerup",t=>{this._isSwiping&&(this._touchCurrentX=t.clientX,this._touchCurrentY=t.clientY,this._isSwiping=!1,e.classList.remove("is-swiping-horizontal"),this._pointerId=null,this.handleSwipe())},{passive:!0}),e.addEventListener("pointercancel",()=>{this._isSwiping=!1,this._swipeDirection=null,e.classList.remove("is-swiping-horizontal")},{passive:!0}),e.addEventListener("pointerleave",t=>{this._isSwiping&&null===this._swipeDirection&&(this._isSwiping=!1,e.classList.remove("is-swiping-horizontal"))},{passive:!0}))},handleSwipe(){if(!this.isOpen())return;if("horizontal"!==this._swipeDirection)return void(this._swipeDirection=null);const e=this._touchCurrentX-this._touchStartX;this._swipeDirection=null,Math.abs(e)<this._minSwipeDistance||(e>0?this.navigateToPreviousCharacter():this.navigateToNextCharacter())},navigateToNextCharacter(){const e=AppState.filteredCharacters;if(!e||0===e.length)return;const t=AppState.selectedCharacterId,a=e.findIndex(e=>e.id===t),n=e[-1===a?0:(a+1)%e.length];n&&(this.showSwipeLoader(),viewCharacter(n.id,{skipKeyboardSync:!1,updateUrl:!0}))},navigateToPreviousCharacter(){const e=AppState.filteredCharacters;if(!e||0===e.length)return;const t=AppState.selectedCharacterId,a=e.findIndex(e=>e.id===t),n=e[a<=0?e.length-1:a-1];n&&(this.showSwipeLoader(),viewCharacter(n.id,{skipKeyboardSync:!1,updateUrl:!0}))},_isSwipeLoading:!1,showSwipeLoader(){this._isSwipeLoading=!0},hideSwipeLoader(){this._isSwipeLoading=!1;const e=document.querySelector(".mobile-swipe-loader");e&&e.remove()},handleResize(){const e=this.isMobile();if(e===this._wasMobile)return;const t=!1===this._wasMobile,a=!0===e,n=this.isOpen();if(this._wasMobile=e,t&&a){const e=AppState?.selectedCharacterId;e&&requestAnimationFrame(()=>{requestAnimationFrame(()=>{AppState.selectedCharacterId===e&&viewCharacter(e,{skipKeyboardSync:!0,updateUrl:!1})})})}else if(!e){const e=AppState?.selectedCharacterId;if(n){const e=document.getElementById("characterGridPanel");e&&e.classList.remove("is-viewing-sheet")}if(!e&&AppState.filteredCharacters.length>0){viewCharacter(AppState.filteredCharacters[0].id,{skipKeyboardSync:!1,updateUrl:!0})}}},isOpen(){const e=document.getElementById("characterGridPanel");return e&&e.classList.contains("is-viewing-sheet")},open(e){const t=document.getElementById("characterGridPanel"),a=document.getElementById("mobileSheetContainer");if(!t||!a)return;const n=this._isSwipeLoading,i=document.getElementById("characterSheet"),l=document.querySelector(".sheet__content .sheet-title-header"),s=document.querySelector(".sheet__content .sheet-status-overlay"),o=(document.querySelector(".sheet__sidebar"),document.getElementById("mobileSheetTitleHeader")),r=document.getElementById("mobileSheetStatusRow");if(o&&o.remove(),r&&r.remove(),this._mobileCampaignObserver&&(this._mobileCampaignObserver.disconnect(),this._mobileCampaignObserver=null),this._mobileCampaignLoaded=!1,l){const e=document.createElement("div");e.className="mobile-sheet-title-header",e.id="mobileSheetTitleHeader";const n=l.querySelector(".sheet-title-name")?.textContent?.trim()||l.querySelector(".sheet-title")?.textContent?.trim()||"[ Campaign ]",i=l.querySelector(".sheet-title-actions"),o=document.createElement("div");o.className="sheet-title";const r=document.createElement("span");r.className="sheet-title-name",r.textContent=n,o.appendChild(r),e.appendChild(o),i&&e.appendChild(i.cloneNode(!0)),a.parentNode.insertBefore(e,a);const c=e.querySelector(".sheet-title-name")||e.querySelector(".sheet-title");if(c&&(c.style.cursor="pointer",c.addEventListener("click",()=>{t.scrollTo({top:0,behavior:"smooth"})})),s){const e=document.createElement("div");e.className="mobile-sheet-status-row sheet-status-row",e.id="mobileSheetStatusRow",e.innerHTML=s.innerHTML,a.parentNode.insertBefore(e,a)}}let c="";i&&(c+=i.innerHTML),c+='<div class="mobile-campaign-section" id="mobileCampaignSection"></div>',a.innerHTML=c;const d=document.getElementById("mobileCampaignSection"),m=()=>{this._mobileCampaignLoaded||(this._mobileCampaignLoaded=!0,this._loadMobileCampaign(e),this._mobileCampaignObserver&&(this._mobileCampaignObserver.disconnect(),this._mobileCampaignObserver=null))};"IntersectionObserver"in window&&d?(this._mobileCampaignObserver=new IntersectionObserver(e=>{e.some(e=>e.isIntersecting)&&m()},{root:t,rootMargin:"128px",threshold:.01}),this._mobileCampaignObserver.observe(d)):m(),n&&this.addSwipeLoaderToContainer(a),t.classList.add("is-viewing-sheet"),this.updateCharacterCount(e),this._updateViewToggle(),t.scrollTop=0,n&&this.waitForPortraitLoad(a);const p=document.getElementById("overflowEditCharacterBtn");p&&p.classList.remove("is-hidden")},async _loadMobileCampaign(e){const t=document.getElementById("mobileCampaignSection");if(!t)return;const a=document.getElementById("characterGridPanel");t.innerHTML=ExpandedView._renderCampaignSkeleton();try{if(!(window.AuthService&&AuthService.isAuthenticated())){const n=a?.scrollTop||0;return t.innerHTML=ExpandedView._renderCampaignPanelContent(e,null,0,[]),void(a&&(a.scrollTop=n))}const n=AppState.characters?.find(t=>String(t.id)===String(e));let i=n?.campaignId,l=null;if(i||void 0===CampaignUI||(l=await CampaignUI.getCharacterCampaign(e).catch(()=>null),l&&(i=l.campaign?.id)),!i){const n=a?.scrollTop||0;return t.innerHTML=ExpandedView._renderCampaignPanelContent(e,null,0,[]),void(a&&(a.scrollTop=n))}l||void 0===CampaignUI||(l=await CampaignUI.getCharacterCampaign(e).catch(()=>null));let s=[];"undefined"!=typeof CampaignAPI&&i?s=await CampaignAPI.getCampaignJournalEntries(i,CampaignUI._journalFilterUserId).catch(()=>[]):"undefined"!=typeof CampaignAPI&&(s=await CampaignAPI.getJournalEntries(e).catch(()=>[]));const o=a?.scrollTop||0;t.innerHTML=ExpandedView._renderCampaignPanelContent(e,l,0,s||[]),ExpandedView._initDescriptionTruncation(),a&&(a.scrollTop=o)}catch(n){console.warn("Failed to load mobile campaign:",n);const i=a?.scrollTop||0;t.innerHTML=ExpandedView._renderCampaignPanelContent(e,null,0,[]),a&&(a.scrollTop=i)}},updateCharacterCount(e){const t=document.getElementById("mobileNavCount");if(!t)return;const a=AppState.filteredCharacters;if(!a||0===a.length)return void(t.textContent="1/1");const n=a.findIndex(t=>t.id===e),i=n>=0?n+1:1,l=a.length;t.textContent=i+"/"+l},_updateViewToggle(){const e=document.getElementById("mobileViewToggle");e&&(e.innerHTML="\u2694 Campaign")},async refreshCampaignSection(e=!1){if(!this.isMobile())return;const t=document.getElementById("characterGridPanel");if(!t?.classList.contains("is-viewing-sheet"))return;const a=AppState.selectedCharacterId;if(a&&(await this._loadMobileCampaign(a),this._mobileCampaignLoaded=!0,e)){const e=document.getElementById("mobileCampaignSection");e&&requestAnimationFrame(()=>{e.scrollIntoView({behavior:"smooth",block:"start"})})}},toggleCampaign(){scrollToCampaign()},addSwipeLoaderToContainer(e){const t=e.querySelector(".portrait-container");if(!t)return;const a=document.createElement("div");a.className="mobile-swipe-loader is-visible",a.innerHTML='\n            <div class="panel-loading-cube-container">\n                <div class="panel-loading-cube">\n                    <i></i><i></i><i></i><i></i><i></i><i></i>\n                </div>\n            </div>\n        ',t.appendChild(a)},waitForPortraitLoad(e){const t=Date.now(),a=()=>{const e=150-(Date.now()-t);e>0?setTimeout(()=>this.hideSwipeLoader(),e):this.hideSwipeLoader()},n=e.querySelectorAll("img.original-portrait, .ascii-portrait img");if(0===n.length)return void a();let i=0,l=0;const s=()=>{l++,l>=i&&a()};n.forEach(e=>{e.complete||(i++,e.addEventListener("load",s,{once:!0}),e.addEventListener("error",s,{once:!0}))}),0===i?a():setTimeout(()=>{this.hideSwipeLoader()},5e3)},close(){const e=document.getElementById("characterGridPanel");if(!e)return;e.classList.remove("is-viewing-sheet");const t=document.getElementById("mobileSheetTitleHeader"),a=document.getElementById("mobileSheetStatusRow");t&&t.remove(),a&&a.remove(),this._mobileCampaignObserver&&(this._mobileCampaignObserver.disconnect(),this._mobileCampaignObserver=null),this._mobileCampaignLoaded=!1;const n=document.getElementById("overflowEditCharacterBtn");n&&n.classList.add("is-hidden"),void 0!==AppState&&AppState&&(AppState.selectedCharacterId=null),document.querySelectorAll(".character-card").forEach(e=>{e.classList.remove("is-selected")}),clearCharacterFromUrl()}},PortraitLightbox={_lightbox:null,_isTouch:!1,_ensureLightbox(){if(this._lightbox)return this._lightbox;const e=document.createElement("div");e.className="portrait-lightbox",e.innerHTML='\n            <div class="portrait-lightbox-backdrop"></div>\n            <img class="portrait-lightbox-image" src="" alt="Portrait">\n            <div class="portrait-lightbox-name"></div>\n            <div class="portrait-lightbox-hint">Tap to close</div>\n        ',document.body.appendChild(e),this._lightbox=e;const t=e.querySelector(".portrait-lightbox-backdrop");return t.addEventListener("click",()=>this.close()),e.addEventListener("click",a=>{a.target!==e&&a.target!==t||this.close()}),document.addEventListener("keydown",e=>{"Escape"===e.key&&this.isOpen()&&this.close()}),e},isOpen(){return this._lightbox&&this._lightbox.classList.contains("is-open")},open(e,t=""){if(!e)return;const a=this._ensureLightbox(),n=a.querySelector(".portrait-lightbox-image"),i=a.querySelector(".portrait-lightbox-name");n.src=e,i&&(i.textContent=t,i.style.display=t?"":"none"),document.body.style.overflow="hidden",a.classList.add("is-open")},close(){this._lightbox&&(this._lightbox.classList.remove("is-open"),document.body.style.overflow="")},init(){this._isTouch="ontouchstart"in window||navigator.maxTouchPoints>0,document.addEventListener("click",e=>{if(!e.target||"function"!=typeof e.target.closest)return;if(!MobileView.isMobile()&&!this._isTouch)return;if(e.target.closest(".sheet-shared-tag, .sheet-status-badge, .sheet-demo-tag, .sheet-spell-tag, .custom-tooltip"))return;const t=e.target.closest(".portrait-container--original-mode .original-portrait.is-loaded");if(!t)return;if(this.isOpen())return;const a=t.src;if(a){e.preventDefault(),e.stopPropagation();const n=t.closest(".character-sheet"),i=n?.querySelector(".sheet-title-name")||n?.querySelector(".sheet-title"),l=i?.textContent?.trim()||"";this.open(a,l)}},!0)}};function closeMobileSheet(){MobileView.close()}function scrollToCampaign(){const e=document.getElementById("mobileCampaignSection"),t=document.getElementById("characterGridPanel");if(!e||!t)return;const a=document.getElementById("mobileBackBar"),n=document.getElementById("mobileSheetTitleHeader");let i=0;a&&(i+=a.offsetHeight),n&&(i+=n.offsetHeight);const l=e.offsetTop-i;t.scrollTo({top:l,behavior:"smooth"})}const UI={SKELETON_CARD_COUNT:9,RENDER_BATCH_SIZE:12,_renderSkeletonCard:()=>'\n            <div class="character-card character-card--skeleton">\n                <div class="card-thumbnail"></div>\n                <div class="card-details">\n                    <div class="skeleton-name"></div>\n                    <div class="skeleton-info"></div>\n                </div>\n            </div>\n        ',renderSkeletonGrid(e=this.SKELETON_CARD_COUNT){const t=document.getElementById("characterGrid");t?(t.innerHTML=Array(e).fill(this._renderSkeletonCard()).join(""),DEBUG_MANAGER&&console.log(`\u23f3 SKELETON: Rendered ${e} skeleton cards`)):DEBUG_MANAGER&&console.log("\u23f3 SKELETON: Grid element not found")},setLoadingState(e){const t=document.getElementById("gridPanelLoading"),a=document.getElementById("sheetPanelLoading"),n=document.getElementById("campaignPanelLoading"),i=document.querySelector(".panel-loading-row"),l=document.getElementById("characterGrid"),s=document.getElementById("emptyState"),o=document.querySelector(".sheet-placeholder"),r=document.getElementById("characterSheet"),c=document.querySelector(".campaign-panel-placeholder"),d=document.getElementById("sheetNavBar");e?(this.renderSkeletonGrid(),l&&l.classList.remove("is-hidden"),i&&i.classList.add("is-hidden"),t&&t.classList.add("is-hidden"),a&&a.classList.add("is-hidden"),n&&n.classList.add("is-hidden"),s&&s.classList.add("is-hidden"),o&&o.classList.add("is-hidden"),r&&r.classList.add("is-hidden"),c&&c.classList.add("is-hidden"),d&&d.classList.add("is-hidden")):(i&&i.classList.remove("is-hidden"),t&&t.classList.add("is-hidden"),a&&a.classList.add("is-hidden"),n&&n.classList.add("is-hidden"),l&&l.classList.remove("is-hidden"))},_initialUrlCharacterHandled:!1,render(){const e=void 0!==AppState&&AppState?AppState.selectedCharacterId:null;this.renderCharacterGrid(),this.updateCount();const t=void 0!==AppState&&AppState&&Array.isArray(AppState.filteredCharacters)?AppState.filteredCharacters:[],a=document.querySelector(".sheet-placeholder"),n=document.getElementById("characterSheet"),i=document.getElementById("sheetNavBar"),l=document.querySelector(".sheet__sidebar");if(!t.length)return a&&a.classList.remove("is-hidden"),n&&n.classList.add("is-hidden"),l&&l.classList.add("is-hidden"),void 0!==AppState&&AppState&&(AppState.selectedCharacterId=null),void clearCharacterFromUrl();let s=null;this._initialUrlCharacterHandled||(s=getCharacterIdFromUrl(),this._initialUrlCharacterHandled=!0);const o=void 0!==MobileView&&MobileView.isMobile();let r=s||e||null;r&&t.some(e=>String(e.id)===String(r))||(r=o?null:t[0]&&t[0].id),void 0!==AppState&&AppState&&(AppState.selectedCharacterId=r||null);const c=document.getElementById("characterGrid");if(c){if(Array.from(c.querySelectorAll(".character-card")).forEach(e=>e.classList.remove("is-selected")),r){const e=c.querySelector(`[data-id="${r}"]`);if(e&&(e.classList.add("is-selected"),void 0!==KeyboardNav&&KeyboardNav&&"function"==typeof KeyboardNav.getCharacterCards)){const t=KeyboardNav.getCharacterCards().indexOf(e);-1!==t&&(KeyboardNav.currentFocusIndex=t,KeyboardNav.updateFocus(!0))}}}if(r&&(r!==e||s))if(o){(async()=>{await viewCharacter(r,{skipKeyboardSync:!0,updateUrl:!1,openMobileModal:!1}),s&&requestAnimationFrame(()=>{requestAnimationFrame(()=>{AppState.selectedCharacterId===r&&MobileView.open(r)})})})()}else viewCharacter(r,{skipKeyboardSync:!0,updateUrl:!s,openMobileModal:!1});else r&&!o?(a&&a.classList.add("is-hidden"),n&&n.classList.remove("is-hidden"),l&&l.classList.remove("is-hidden"),i&&i.classList.remove("is-hidden")):r||o||(a&&a.classList.remove("is-hidden"),n&&n.classList.add("is-hidden"),l&&l.classList.add("is-hidden"),i&&i.classList.add("is-hidden"))},BATCH_RENDER_THRESHOLD:20,_cancelBatchedRender(){this._batchRenderFrameId&&(cancelAnimationFrame(this._batchRenderFrameId),this._batchRenderFrameId=null)},renderCharacterGrid(){DEBUG_MANAGER&&(console.log("\ud83c\udfa8 RENDER: Starting grid render with",AppState.filteredCharacters.length,"characters"),console.log("\ud83c\udfa8 RENDER: Character names:",AppState.filteredCharacters.map(e=>e.name).join(", "))),this._cancelBatchedRender();const e=document.getElementById("characterGrid"),t=document.getElementById("emptyState"),a=AppState.filteredCharacters;if(0===a.length)return e.innerHTML='\n                <div class="character-card new-character-card" onclick="createNewCharacter()">\n                    <div class="card-details">\n                        <div class="card-name">+ New Character</div>\n                    </div>\n                </div>\n            ',t&&t.classList.remove("show"),KeyboardNav.isActive=!0,void KeyboardNav.reset();t.classList.remove("show"),a.length>this.BATCH_RENDER_THRESHOLD?this._renderCharacterGridBatched(e,a):(e.innerHTML=a.map(e=>this.renderCharacterCard(e)).join(""),this._postRenderCharacterGrid(a))},_renderCharacterGridBatched(e,t){const a=this.RENDER_BATCH_SIZE;let n=0;e.innerHTML=t.map((e,t)=>`<div class="character-card character-card--skeleton" data-placeholder-id="${e.id}">\n                <div class="card-thumbnail"></div>\n                <div class="card-details">\n                    <div class="skeleton-name"></div>\n                    <div class="skeleton-info"></div>\n                </div>\n            </div>`).join("");const i=()=>{const l=Math.min(n+a,t.length);for(let a=n;a<l;a++){const n=t[a],i=e.querySelector(`[data-placeholder-id="${n.id}"]`);if(i){const e=document.createElement("div");e.innerHTML=this.renderCharacterCard(n);const t=e.firstElementChild;i.replaceWith(t),this._populateCardThumbnail(n)}}n=l,n<t.length?this._batchRenderFrameId=requestAnimationFrame(i):(this._batchRenderFrameId=null,this._postRenderCharacterGrid(t))};this._batchRenderFrameId=requestAnimationFrame(i)},_populateCardThumbnail(e){const t=document.getElementById(`card-thumb-${e.id}`);if(!t)return;if(t.classList.contains("card-thumbnail--image"))return;const a=window.CharacterSheet?window.CharacterSheet.getAsciiPortrait(e):e.customPortraitAscii||e.portrait?.ascii||e.asciiPortrait||null;if(a){t.innerHTML="";const e=document.createElement("pre");e.textContent=this.cropAsciiForThumbnail(a),t.appendChild(e)}},_postRenderCharacterGrid(e){e.forEach(e=>this._populateCardThumbnail(e)),KeyboardNav.isActive=!0,KeyboardNav.reset(),this._setupCardTooltips()},_setupCardTooltips(){let e=document.getElementById("card-tooltip-portal");e||(e=document.createElement("div"),e.id="card-tooltip-portal",document.body.appendChild(e)),document.querySelectorAll(".card-status-icon.has-tooltip").forEach(t=>{const a=t.querySelector(".custom-tooltip");if(!a)return;let n=null;t.addEventListener("mouseenter",()=>{const i=t.getBoundingClientRect();n=a.cloneNode(!0),n.classList.add("card-portal-tooltip"),n.style.cssText=`\n                    position: fixed;\n                    top: ${i.top}px;\n                    left: ${i.right+6}px;\n                    z-index: 10001;\n                    opacity: 1;\n                    transform: scale(1);\n                    pointer-events: none;\n                `,e.appendChild(n)}),t.addEventListener("mouseleave",()=>{n&&n.parentNode&&(n.parentNode.removeChild(n),n=null)})})},cropAsciiForThumbnail(e,t=80,a=160){const n=e.split("\n"),i=n.length,l=Math.min(i,t);return n.slice(0,l).map(e=>{if(e.length<=a)return e;const t=e.length-a,n=Math.floor(t/2);return e.slice(n,n+a)}).join("\n")},renderCharacterCard(e){const t=toSentenceCase(`${e.raceData?.name||e.race||"?"} ${e.classData?.name||e.class||"?"}`.trim()),a=Utils.escapeHtml(t||"?"),n=Utils.escapeHtml(e.name||"Unnamed Character"),i=window.CharacterSheet?window.CharacterSheet.getAsciiPortrait(e):e.customPortraitAscii||e.portrait?.ascii||e.asciiPortrait||null,l=i&&i.length>0,s=window.CharacterSheet?window.CharacterSheet.getOriginalPortraitUrl(e):e.originalPortraitUrl||e.portrait?.url||null;window.DEBUG_PORTRAITS&&console.log("\ud83d\uddbc\ufe0f [PORTRAIT DEBUG] renderCharacterCard",{characterId:e.id,characterName:e.name,context:"card",hasAscii:l,asciiLength:i?.length||0,url:s,portraitMetadataActiveId:e.portraitMetadata?.activeVersionId||null,portraitMetadataVersionsCount:e.portraitMetadata?.versions?.length||0});let o="original";try{window.StorageService&&StorageService.getPortraitViewMode?o=StorageService.getPortraitViewMode():"undefined"!=typeof CONFIG&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE&&(o=CONFIG.DEFAULT_PORTRAIT_VIEW_MODE)}catch(e){}let r="";(l||!!s)&&("original"===o&&!!s?r=`<div class="card-thumbnail card-thumbnail--image" id="card-thumb-${e.id}">\n                    <img src="${Utils.escapeHtml(s)}" alt="${n}" loading="lazy" decoding="async" width="600" height="800" onload="this.classList.add('is-loaded')" />\n                </div>`:l&&(r=`<div class="card-thumbnail" id="card-thumb-${e.id}"></div>`));const c=window.DemoCharacters&&window.DemoCharacters.isDemo(e),d=window.DemoCharacters&&window.DemoCharacters.isDemoMode(),m=c&&d?'<span class="card-demo-tag">SAMPLE</span>':"",p=e.is_shared||e.isShared,u=e.collaborator_count||e.collaboratorCount||0,h=u>0,g=p||h,v=isCharacterPinned(e.id),S=!!(e.campaignId||e.campaign_id),w=e.campaignName||e.campaign_name||null,y=e.owner_email||e.ownerEmail||null,f=e.last_updated_by_email||e.lastUpdatedByEmail||null,C=[];if(S){const e=w?Utils.escapeHtml(w):"In Campaign";C.push(`<span class="card-status-icon card-status-icon--campaign has-tooltip">\u2694<span class="custom-tooltip" data-position="right">${e}</span></span>`)}if(g){const t=e.updatedAt||e.updated_at;let a="";t&&(a=Utils.formatCompactDate(t));let n="";if(p){const e=`Shared by ${Utils.escapeHtml(y||"unknown")}`;let t="";a&&(t=f?`Last updated: ${a}<br>by ${Utils.escapeHtml(f)}`:`Last updated: ${a}`),n=t?`${e}<br>${t}`:e}else if(h){const e=1===u?"Shared with 1 user":`Shared with ${u} users`;let t="";a&&(t=f?`Last updated: ${a}<br>by ${Utils.escapeHtml(f)}`:`Last updated: ${a}`),n=t?`${e}<br>${t}`:e}else n="Shared";C.push(`<span class="card-status-icon card-status-icon--shared has-tooltip">\u2194<span class="custom-tooltip" data-position="right">${n}</span></span>`)}v&&C.push('<span class="card-status-icon card-status-icon--pinned">\u25c6</span>');const E=C.length>0?`<div class="card-status-icons">${C.join("")}</div>`:"";return`\n            <div class="character-card${g?" is-shared":""}${v?" is-pinned":""}" data-id="${e.id}" onclick="viewCharacter('${e.id}')">\n                ${m}\n                ${E}\n                ${r}\n                <div class="card-details">\n                    <div class="card-name">${n}</div>\n                    <div class="card-info">\n                        ${a}${e.level?` \u2022 Lvl ${e.level}`:""}\n                    </div>\n                </div>\n            </div>\n        `},updateCount(){const e=document.getElementById("searchInput"),t=document.getElementById("clearSearchBtn"),a=AppState.characters.length;e&&(e.disabled=0===a,0===a||MobileView.isMobile()?e.placeholder="Search":e.placeholder="Search "+a+" character"+(1!==a?"s":"")),t&&(t.disabled=0===a)},showCharacterSheet(e){const t=document.querySelector(".sheet-placeholder"),a=document.getElementById("characterSheet"),n=document.getElementById("sheetNavBar");document.getElementById("characterSheetPanel");t.classList.add("is-hidden"),a.classList.remove("is-hidden"),n&&n.classList.remove("is-hidden");const i=window.DemoCharacters&&window.DemoCharacters.isDemo(e),l=window.DemoCharacters&&window.DemoCharacters.isDemoMode(),s=e.is_shared||e.isShared,o=e.collaborator_count||e.collaboratorCount||0,r=o>0,c=!(i||s&&"edit"!==e.permission),d="function"==typeof window.isCharacterPinned&&window.isCharacterPinned(e.id),m=e.campaignId||e.campaign_id;let p=e.campaignName||e.campaign_name||null;if(m&&!p&&void 0!==CampaignUI){const e=CampaignUI._currentCampaign;e&&String(e.id)===String(m)&&(p=e.name||null)}if(m&&!p){const e=document.querySelector(".campaign-area[data-campaign-id]"),t=e?.dataset?.campaignId;if(t&&String(t)===String(m)){const t=e.querySelector(".campaign-name");t&&(p=t.textContent?.trim()||null)}}m&&!p&&void 0!==CampaignUI&&CampaignUI.getCharacterCampaign(e.id).then(e=>{if(e?.campaign?.name){const t=document.querySelector(".sheet-status-badge--campaign .custom-tooltip");t&&(t.textContent=e.campaign.name)}}).catch(()=>{}),a.innerHTML=CharacterSheet.render(e,{context:"manager",showPortrait:!0,onRename:!i&&!s,onEdit:c,onDelete:!i&&!s,onGeneratePortrait:c,onPrint:!0,onShare:!i&&!l&&!s,onLeave:s,isShared:s,hasCollaborators:r,collaboratorCount:o,ownerEmail:e.owner_email||e.ownerEmail,lastUpdatedByEmail:e.last_updated_by_email||e.lastUpdatedByEmail,isPinned:d,campaignName:p,hasPastAdventures:CampaignUI._pastCampaignsCount>0});const u=document.querySelector(".sheet__content"),h=document.querySelector(".sheet__layout"),g=a.querySelector(".sheet-title-header");if(u&&h&&g){const e=u.querySelector(".sheet-title-header");e&&e.remove(),u.insertBefore(g,h)}CharacterSheet.populatePortrait(e),ExpandedView.isExpanded()&&CharacterNavBar.update(e.id)}};function printCharacterSheet(){document.querySelector(".character-sheet")?window.print():alert("No character sheet to print yet.")}function createNewCharacter(){"number"!=typeof _creationQuotaRemaining||0!==_creationQuotaRemaining?window.location.href="builder.html":showAlertDialog("You've reached your daily limit for character creation. Come back tomorrow for more adventures!")}let _creationQuotaRemaining=null;function _formatCreationQuotaTooltip(){const e=window._creationQuotaRemaining,t=window._creationQuotaLimit;if("number"!=typeof e)return"";if(-1===e)return"";return"number"==typeof t?e+"/"+t+" remaining today":e+" remaining today"}function _updateQuotaTooltipText(){const e=_formatCreationQuotaTooltip(),t=document.getElementById("gridNewCharacterTooltip");t&&(t.textContent=e)}async function updateCreationQuotaState(){const e=document.getElementById("overflowNewCharBtn"),t=document.getElementById("gridNewCharacterBtn"),a=document.getElementById("gridNewCharacterTooltip"),n=(n,i,l)=>{[e,t].forEach(e=>{e&&(e.disabled=n,e.title="",l?e.classList.add("is-quota-exhausted"):e.classList.remove("is-quota-exhausted"))}),a&&(a.textContent=i)};if(e||t)try{let e=null;if(window.AIService&&"function"==typeof AIService.getCreationQuotaStatus)e=await AIService.getCreationQuotaStatus();else{const t={"Content-Type":"application/json"},a=window.AuthService?.getToken?.();a&&(t.Authorization=`Bearer ${a}`);const n=window.DanddyConfig?.BACKEND_ORIGIN||window.CONFIG?.BACKEND_URL||"",i=await fetch(`${n}/api/ai/characters/quota`,{method:"GET",headers:t});i.ok&&(e=await i.json())}if(!e)return _creationQuotaRemaining=null,window._creationQuotaRemaining=null,void n(!1,"",!1);if(_creationQuotaRemaining=e.remaining,window._creationQuotaRemaining=e.remaining,window._creationQuotaLimit="number"==typeof e.limit?e.limit:null,window._creationQuotaResetAt=e.resetAt||e.reset_at||null,-1===e.remaining)return n(!1,"",!1),void _updateQuotaTooltipText();0===e.remaining?n(!0,"Daily limit reached",!0):-1===e.remaining?n(!1,"",!1):n(!1,`${e.remaining} creation${1===e.remaining?"":"s"} remaining`,!1),_updateQuotaTooltipText()}catch(e){console.warn("Failed to check creation quota:",e),_creationQuotaRemaining=null,window._creationQuotaRemaining=null,n(!1,"",!1),_updateQuotaTooltipText()}}async function updateImageQuotaState(){try{let e=null;if(window.AIService&&"function"==typeof AIService.getImageQuotaStatus)e=await AIService.getImageQuotaStatus();else{const t={"Content-Type":"application/json"},a=window.AuthService?.getToken?.();a&&(t.Authorization=`Bearer ${a}`);const n=window.DanddyConfig?.BACKEND_ORIGIN||window.CONFIG?.BACKEND_URL||"",i=await fetch(`${n}/api/ai/images/quota`,{method:"GET",headers:t});i.ok&&(e=await i.json())}const t=window._imageQuotaRemaining;if(!e)return window._imageQuotaRemaining=null,window._imageQuotaLimit=null,void(window._imageQuotaResetAt=null);window._imageQuotaRemaining=e.remaining,window._imageQuotaLimit="number"==typeof e.limit?e.limit:null,window._imageQuotaResetAt=e.resetAt||e.reset_at||null,t!==e.remaining&&AppState.selectedCharacterId&&viewCharacter(AppState.selectedCharacterId,{skipKeyboardSync:!0})}catch(e){console.warn("Failed to check image quota:",e),window._imageQuotaRemaining=null}}function showSheetLoading(e){const t=document.querySelector(".sheet__loading"),a=document.querySelector(".sheet__content");t&&a&&(e?a.classList.add("is-loading"):a.classList.remove("is-loading"))}async function viewCharacter(e,t={}){const{fromKeyboard:a=!1,skipKeyboardSync:n=!1,updateUrl:i=!0,openMobileModal:l=!0}=t,s=++latestViewCharacterRequestId;window.DEBUG_PORTRAITS&&console.log("\ud83d\uddbc\ufe0f [PORTRAIT DEBUG] viewCharacter called",{id:e,requestId:s,options:t,timestamp:(new Date).toISOString()}),void 0!==AppState&&AppState&&(AppState.selectedCharacterId=e);let o=null,r=null;if(void 0!==AppState&&AppState&&Array.isArray(AppState.filteredCharacters)){const t=String(e);o=AppState.filteredCharacters.find(e=>e&&String(e.id)===t),o?r="filteredCharacters":(o=AppState.characters.find(e=>e&&String(e.id)===t),o&&(r="characters"))}const c=!(!o||!o._isLite);if((c||!o)&&showSheetLoading(!0),c)try{const t=await CharacterStorage.getById(e);o=t,r="storage_full_from_lite";const a=String(e);if(void 0!==AppState&&AppState){if(Array.isArray(AppState.characters)){const e=AppState.characters.findIndex(e=>e&&String(e.id)===a);e>=0&&(AppState.characters[e]=t)}if(Array.isArray(AppState.filteredCharacters)){const e=AppState.filteredCharacters.findIndex(e=>e&&String(e.id)===a);e>=0&&(AppState.filteredCharacters[e]=t)}}}catch(e){if(e&&e.message&&e.message.toLowerCase().includes("session has expired"))return void showSessionExpiredModal();console.warn("Failed to upgrade lite character to full payload:",e)}if(!o)try{o=await CharacterStorage.getById(e),r="storage"}catch(e){if(e.message&&e.message.toLowerCase().includes("session has expired"))return void showSessionExpiredModal();console.warn("Failed to load character from storage:",e)}if(s!==latestViewCharacterRequestId)return window.DEBUG_PORTRAITS&&console.log("\ud83d\uddbc\ufe0f [PORTRAIT DEBUG] viewCharacter ABANDONED (stale request)",{id:e,requestId:s,latestRequestId:latestViewCharacterRequestId}),void showSheetLoading(!1);if(o){o=await autoRecalculateLevelStats(o),showSheetLoading(!1),window.DEBUG_PORTRAITS&&console.log("\ud83d\uddbc\ufe0f [PORTRAIT DEBUG] viewCharacter rendering",{id:o.id,name:o.name,source:r,requestId:s,portraitMetadataActiveId:o.portraitMetadata?.activeVersionId||null,portraitMetadataVersionsCount:o.portraitMetadata?.versions?.length||0,originalPortraitUrl:o.originalPortraitUrl||null,portraitUrl:o.portrait?.url||null,hasCustomPortraitAscii:!!o.customPortraitAscii,hasAsciiPortrait:!!o.asciiPortrait,timestamp:(new Date).toISOString()}),UI.showCharacterSheet(o);const t=document.querySelector(".sidebar__content")||document.querySelector(".sheet__sidebar");t&&(t.innerHTML=ExpandedView._renderCampaignSkeleton(),t.classList.remove("is-hidden")),ExpandedView._loadCampaignPanel().then(()=>{CampaignUI._pastCampaignsCount>0&&o&&UI.showCharacterSheet(o)}).catch(()=>{}),i&&e&&updateUrlWithCharacter(e),document.querySelectorAll(".character-card").forEach(e=>{e.classList.remove("is-selected")});const a=document.querySelector(`[data-id="${e}"]`);if(a&&(a.classList.add("is-selected"),!n&&void 0!==KeyboardNav&&KeyboardNav.getCharacterCards)){const e=KeyboardNav.getCharacterCards().indexOf(a);-1!==e&&(KeyboardNav.currentFocusIndex=e,KeyboardNav.updateFocus(!0))}void 0!==MobileView&&MobileView.isMobile()&&l&&requestAnimationFrame(()=>{requestAnimationFrame(()=>{AppState.selectedCharacterId===e&&MobileView.open(e)})})}else showSheetLoading(!1)}function updateUrlWithCharacter(e){const t=new URL(window.location.href);e?t.searchParams.set("character",e):t.searchParams.delete("character"),t.searchParams.delete("from"),history.replaceState({characterId:e},"",t.toString())}function getCharacterIdFromUrl(){return new URLSearchParams(window.location.search).get("character")}function clearCharacterFromUrl(){const e=new URL(window.location.href);e.searchParams.delete("character"),history.replaceState({},"",e.toString())}window._imageQuotaRemaining=null,window._imageQuotaLimit=null,window._imageQuotaResetAt=null,window._creationQuotaRemaining=null,window._creationQuotaLimit=null,window._creationQuotaResetAt=null;let currentEditCharacterId=null,originalEditLevel=null,originalEditModalContent=null;function selectAlignment(e,t){const a=document.getElementById("editAlignment");a&&(a.value=e);const n=document.getElementById("editAlignment-label");n&&(n.textContent=t);const i=document.getElementById("editAlignment-trigger");if(i){const t=i.closest(".selector-shell");if(t){t.querySelectorAll(".selector-option").forEach(t=>{const a=t.getAttribute("data-value")===e;t.classList.toggle("is-selected",a),t.setAttribute("aria-selected",a?"true":"false")})}}}function selectSex(e,t){const a=document.getElementById("editSex");a&&(a.value=e);const n=document.getElementById("editSex-label");n&&(n.textContent=t);const i=document.getElementById("editSex-trigger");if(i){const t=i.closest(".selector-shell");if(t){t.querySelectorAll(".selector-option").forEach(t=>{const a=t.getAttribute("data-value")===e;t.classList.toggle("is-selected",a),t.setAttribute("aria-selected",a?"true":"false")})}}}async function editCharacter(e,t={}){const{scrollTo:a}=t,n=await CharacterStorage.getById(e);if(!n)return;currentEditCharacterId=e;const i=document.getElementById("editDetailsModal");if(i){const e=i.querySelector(".modal-content");e&&(originalEditModalContent?e.innerHTML=originalEditModalContent:originalEditModalContent=e.innerHTML),i.classList.remove("closing")}const l=CharacterSheet._parseCharacterData(n),s=(e,t)=>{const a=document.getElementById(e);a&&(a.value=t||"")};s("editName",n.name||"");const o=null!=l.level?Number(l.level):Number(n.level||1);originalEditLevel=o,s("editLevel",o);s("editExperiencePoints",null!=l.experiencePoints?Number(l.experiencePoints):Number(n.experiencePoints||0));const r=n.alignment||"n";s("editAlignment",r);const c=n.sex||"";s("editSex",c);const d=l.abilities||{};s("editStr",null!=d.str?d.str:""),s("editDex",null!=d.dex?d.dex:""),s("editCon",null!=d.con?d.con:""),s("editInt",null!=d.int?d.int:""),s("editWis",null!=d.wis?d.wis:""),s("editCha",null!=d.cha?d.cha:""),s("editHpMax",null!=l.hpMax?l.hpMax:""),s("editHpCurrent",null!=l.hpCurrent?l.hpCurrent:"");s("editHpTemp",n.hitPoints&&"object"==typeof n.hitPoints&&n.hitPoints.temp||0),s("editArmorClass",null!=l.armorClass?l.armorClass:""),s("editInitiative",null!=l.initiative?l.initiative:""),s("editSpeed",null!=l.speed?l.speed:""),s("editProfBonus",null!=l.proficiencyBonus?l.proficiencyBonus:"");s("editSkills",(l.skillProficiencies||[]).map(e=>CharacterSheet.formatSkillName(e)).join("\n"));s("editEquipment",(l.equipment||[]).join("\n"));s("editTools",(l.toolProficiencies||[]).map(e=>CharacterSheet.formatSkillName(e)).join("\n"));s("editLanguages",(l.languages||[]).join("\n")),s("editBackstory",n.backstory||"");const m=n.is_shared||n.isShared,p=document.getElementById("editName");if(p&&(m?(p.disabled=!0,p.title="Only the owner can rename this character",p.classList.add("is-owner-only")):(p.disabled=!1,p.title="",p.classList.remove("is-owner-only"))),i){i.classList.add("show"),setTimeout(()=>ModalManager.snapshotForm("editDetailsModal"),50);const e=r,t=c;setTimeout(()=>{const n={lg:"Lawful Good",ng:"Neutral Good",cg:"Chaotic Good",ln:"Lawful Neutral",n:"True Neutral",cn:"Chaotic Neutral",le:"Lawful Evil",ne:"Neutral Evil",ce:"Chaotic Evil"}[e]||"Select Alignment",i=document.getElementById("editAlignment-label");i&&(i.textContent=n);const l=document.getElementById("editAlignment-trigger");if(l){const t=l.closest(".selector-shell");if(t){t.querySelectorAll(".selector-option").forEach(t=>{const a=t.getAttribute("data-value")===e;t.classList.toggle("is-selected",a),t.setAttribute("aria-selected",a?"true":"false")})}}const s={male:"Male",female:"Female"}[t]||"Select Sex",o=document.getElementById("editSex-label");o&&(o.textContent=s);const r=document.getElementById("editSex-trigger");if(r){const e=r.closest(".selector-shell");if(e){e.querySelectorAll(".selector-option").forEach(e=>{const a=e.getAttribute("data-value")===t;e.classList.toggle("is-selected",a),e.setAttribute("aria-selected",a?"true":"false")})}}if(a){const e=document.getElementById(a);e&&setTimeout(()=>{e.scrollIntoView({behavior:"smooth",block:"start"})},100)}},0)}}function closeEditDetailsModal(){const e=document.getElementById("editDetailsModal");if(!e)return currentEditCharacterId=null,void(originalEditLevel=null);const t=document.getElementById("editDetailsLoading");t&&t.classList.remove("is-visible"),animateModalClose(e,{removeOnClose:!1,onClosed:()=>{currentEditCharacterId=null,originalEditLevel=null}})}async function saveEditDetails(){if(!currentEditCharacterId)return void closeEditDetailsModal();const e=await CharacterStorage.getById(currentEditCharacterId);if(!e)return void closeEditDetailsModal();const t=document.getElementById("editDetailsLoading");t&&t.classList.add("is-visible");const a=e=>{const t=document.getElementById(e);return t?t.value.split("\n").map(e=>e.trim()).filter(e=>e.length>0):[]},n=a("editSkills"),i=a("editEquipment"),l=a("editTools"),s=a("editLanguages"),o=document.getElementById("editBackstory"),r=o?o.value.trim():"",c=document.getElementById("editName"),d=c?c.value.trim():"",m=e=>{const t=document.getElementById(e);if(!t)return null;const a=t.value.trim();if(!a)return null;const n=parseInt(a,10);return Number.isFinite(n)?n:null};let p=m("editLevel");const u=m("editExperiencePoints");if(null!==p&&(p<1||p>20))return t&&t.classList.remove("is-visible"),void showAlertDialog(`Level must be between 1 and 20.\n\nYou entered: ${p}`);const h=p??originalEditLevel??1;let g=!1;if(null!==u){const e=calculateLevelFromXP(u);if(e>h){p=e,g=!0;const t=document.getElementById("editLevel");t&&(t.value=e)}}const v=p;let S="manual",w=null,y=null,f=null;if(null!==v&&null!==originalEditLevel&&v!==originalEditLevel){if(y=originalEditLevel,f=v,t&&t.classList.remove("is-visible"),S=await showLevelChangeDialog(originalEditLevel,v,g),"cancel"===S||"manual"===S)return;if(t&&t.classList.add("is-visible"),"auto"===S){const t={str:m("editStr")??e.abilities?.str??10,dex:m("editDex")??e.abilities?.dex??10,con:m("editCon")??e.abilities?.con??10,int:m("editInt")??e.abilities?.int??10,wis:m("editWis")??e.abilities?.wis??10,cha:m("editCha")??e.abilities?.cha??10};w=calculateStatsForLevel({...e,abilities:t},v)}}const C={},E=m("editStr"),I=m("editDex"),L=m("editCon"),b=m("editInt"),M=m("editWis"),A=m("editCha");null!==E&&(C.str=E),null!==I&&(C.dex=I),null!==L&&(C.con=L),null!==b&&(C.int=b),null!==M&&(C.wis=M),null!==A&&(C.cha=A);let _=m("editHpMax"),x=m("editHpCurrent");const P=m("editHpTemp"),B=m("editArmorClass"),k=m("editInitiative"),T=m("editSpeed");let U=m("editProfBonus"),D=null,$=null,R=null;w&&(_=w.hpMax,x=w.hpMax,U=w.proficiencyBonus,D=w.spellSlots,$=w.hitDiceMax,R=w.classResources);const N=document.getElementById("editAlignment")?.value||"",F=document.getElementById("editSex")?.value||"",O={skillProficiencies:n.map(e=>e.toLowerCase().replace(/\s+/g,"-")),equipment:i,toolProficiencies:l.map(e=>e.toLowerCase().replace(/\s+/g,"-")),languages:s,backstory:r},H=e.is_shared||e.isShared;d&&!H?O.name=d:d||console.warn("\u26a0\ufe0f EDIT: Name field was empty - preserving existing name"),null!==p&&(O.level=p),null!==u&&(O.experiencePoints=u),N&&(O.alignment=N),F&&(O.sex=F),Object.keys(C).length>0&&(O.abilities={...e.abilities||e.abilityScores||{},...C});if(null!==_||null!==x||null!==P){const t=e.hitPoints,a=t&&"object"==typeof t?{...t}:{max:t||0,current:t||0,temp:0};null!==_&&(a.max=_),null!==x&&(a.current=x),null!==P&&(a.temp=P),O.hitPoints=a}null!==B&&(O.armorClass=B),null!==k&&(O.initiative=k),null!==T&&(O.speed=T),null!==U&&(O.proficiencyBonus=U),D&&(O.spellSlots=D,O.spellSlotsUsed={}),$&&(O.hitDiceMax=$,O.hitDiceCurrent=null),R&&Object.keys(R).length>0&&(O.classResources=R);try{if(await CharacterStorage.update(currentEditCharacterId,O),markUserChanges(),await AppState.loadCharacters(),UI.render(),viewCharacter(currentEditCharacterId),showNotification("Character details updated"),closeEditDetailsModal(),w&&w.spellProgression&&null!==y&&null!==f){const e=await CharacterStorage.getById(currentEditCharacterId);e&&setTimeout(()=>{checkAndPromptForNewSpells(e,y,f)},400)}}catch(e){console.error("Failed to save character details:",e),showNotification("Failed to save changes","error")}finally{const e=document.getElementById("editDetailsLoading");e&&e.classList.remove("is-visible")}}function getManagerModalHost(){return document.querySelector(".app-root")||document.querySelector(".terminal-frame")||document.querySelector(".terminal-container")||document.body}async function renameCharacter(e){const t=await CharacterStorage.getById(e);if(!t)return;if(t.is_shared||t.isShared)return void showNotification("Only the owner can rename this character","error");const a=document.getElementById("renameModal");a&&a.remove();const n=`\n      <div id="renameModal" class="modal show">\n        <div class="modal-content">\n          <div class="modal-header">\n            <h2 class="modal-title">RENAME CHARACTER</h2>\n            <button class="modal-close" onclick="closeRenameModal()">&times;</button>\n          </div>\n          <div class="modal-body">\n            <p class="terminal-text-small modal-section-label">New name:</p>\n            <input type="text" id="renameInput" class="terminal-input" value="${Utils.escapeHtml(t.name||"")}" data-1p-ignore>\n          </div>\n          <div class="modal-footer modal-footer-end">\n            <button class="terminal-btn" id="renameCancel">Cancel</button>\n            <button class="terminal-btn terminal-btn-primary" id="renameOk">Apply</button>\n          </div>\n        </div>\n      </div>\n    `;getManagerModalHost().insertAdjacentHTML("beforeend",n);const i=document.getElementById("renameModal"),l=document.getElementById("renameInput"),s=document.getElementById("renameCancel"),o=document.getElementById("renameOk"),r=()=>{i&&animateModalClose(i,{removeOnClose:!0})};s.addEventListener("click",r),o.addEventListener("click",async()=>{const t=l.value.trim();t&&(r(),await CharacterStorage.update(e,{name:t}),markUserChanges(),await AppState.loadCharacters(),UI.render(),viewCharacter(e),showNotification("Character renamed to: "+t))}),"function"==typeof focusFirstFieldInModal?focusFirstFieldInModal(i):l&&(l.focus(),l.select())}async function openShareModal(e){if(!AuthService.isAuthenticated())return void showNotification("Please log in to share characters","error");const t=await CharacterStorage.getById(e);if(!t)return void showNotification("Character not found","error");const a=document.getElementById("shareModal");a&&a.remove();const n=`\n      <div id="shareModal" class="modal show">\n        <div class="modal-content">\n          <div class="modal-header">\n            <h2 class="modal-title">SHARE CHARACTER</h2>\n            <button class="modal-close" onclick="closeShareModal()">&times;</button>\n          </div>\n          <div class="modal-body">\n            <p class="terminal-text">Sharing <strong>${Utils.escapeHtml(t.name||"Unnamed")}</strong></p>\n            \n            <div id="shareCollaboratorsSection" class="share-section" style="margin-top: 1.25rem; display: none;">\n              <label class="terminal-text-small modal-section-label">PEOPLE WITH ACCESS</label>\n              <div id="shareCollaboratorsList" class="share-collaborators-list"></div>\n            </div>\n            \n            <div class="share-section" style="margin-top: 1.25rem;">\n              <label class="terminal-text-small modal-section-label" for="shareUsernameInput">ADD PERSON</label>\n              <div class="share-add-row">\n                <input type="text" id="shareUsernameInput" class="terminal-input" placeholder="@username" autocomplete="off" data-1p-ignore>\n                <button class="terminal-btn" id="shareAddBtn">Add</button>\n              </div>\n              <p id="shareUsernameError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>\n            </div>\n          </div>\n          <div class="modal-footer modal-footer-end">\n            <button class="terminal-btn terminal-btn-primary" id="shareDoneBtn">Done</button>\n          </div>\n        </div>\n      </div>\n    `;getManagerModalHost().insertAdjacentHTML("beforeend",n);const i=document.getElementById("shareModal"),l=document.getElementById("shareUsernameInput"),s=document.getElementById("shareUsernameError"),o=document.getElementById("shareAddBtn"),r=document.getElementById("shareDoneBtn"),c=document.getElementById("shareCollaboratorsSection"),d=document.getElementById("shareCollaboratorsList"),m=e=>{s.textContent=e,s.style.display="block"},p=async()=>{try{const[t,a]=await Promise.all([CharacterCloudStorage.getCollaborators(e),CharacterCloudStorage.getPendingSharesForCharacter(e)]);((t,a)=>{const n=t&&t.length>0,i=a&&a.length>0;if(!n&&!i)return c.style.display="none",void(d.innerHTML="");c.style.display="block";const l=(t||[]).map(e=>{const t=e.username?`@${Utils.escapeHtml(e.username)}`:Utils.escapeHtml(e.user_email);return`\n            <div class="share-collaborator-item" data-id="${e.id}" data-type="collaborator">\n                <span class="share-collaborator-email">${t}</span>\n                <button class="share-collaborator-remove" title="Remove access" data-id="${e.id}" data-type="collaborator">&times;</button>\n            </div>\n        `}).join(""),s=(a||[]).map(e=>`\n            <div class="share-collaborator-item share-collaborator-pending" data-id="${e.id}" data-type="pending">\n                <span class="share-collaborator-email">${Utils.escapeHtml(e.to_email)}</span>\n                <span class="share-collaborator-status">PENDING</span>\n                <button class="share-collaborator-remove" title="Cancel invitation" data-id="${e.id}" data-type="pending">&times;</button>\n            </div>\n        `).join("");d.innerHTML=l+s,d.querySelectorAll('.share-collaborator-remove[data-type="collaborator"]').forEach(t=>{t.addEventListener("click",async t=>{const a=t.target.dataset.id,n=d.querySelector(`.share-collaborator-item[data-id="${a}"][data-type="collaborator"]`);n&&n.classList.add("removing");try{await CharacterCloudStorage.removeCollaborator(e,a),await p(),showNotification("Access removed")}catch(e){n&&n.classList.remove("removing"),showNotification(e.message||"Failed to remove access","error")}})}),d.querySelectorAll('.share-collaborator-remove[data-type="pending"]').forEach(t=>{t.addEventListener("click",async t=>{const a=t.target.dataset.id,n=d.querySelector(`.share-collaborator-item[data-id="${a}"][data-type="pending"]`);n&&n.classList.add("removing");try{await CharacterCloudStorage.cancelPendingShare(e,a),await p(),showNotification("Invitation canceled")}catch(e){n&&n.classList.remove("removing"),showNotification(e.message||"Failed to cancel invitation","error")}})})})(t,a)}catch(e){console.error("Failed to load access list:",e),c.style.display="none"}};p(),r.addEventListener("click",()=>{i&&animateModalClose(i,{removeOnClose:!0})}),l.addEventListener("input",()=>{s.style.display="none"}),l.addEventListener("keydown",e=>{"Enter"===e.key&&(e.preventDefault(),o.click())}),o.addEventListener("click",async()=>{let t=l.value.trim();if(!t)return void m("Please enter a username");t.startsWith("@")||(t="@"+t);const a=t.toLowerCase();if(/^@[a-zA-Z0-9_]{3,30}$/.test(t)){o.disabled=!0,o.textContent="ADDING...";try{const t={to_username:a.substring(1)};await CharacterCloudStorage.shareCharacterByUsernameOrEmail(e,t),l.value="",showNotification(`Invitation sent to ${a}`),await p()}catch(e){m(e.message||"Failed to share character")}finally{o.disabled=!1,o.textContent="Add"}}else m("Username must be 3-30 characters (letters, numbers, underscores)")}),"function"==typeof focusFirstFieldInModal?focusFirstFieldInModal(i):l&&l.focus()}function closeShareModal(){const e=document.getElementById("shareModal");e&&animateModalClose(e,{removeOnClose:!0})}async function checkPendingShares(){if(AuthService.isAuthenticated())try{const e=await CharacterCloudStorage.getPendingShares();e&&e.length>0&&showPendingSharesModal(e)}catch(e){console.error("Failed to check pending shares:",e)}}function showPendingSharesModal(e){if(!e||0===e.length)return;const t=document.getElementById("pendingSharesModal");t&&t.remove();const a=e.length,n=`\n      <div id="pendingSharesModal" class="modal show">\n        <div class="modal-content pending-shares-modal">\n          <div class="modal-header">\n            <h2 class="modal-title">${1===a?"CHARACTER SHARED WITH YOU":`${a} CHARACTERS SHARED WITH YOU`}</h2>\n            <button class="modal-close" onclick="closePendingSharesModal()">&times;</button>\n          </div>\n          <div class="modal-body">\n            <p class="terminal-text-small terminal-text-dim" style="margin-bottom: 1rem;">\n              ${1===a?"Someone shared a character with you!":"Other users have shared characters with you!"} \n              Add them to your collection or ignore to dismiss.\n            </p>\n            <div class="pending-shares-list">\n              ${e.map((e,t)=>{const a=e.character,n=e=>e?e.replace(/_/g," ").replace(/\b\w/g,e=>e.toUpperCase()):"\u2014",i=Utils.escapeHtml(a.name||"Unnamed"),l=Utils.escapeHtml(n(a.race||"Unknown")),s=Utils.escapeHtml(n(a.character_class||"Unknown")),o=a.level||1,r=(Utils.escapeHtml(n(a.background||"\u2014")),e.from_username?`@${Utils.escapeHtml(e.from_username)}`:Utils.escapeHtml(e.from_email||"Unknown")),c=(Utils.escapeHtml(n(a.sex)),new Date(e.created_at).toLocaleDateString());let d='<div class="share-card-portrait-placeholder">No Portrait</div>';return a.original_portrait_url?d=`<img class="share-card-portrait-image" src="${Utils.escapeHtml(a.original_portrait_url)}" alt="${i} portrait" />`:a.ascii_portrait&&(d=`<pre class="share-card-portrait">${Utils.escapeHtml(a.ascii_portrait)}</pre>`),`\n          <div class="pending-share-card" data-share-id="${e.id}" data-index="${t}">\n            <div class="share-card-layout">\n              <div class="share-card-portrait-col">\n                ${d}\n              </div>\n              <div class="share-card-info-col">\n                <h3 class="share-card-name">${i}</h3>\n                <div class="share-card-stats">\n                  <div class="share-card-stat">\n                    <span class="share-card-label">Race</span>\n                    <span class="share-card-value">${l}</span>\n                  </div>\n                  <div class="share-card-stat">\n                    <span class="share-card-label">Class</span>\n                    <span class="share-card-value">${s}</span>\n                  </div>\n                  <div class="share-card-stat">\n                    <span class="share-card-label">Level</span>\n                    <span class="share-card-value">${o}</span>\n                  </div>\n                </div>\n                <p class="share-card-from">\n                  From: ${r} \xb7 ${c}\n                </p>\n                <div class="share-card-actions">\n                  <button class="terminal-btn pending-share-ignore" data-share-id="${e.id}">Ignore</button>\n                  <button class="terminal-btn pending-share-accept" data-share-id="${e.id}">Add character</button>\n                </div>\n              </div>\n            </div>\n          </div>\n        `}).join("")}\n            </div>\n          </div>\n        </div>\n      </div>\n    `;getManagerModalHost().insertAdjacentHTML("beforeend",n);const i=document.getElementById("pendingSharesModal");i.querySelectorAll(".pending-share-accept").forEach(e=>{e.addEventListener("click",async e=>{const t=e.target.dataset.shareId;await handleAcceptShare(t)})}),i.querySelectorAll(".pending-share-ignore").forEach(e=>{e.addEventListener("click",async e=>{const t=e.target.dataset.shareId;await handleDismissShare(t)})})}async function handleAcceptShare(e){const t=document.querySelector(`.pending-share-card[data-share-id="${e}"]`),a=t?.querySelector(".pending-share-accept");a&&(a.disabled=!0,a.textContent="ADDING...");try{const a=await CharacterCloudStorage.acceptShare(e);t&&(t.style.opacity="0.5",t.style.pointerEvents="none",setTimeout(()=>t.remove(),300)),setTimeout(()=>{0===document.querySelectorAll(".pending-share-card").length&&closePendingSharesModal()},350),await AppState.loadCharacters(),UI.render(),showNotification("Character added to your collection!"),a&&a.character_id&&viewCharacter(a.character_id)}catch(e){a&&(a.disabled=!1,a.textContent="ADD CHARACTER"),showNotification(e.message||"Failed to add character","error")}}async function handleDismissShare(e){const t=document.querySelector(`.pending-share-card[data-share-id="${e}"]`),a=t?.querySelector(".pending-share-ignore");a&&(a.disabled=!0,a.textContent="IGNORING...");try{await CharacterCloudStorage.dismissShare(e),t&&(t.style.opacity="0.5",t.style.pointerEvents="none",setTimeout(()=>t.remove(),300)),setTimeout(()=>{0===document.querySelectorAll(".pending-share-card").length&&closePendingSharesModal()},350),showNotification("Share dismissed")}catch(e){a&&(a.disabled=!1,a.textContent="Ignore"),showNotification(e.message||"Failed to dismiss share","error")}}function closePendingSharesModal(){const e=document.getElementById("pendingSharesModal");e&&animateModalClose(e,{removeOnClose:!0})}let currentPortraitCharacterId=null,currentPortraitStyle=null;function formatStyleLabel(e){if(!e)return"";let t=String(e).replace(/^Custom:\s*/i,"");return t=t.replace(/\s*\(default\)\s*$/i,""),t=t.replace(/[-_]/g," "),t.length>0&&(t=t.split(" ").map(e=>e.charAt(0).toUpperCase()+e.slice(1).toLowerCase()).join(" ")),t}async function populatePortraitStyleDropdown(e){const t=document.getElementById("portraitStyleMenu"),a=document.getElementById("portraitStyleLabel");if(!t)return null;if(t.innerHTML="",window.PortraitPrompt&&"function"==typeof PortraitPrompt.syncFromAPI)try{await PortraitPrompt.syncFromAPI()}catch(e){console.warn("populatePortraitStyleDropdown: API sync failed",e)}let n=[],i="cinematic-inks";try{window.PortraitPrompt&&("function"==typeof PortraitPrompt.getThemes&&(n=PortraitPrompt.getThemes()||[]),"function"==typeof PortraitPrompt.getDefaultThemeId&&(i=PortraitPrompt.getDefaultThemeId()||i))}catch(e){console.warn("populatePortraitStyleDropdown: Error getting themes",e)}n.length||(n=[{id:"cinematic-inks",label:"Cinematic Inks (default)"}]),n=n.slice().sort((e,t)=>{const a=(e.id||"").toLowerCase(),n=(t.id||"").toLowerCase();return a.localeCompare(n)});const l=e||i;let s=formatStyleLabel(i);return n.forEach(e=>{const a=formatStyleLabel(e.id),n=e.id===l;n&&(s=a);const i=document.createElement("button");i.type="button",i.className="selector-option"+(n?" is-selected":""),i.setAttribute("role","option"),i.setAttribute("data-value",e.id),i.setAttribute("aria-selected",n?"true":"false"),i.innerHTML=`<span class="selector-option-label">${a}</span>`,t.appendChild(i)}),a&&(a.textContent=s),currentPortraitStyle=l,initPortraitStyleSelector(),l}function initPortraitStyleSelector(){const e=document.getElementById("portraitStyleMenu"),t=document.getElementById("portraitStyleLabel"),a=document.getElementById("portraitStyleTrigger");if(!e)return;const n=e.querySelectorAll(".selector-option");n.forEach(e=>{e.addEventListener("click",i=>{i.stopPropagation();const l=e.getAttribute("data-value"),s=e.querySelector(".selector-option-label");l&&s&&(t&&(t.textContent=s.textContent.trim()),currentPortraitStyle=l,n.forEach(e=>{const t=e.getAttribute("data-value")===l;e.classList.toggle("is-selected",t),e.setAttribute("aria-selected",t?"true":"false")}),a&&window.CharacterSheet&&"function"==typeof CharacterSheet.toggleSelectorMenu&&CharacterSheet.toggleSelectorMenu(a))})})}async function generatePortraitForCharacter(e){let t;try{t=await CharacterStorage.getById(e)}catch(e){return e.message&&e.message.toLowerCase().includes("session has expired")?void showSessionExpiredModal():(console.error("Failed to load character for portrait generation:",e),void showAlertDialog("Failed to load character. Please try again."))}if(!t)return void showAlertDialog("Character not found. It may have been deleted or not yet synced.");if(window.DemoCharacters&&DemoCharacters.isDemo(t))return void showAlertDialog("Custom art generation is not available for sample characters. Create your own character to generate custom portraits!");if("number"==typeof window._imageQuotaRemaining&&0===window._imageQuotaRemaining){return void(window.DemoCharacters&&"function"==typeof DemoCharacters.isDemoMode&&DemoCharacters.isDemoMode()?showAlertDialog("You've reached the daily portrait limit in guest mode. Create an account for higher limits!",{actionLabel:"Create a free account",onAction:()=>{showAuthModal(),showRegisterForm()}}):showAlertDialog("You've reached your daily limit for portrait generation. Come back tomorrow for more adventures!"))}if(!t.race||!t.class)return void showAlertDialog("This character needs both a race and class to generate a custom portrait.");try{const e=await fetch(`${window.CONFIG.BACKEND_URL}/api/ai/status`);if(!e.ok)return void showAlertDialog("Backend server is not available. Make sure the backend is running on port 8000.");if(!(await e.json()).available)return void showAlertDialog("AI features are not available. The backend server is not configured properly.")}catch(e){return void showAlertDialog("Cannot connect to backend server. Make sure it is running on http://localhost:8000")}currentPortraitCharacterId=e;let a="",n=null;try{try{const e=t.portraitMetadata||{},i=Array.isArray(e.versions)?e.versions:[];if(i.length){const t=e.activeVersionId;let l=t&&i.find(e=>e&&e.id===t)||i[i.length-1];l&&l.characterDescription&&(a=l.characterDescription),l&&l.style&&(n=l.style)}}catch(e){}a||(a=window.AIService&&"function"==typeof AIService.buildCharacterDescription?AIService.buildCharacterDescription(t):`${t.race} ${t.class}`)}catch(e){a=`${t.race} ${t.class}`}if(!n)try{window.StorageService&&"function"==typeof StorageService.getPortraitPromptTheme&&(n=StorageService.getPortraitPromptTheme())}catch(e){}await populatePortraitStyleDropdown(n),document.getElementById("portraitPrompt").value=a;const i=document.getElementById("portraitPromptModal");i&&(i.classList.add("show"),"function"==typeof focusFirstFieldInModal&&focusFirstFieldInModal(i),setTimeout(()=>ModalManager.snapshotForm("portraitPromptModal"),50));try{const e=e=>{const t=document.getElementById("portraitPrompt"),a=document.getElementById("portraitStyleTrigger"),n=i?.querySelectorAll(".modal-footer button");t&&(t.disabled=e,t.placeholder=e?"Daily limit reached - come back tomorrow!":"Enter custom description..."),a&&(a.disabled=e),n&&n.forEach(t=>{t.disabled=e})},t=t=>{const a=document.getElementById("managerImageQuotaLine");if(!a)return;const n=t&&"number"==typeof t.remaining?t.remaining:null,i=t&&"number"==typeof t.limit?t.limit:null;e(0===n),a.textContent=-1!==n?0!==n||null==i?null==n||null==i?"Image quota: unavailable":"Custom portraits left today: "+n+"/"+i:"Custom portraits left today: 0/"+i:"Image quota: unlimited (admin/dev)"};if(window._managerQuotaHandler&&window.removeEventListener("danddy:imageQuotaUpdate",window._managerQuotaHandler),window._managerQuotaHandler=e=>t(e&&e.detail),window.addEventListener("danddy:imageQuotaUpdate",window._managerQuotaHandler),window.AIService&&"function"==typeof AIService.getImageQuotaStatus){const e=await AIService.getImageQuotaStatus();e&&t({limit:e.limit,remaining:e.remaining})}}catch(e){}}function closePortraitPromptModal(){const e=document.getElementById("portraitStyleTrigger");e&&e.classList.contains("is-open")&&window.CharacterSheet&&CharacterSheet.toggleSelectorMenu(e);const t=document.getElementById("portraitPromptModal");if(!t){const e=document.getElementById("portraitPrompt");return e&&(e.value=""),currentPortraitCharacterId=null,void(currentPortraitStyle=null)}animateModalClose(t,{removeOnClose:!1,onClosed:()=>{const e=document.getElementById("portraitPrompt");e&&(e.value=""),currentPortraitCharacterId=null,currentPortraitStyle=null;try{window._managerQuotaHandler&&(window.removeEventListener("danddy:imageQuotaUpdate",window._managerQuotaHandler),window._managerQuotaHandler=null)}catch(e){}}})}async function confirmGeneratePortrait(){if("number"==typeof window._imageQuotaRemaining&&0===window._imageQuotaRemaining)return showAlertDialog("You've reached your daily limit for portrait generation. Come back tomorrow for more adventures!"),void closePortraitPromptModal();const e=currentPortraitCharacterId,t=currentPortraitStyle;if(!e)return void closePortraitPromptModal();const a=await CharacterStorage.getById(e);if(!a)return void closePortraitPromptModal();const n=document.getElementById("portraitPrompt").value.trim();if(!n)return void showAlertDialog("Please enter a description for your character portrait.");closePortraitPromptModal();const i=`character-portrait-${e}`,l=document.getElementById(i),s=`original-portrait-${e}`,o=document.getElementById(s);let r,c=!1;if(l&&o){const t=l.closest(".portrait-container"),a=document.getElementById(`toggle-portrait-btn-${e}`);let n="original";try{window.StorageService&&StorageService.getPortraitViewMode?n=StorageService.getPortraitViewMode():"undefined"!=typeof CONFIG&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE&&(n=CONFIG.DEFAULT_PORTRAIT_VIEW_MODE)}catch(e){}const i=l.classList.contains("is-hidden"),s=!o.classList.contains("is-hidden"),r=!!t&&t.classList.contains("portrait-container--original-mode");if("original"===n&&i&&s&&r&&(c=!0,l.classList.remove("is-hidden"),o.classList.add("is-hidden"),t&&t.classList.remove("portrait-container--original-mode"),a)){const e=a.querySelector(".selector-option-icon"),t=a.querySelector(".selector-option-label");e&&t?(e.textContent="\u25c9",t.textContent="View Original Art"):a.textContent="\u25c9 View Original Art"}}let d=0,m=!0;const p=()=>{if(!l||!m)return;const e="Generating character art";let t="(This usually takes 20\u201330 seconds)";try{let e="dall-e-3";window.StorageService&&"function"==typeof StorageService.getImageModel?e=StorageService.getImageModel():"undefined"!=typeof CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL&&(e=CONFIG.DEFAULT_IMAGE_MODEL),"gpt-image-1"===e?t="(This can take up to a minute)":"gpt-image-1.5"===e&&(t="(GPT Image 1.5 \u2013 usually 15\u201330 seconds)")}catch(e){}const a=d%3+1;if(window.PortraitUI&&"function"==typeof PortraitUI.renderGeneratingLoader)PortraitUI.renderGeneratingLoader(l,{baseMessage:e,subtext:t,dotCount:a,isLoading:!0});else{let n=l.querySelector(".portrait-placeholder-text");if(n){n.setAttribute("data-dots",String(a));const t=n.querySelector(".portrait-placeholder-message");t&&(t.textContent=e)}else l.innerHTML=`\n                    <div class="portrait-placeholder-content">\n                        <div class="portrait-placeholder-cube-container">\n                            <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">\n                                <i></i>\n                                <i></i>\n                                <i></i>\n                                <i></i>\n                                <i></i>\n                                <i></i>\n                            </div>\n                        </div>\n                        <div class="portrait-placeholder-text" data-dots="${a}">\n                            <span class="portrait-placeholder-message">${e}</span>\n                            <span class="portrait-placeholder-dots">\n                                <span class="dot dot-1">.</span>\n                                <span class="dot dot-2">.</span>\n                                <span class="dot dot-3">.</span>\n                            </span>\n                            <div class="portrait-placeholder-subtext">\n                                ${t}\n                            </div>\n                        </div>\n                    </div>\n                `,n=l.querySelector(".portrait-placeholder-text")}d++};l&&(l.classList.add("ascii-portrait--placeholder"),l.classList.remove("ascii-portrait--loading"),l.style.fontSize="",p(),r=setInterval(p,1e3)),console.log("%c\ud83c\udfa8 PORTRAIT: Starting AI portrait generation...","color: #0ff; font-weight: 500"),console.log("  Note: DALL-E takes 20-30s when backend is warm, 60s+ on cold start...");try{const i=(a.class||"default").toLowerCase(),{pose:l,camera:s}=window.PortraitPoseData&&"function"==typeof PortraitPoseData.getRandomPoseAndCamera?PortraitPoseData.getRandomPoseAndCamera(i):{pose:"standing in a relaxed but heroic stance",camera:"Camera angle: three-quarter view that clearly shows the full silhouette."};let o;if("undefined"!=typeof window&&window.PortraitPrompt&&"function"==typeof window.PortraitPrompt.buildCustomPortraitInstructions){const e=t||null;o=window.PortraitPrompt.buildCustomPortraitInstructions({posePrompt:l,cameraPrompt:s,themeId:e})}else o=["Create a high-contrast black-and-white fantasy illustration.","Use bold shadow shapes, strong silhouettes, and clean white highlights.","Include some controlled, directional hatching to define form (light mid-tone texture only).",`Pose: ${l}`,"Background should be simple, entirely black, and free of symbols or text.","Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.","Aspect ratio 3:4."];const d=3900;let p=[n,...o].join(" ");if(p.length>d){console.warn(`Portrait prompt exceeds ${d} chars (${p.length}), truncating...`);const e=o.join(" "),t=d-n.length-50;if(t>200){p=e.substring(0,t)+" "+n}else{const e="High-contrast black-and-white fantasy ink illustration.";p=e+" "+n.substring(0,d-e.length-1)}console.log(`Truncated prompt length: ${p.length}`)}const u=await window.AsciiArtService.generateCustomAIPortraitWithPrompt(p);if(!u||!u.asciiArt||!u.imageUrl)throw new Error("Portrait generation returned incomplete result");m=!1,r&&clearInterval(r),console.log("%c\ud83c\udfa8 PORTRAIT (Success) \u2728","color: #0f0; font-weight: 500");const h=a.customPortraitCount||0;console.log("%c\ud83c\udfa8 PORTRAIT HISTORY CHECK","color: #0ff; font-weight: 500"),console.log("  window.PortraitHistory exists:",!!window.PortraitHistory),console.log("  addVersion is function:","function"==typeof window.PortraitHistory?.addVersion);const g=t||null;let v;if(window.PortraitHistory&&"function"==typeof window.PortraitHistory.addVersion){const e=a.portraitMetadata||{},t=Array.isArray(e.versions)?e.versions:[];let i=a;if(0===t.length){const e=a.customPortraitAscii||a.asciiPortrait||a.portrait?.ascii||"",t=a.originalPortraitUrl||a.portrait?.url||null;if(e||t){const n=window.PortraitHistory.addVersion(a,e,t,{source:"original-ai",prompt:null,style:null});i={...a,portraitMetadata:n}}}let l="dall-e-3",s=null;try{window.StorageService&&"function"==typeof StorageService.getImageModel?l=StorageService.getImageModel():"undefined"!=typeof CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL&&(l=CONFIG.DEFAULT_IMAGE_MODEL),window.StorageService&&"function"==typeof StorageService.getImageQuality&&(s=StorageService.getImageQuality(l))}catch(e){}v=window.PortraitHistory.addVersion(i,u.asciiArt,u.imageUrl,{source:"custom-ai",prompt:p,characterDescription:n,style:g,model:l,quality:s}),console.log("%c\ud83c\udfa8 PORTRAIT HISTORY UPDATED","color: #0f0; font-weight: 500"),console.log("  Versions count:",v.versions?.length||0),console.log("  Active version:",v.activeVersionId)}else console.log("%c\u26a0\ufe0f PORTRAIT HISTORY NOT AVAILABLE!","color: #f00; font-weight: 500"),console.log("  Using fallback - no versions will be saved"),v=a.portraitMetadata||{};const S={originalPortraitUrl:u.imageUrl,customPortraitAscii:u.asciiArt,customPortraitCount:h+1,portraitMetadata:v,portrait:{...a.portrait||{},url:u.imageUrl,ascii:u.asciiArt}};await CharacterStorage.update(e,S),markUserChanges();try{const t=u.asciiArt,a=`character-portrait-${e}`,n=`original-portrait-${e}`,i=document.getElementById(a),l=document.getElementById(n);if(c&&i&&l){const a=i.closest(".portrait-container"),n=document.getElementById(`toggle-portrait-btn-${e}`);if(t){if(window.CharacterSheet&&"function"==typeof CharacterSheet.setPortraitContent)CharacterSheet.setPortraitContent(i,t);else{i.innerHTML="";const e=document.createElement("pre");e.textContent=t,i.appendChild(e)}i.classList.remove("ascii-portrait--placeholder","ascii-portrait--loading")}if(i.classList.add("is-hidden"),l.classList.remove("is-hidden","is-loaded","portrait-reveal"),a&&a.classList.add("portrait-container--original-mode"),l.onload=function(){this.classList.add("is-loaded","portrait-reveal"),this.addEventListener("animationend",()=>{this.classList.remove("portrait-reveal")},{once:!0})},l.src=u.imageUrl,n){const e=n.querySelector(".selector-option-icon"),t=n.querySelector(".selector-option-label");e&&t?(e.textContent="\u2261",t.textContent="View ASCII Art"):n.textContent="\u2261 View ASCII Art"}}else l&&u.imageUrl&&(l.src=u.imageUrl),i&&t&&await typeManagerPortrait(i,t);const s=document.getElementById(`card-thumb-${e}`);if(s)try{let e="original";try{window.StorageService&&StorageService.getPortraitViewMode?e=StorageService.getPortraitViewMode():"undefined"!=typeof CONFIG&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE&&(e=CONFIG.DEFAULT_PORTRAIT_VIEW_MODE)}catch(e){}if("original"===e&&!!u.imageUrl){let e=s.querySelector("img");e?e.src=u.imageUrl:(s.innerHTML="",s.classList.add("card-thumbnail--image"),e=document.createElement("img"),e.src=u.imageUrl,e.alt="Character portrait",e.loading="lazy",e.onload=function(){this.classList.add("is-loaded")},s.appendChild(e))}else if(t){let e;if(window.UI&&"function"==typeof UI.cropAsciiForThumbnail)e=UI.cropAsciiForThumbnail(t);else{const a=t.split("\n");e=a.slice(0,80).map(e=>e.slice(0,160)).join("\n")}s.classList.remove("card-thumbnail--image"),s.innerHTML="";const a=document.createElement("pre");a.textContent=e,s.appendChild(a)}}catch(e){console.error("Portrait thumbnail update failed",e)}}catch(e){console.error("Error applying new custom portrait to manager UI",e)}try{const t={...a,...S},n=String(e);if(window.DEBUG_PORTRAITS&&console.log("\ud83d\uddbc\ufe0f [PORTRAIT DEBUG] After generation - updating AppState",{characterId:n,characterName:t.name,newPortraitUrl:S.originalPortraitUrl,newActiveVersionId:S.portraitMetadata?.activeVersionId,hasCustomPortraitAscii:!!S.customPortraitAscii,timestamp:(new Date).toISOString()}),Array.isArray(AppState.characters)){const e=AppState.characters.findIndex(e=>e&&String(e.id)===n);-1!==e&&(AppState.characters[e]=t)}if(Array.isArray(AppState.filteredCharacters)){const e=AppState.filteredCharacters.findIndex(e=>e&&String(e.id)===n);-1!==e&&(AppState.filteredCharacters[e]=t)}if(window.DEBUG_PORTRAITS){const e=AppState.characters.find(e=>e&&String(e.id)===n);console.log("\ud83d\uddbc\ufe0f [PORTRAIT DEBUG] AppState AFTER in-place update",{characterId:n,portraitUrl:e?.originalPortraitUrl,activeVersionId:e?.portraitMetadata?.activeVersionId,hasCustomPortraitAscii:!!e?.customPortraitAscii,timestamp:(new Date).toISOString()})}}catch(e){console.error("Error syncing AppState after portrait generation",e)}window.DEBUG_PORTRAITS&&console.log("\ud83d\uddbc\ufe0f [PORTRAIT DEBUG] Re-sorting grid (no storage reload)",{characterId:e,timestamp:(new Date).toISOString()});const w=String(e),y=AppState.characters.find(e=>e&&String(e.id)===w);if(y){y.updatedAt=(new Date).toISOString();const e=AppState.filteredCharacters.find(e=>e&&String(e.id)===w);e&&(e.updatedAt=y.updatedAt)}if(AppState.applyFilters(),UI.render(),window.DEBUG_PORTRAITS){const e=AppState.characters.find(e=>e&&String(e.id)===w);console.log("\ud83d\uddbc\ufe0f [PORTRAIT DEBUG] AppState AFTER re-render (no reload)",{characterId:w,portraitUrl:e?.originalPortraitUrl,activeVersionId:e?.portraitMetadata?.activeVersionId,hasCustomPortraitAscii:!!e?.customPortraitAscii,versionsCount:e?.portraitMetadata?.versions?.length||0,timestamp:(new Date).toISOString()})}showNotification("Custom portrait generated!"),currentPortraitCharacterId=null}catch(e){if(console.error("Error generating custom AI portrait:",e),r&&clearInterval(r),l&&(l.style.fontSize="",l.classList.remove("ascii-portrait--loading","ascii-portrait--placeholder")),l){const e=window.CharacterSheet.getAsciiPortrait(a);e&&window.CharacterSheet?CharacterSheet.setPortraitContent(l,e):window.CharacterSheet&&CharacterSheet.setPortraitContent(l,"[ NO PORTRAIT ]")}e.isSafetyRejection?(console.log("%c\ud83c\udfa8 PORTRAIT (Safety System Rejection)","color: #fa0; font-weight: 500"),console.log("  OpenAI flagged this request:",e.originalMessage||e.message),showNotification("\u26a0\ufe0f OpenAI flagged this portrait request. Try modifying your character description or prompt.")):e.isRateLimit?(console.log("%c\ud83c\udfa8 PORTRAIT (Rate Limited)","color: #fa0; font-weight: 500"),showNotification("\u26a0\ufe0f Rate limit exceeded. Please wait a few minutes before trying again.")):"AbortError"===e.name||e.message&&e.message.includes("timed out")?(console.log("%c\ud83c\udfa8 PORTRAIT (Timeout - Backend Waking Up)","color: #fa0; font-weight: 500"),console.log("  \u23f0 Request timed out. Backend may be waking up from cold start."),console.log("  \u2705 Try again in a moment - server should be warm now!"),showNotification("\u23f0 Request timed out. Backend may be waking up. Try again in a moment!"),window.AIService&&window.AIService.warmupBackend&&window.AIService.warmupBackend()):e.message&&e.message.includes("fetch")?(console.log("%c\ud83c\udfa8 PORTRAIT (Connection Error)","color: #f00; font-weight: 500"),console.log("  Cannot connect to backend server"),showNotification("\ud83d\udd0c Cannot connect to backend server. Check that it's running.")):(console.log("%c\ud83c\udfa8 PORTRAIT (Failed)","color: #f00; font-weight: 500"),console.log("  Error:",e.message),showNotification("Portrait generation failed. Check console for details and try again."))}}async function surpriseMePortrait(){if("number"==typeof window._imageQuotaRemaining&&0===window._imageQuotaRemaining)return showAlertDialog("You've reached your daily limit for portrait generation. Come back tomorrow for more adventures!"),void closePortraitPromptModal();const e=currentPortraitCharacterId;if(!e)return void closePortraitPromptModal();const t=await CharacterStorage.getById(e);if(!t)return void closePortraitPromptModal();let a="";try{a=window.AIService&&"function"==typeof AIService.buildCharacterDescription?AIService.buildCharacterDescription(t):`${t.race} ${t.class}`}catch(e){a=`${t.race} ${t.class}`}const n=document.getElementById("portraitPrompt");n&&(n.value=a),await confirmGeneratePortrait()}async function typeManagerPortrait(e,t){if(!e||!t)return;e.classList.remove("ascii-portrait--loading","ascii-portrait--placeholder"),e.style.fontSize="",e.style.whiteSpace="",e.style.textAlign="",e.style.overflowX="",e.style.overflowY="";const a=t.split("\n");e.innerHTML="";const n=document.createElement("pre");e.appendChild(n);let i="";let l=0;for(let e=0;e<a.length;e++){const t=a[e];for(let e=0;e<t.length;e++)i+=t[e],l++,l>=40&&(n.textContent=i,l=0,await new Promise(e=>requestAnimationFrame(e)));e<a.length-1&&(i+="\n")}n.textContent=i}async function openPortraitHistory(e){if(window.PortraitUI&&"function"==typeof window.PortraitUI.openManagerHistory)return window.PortraitUI.openManagerHistory(e)}async function duplicateCharacter(e){showConfirmDialog("Create a copy of this character?",async()=>{const t=await CharacterStorage.duplicate(e);t&&(await AppState.loadCharacters(),UI.render(),showNotification(`Created: ${t.name}`))})}async function exportCharacter(e){const t=await CharacterStorage.export(e);if(t){const a=await CharacterStorage.getById(e),n=new Blob([t],{type:"application/json"}),i=URL.createObjectURL(n),l=document.createElement("a");l.href=i,l.download=`${a.name||"character"}.json`,l.click(),URL.revokeObjectURL(i),showNotification("Character exported!")}}async function deleteCharacter(e){const t=await CharacterStorage.getById(e);t&&(void 0!==MobileView&&MobileView.isMobile()&&MobileView.isOpen()&&MobileView.close(),showConfirmDialog(`Delete ${t.name}?\n\nThis cannot be undone.`,async()=>{await CharacterStorage.delete(e),await AppState.loadCharacters(),UI.render(),showNotification("Character deleted")}))}async function leaveSharedCharacter(e){const t=await CharacterStorage.getById(e);if(!t)return;void 0!==MobileView&&MobileView.isMobile()&&MobileView.isOpen()&&MobileView.close();const a=t.owner_email||t.ownerEmail||"the owner";showConfirmDialog(`Leave shared character "${t.name}"?\n\nThis character was shared with you by ${a}. You will no longer have access to it, but the owner will keep it.`,async()=>{try{await CharacterCloudStorage.leaveSharedCharacter(e),await AppState.loadCharacters(),UI.render(),showNotification("Left shared character")}catch(e){console.error("Failed to leave shared character:",e),showNotification(e.message||"Failed to leave character","error")}})}let isImporting=!1;function getImportModalPrimaryButton(){const e=document.getElementById("importModal");return e?e.querySelector(".modal-footer .terminal-btn-primary"):null}function showImportModal(){const e=document.getElementById("importModal");if(e){e.classList.add("show"),"function"==typeof focusFirstFieldInModal&&focusFirstFieldInModal(e);const t=e.querySelector(".modal-footer .terminal-btn-primary");t&&(t.disabled=!0)}}function closeImportModal(){console.log("\ud83d\udeaa closeImportModal() called, isImporting was:",isImporting);const e=document.getElementById("importModal");if(!e)return void(isImporting=!1);animateModalClose(e,{removeOnClose:!1,onClosed:()=>{const e=document.getElementById("importFile"),t=document.getElementById("fileName");e&&(e.value=""),t&&(t.textContent="");const a=getImportModalPrimaryButton();a&&(a.disabled=!0,a.textContent="Import"),isImporting=!1,console.log("\ud83d\udeaa closeImportModal() done, isImporting now:",isImporting)}})}let pendingDuplicateResolution=null;function showDuplicateResolutionModal(e,t,a){console.log("\u26a0\ufe0f DUPLICATE MODAL: Showing resolution options for",e),pendingDuplicateResolution={characterName:e,existingId:t,importData:a},document.getElementById("duplicateCharName").textContent=e,document.getElementById("importModal").classList.remove("show");const n=document.getElementById("duplicateModal");n&&(n.classList.add("show"),"function"==typeof focusFirstFieldInModal&&focusFirstFieldInModal(n))}function closeDuplicateModal(){console.log("\ud83d\udeaa DUPLICATE MODAL: Closing");const e=document.getElementById("duplicateModal");if(!e)return pendingDuplicateResolution=null,void(isImporting=!1);animateModalClose(e,{removeOnClose:!1,onClosed:()=>{pendingDuplicateResolution=null,isImporting=!1}})}function saveDuplicateResolution(){const e=document.querySelector('input[name="duplicateAction"]:checked');e?resolveDuplicate(e.value):console.error("No duplicate action selected!")}function resolveDuplicate(e){if(!pendingDuplicateResolution)return void console.error("No pending duplicate resolution!");const{existingId:t,importData:a}=pendingDuplicateResolution;console.log("\ud83d\udd27 DUPLICATE RESOLUTION: Action =",e),"overwrite"===e?handleOverwriteCharacter(t,a):"keep-both"===e&&handleKeepBothCharacters(a),closeDuplicateModal()}async function handleOverwriteCharacter(e,t){console.log("\ud83d\udd04 OVERWRITE: Replacing existing character with ID:",e),await CharacterStorage.delete(e);const a=JSON.parse(t);delete a.id;const n=a.metadata?.characterUid||a.characterUid||null;n&&(a.metadata||(a.metadata={}),a.metadata.characterUid=n,a.characterUid=n);const i=await CharacterStorage.add(a);markUserChanges(),i&&(console.log("\u2705 KEEP BOTH SUCCESS: Character imported as",newName),await AppState.loadCharacters(),UI.render(),closeImportModal(),showNotification(`Replaced: ${i.name}`),setTimeout(()=>viewCharacter(i.id),100))}async function handleKeepBothCharacters(e){console.log("\ud83d\udccb KEEP BOTH: Importing with modified name");const t=JSON.parse(e),a=t.name,n=await CharacterStorage.getAll();let i=1,l=`${a} (Copy)`;for(;n.some(e=>e.name===l);)i++,l=`${a} (Copy ${i})`;t.name=l;const s=`danddy_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;t.metadata||(t.metadata={}),t.metadata.characterUid=s,t.characterUid=s,delete t.id;const o=await CharacterStorage.add(t);markUserChanges(),o&&(console.log("\u2705 KEEP BOTH SUCCESS: Character imported as",l),await AppState.loadCharacters(),UI.render(),closeImportModal(),showNotification(`Imported as: ${o.name}`),setTimeout(()=>viewCharacter(o.id),100))}async function importCharacter(){if(console.log("\ud83d\udd35 importCharacter() called, isImporting =",isImporting),isImporting)return void console.log("\u26a0\ufe0f Import already in progress, blocking duplicate call");isImporting=!0,console.log("\ud83d\udd12 Import locked, isImporting =",isImporting);const e=getImportModalPrimaryButton();e&&(e.disabled=!0,e.textContent="IMPORTING...");const t=document.getElementById("importFile");if(t.files.length>0){const e=t.files[0];console.log("\ud83d\udcc2 FILE: Selected file:",e.name,"Size:",e.size);const a=new FileReader;console.log("\ud83d\udcd6 READER: Created new FileReader"),a.onload=async e=>{console.log("\ud83d\udcd6 READER.ONLOAD: Callback triggered, isImporting =",isImporting);const t=e.target.result,a=await CharacterStorage.import(t);if(a&&a.isDuplicate){console.warn("\u26a0\ufe0f DUPLICATE: Character already exists"),showDuplicateResolutionModal(a.name,a.existingIds[0],t);const e=getImportModalPrimaryButton();return e&&(e.disabled=!1,e.textContent="Import"),void(isImporting=!1)}if(a)console.log("\u2705 SUCCESS: Character imported, calling loadCharacters()"),await AppState.loadCharacters(),console.log("\ud83c\udfa8 RENDER: Calling UI.render()"),UI.render(),console.log("\ud83d\udeaa MODAL: Calling closeImportModal()"),closeImportModal(),showNotification(`Imported: ${a.name}`),setTimeout(()=>viewCharacter(a.id),100);else{showAlertDialog("Invalid character file!");const e=getImportModalPrimaryButton();e&&(e.disabled=!1,e.textContent="Import"),isImporting=!1}},a.onerror=()=>{showAlertDialog("Error reading file!");const e=getImportModalPrimaryButton();e&&(e.disabled=!1,e.textContent="Import"),isImporting=!1},console.log("\ud83d\udcd6 READER: Starting readAsText()"),a.readAsText(e)}else{showAlertDialog("Please select a file to import.");const e=getImportModalPrimaryButton();e&&(e.disabled=!1,e.textContent="Import"),isImporting=!1}}function togglePortraitView(e){const t=document.getElementById(`character-portrait-${e}`),a=document.getElementById(`original-portrait-${e}`),n=document.getElementById(`toggle-portrait-btn-${e}`),i=t?t.closest(".portrait-container"):null;if(!t||!a||!n)return void console.warn("Portrait elements not found for character:",e);const l=!t.classList.contains("is-hidden"),s=n.querySelector(".selector-option-icon"),o=n.querySelector(".selector-option-label");l?(t.classList.add("is-hidden"),a.classList.remove("is-hidden"),i&&i.classList.add("portrait-container--original-mode"),s&&o?(s.textContent="\u2261",o.textContent="View ASCII Art"):n.textContent="\u2261 View ASCII Art",n.title="Toggle between ASCII and original art"):(t.classList.remove("is-hidden"),a.classList.add("is-hidden"),i&&i.classList.remove("portrait-container--original-mode"),s&&o?(s.textContent="\u25c9",o.textContent="View Original Art"):n.textContent="\u25c9 View Original Art",n.title="Toggle between ASCII and original art")}function showNotification(e,t=4e3){const a=null==e?"":String(e);console.log("%c\u2713 "+a,"color: #0f0; font-weight: 500");const n=a.replace(/^[\s\u200b]*(?:[\u2713\u2714\u2715\u2716\u2717\u2605\u26a0\ud83d\udca1\u274c\u23f0\ud83d\udd0c]+[\s\u00a0\u200b]*)+/u,"").trim().replace(/!{2,}/g,"!").replace(/!+(\s*[\.\)])?$/u,"$1").trim();let i=document.getElementById("toastNotification");if(!i){i=document.createElement("div"),i.id="toastNotification",i.className="toast-notification",i.setAttribute("role","status"),i.setAttribute("aria-live","polite"),i.innerHTML='\n            <span class="toast-message"></span>\n            <div class="toast-dismiss-wrapper">\n                <button type="button" class="toast-dismiss" aria-label="Dismiss notification">\n                    <span class="toast-dismiss-icon">&times;</span>\n                </button>\n            </div>\n        ';(document.querySelector(".app-root")||document.querySelector(".terminal-frame")||document.body).appendChild(i);const e=i.querySelector(".toast-dismiss");e&&e.addEventListener("click",()=>{i.classList.remove("show"),window._toastShowTimeout&&(clearTimeout(window._toastShowTimeout),window._toastShowTimeout=null),window._toastTimeout&&(clearTimeout(window._toastTimeout),window._toastTimeout=null)})}const l=i.querySelector(".toast-message");l?l.textContent=n:i.textContent=n,window._toastShowTimeout&&(clearTimeout(window._toastShowTimeout),window._toastShowTimeout=null),window._toastTimeout&&(clearTimeout(window._toastTimeout),window._toastTimeout=null),i.classList.remove("show"),i.offsetWidth,window._toastShowTimeout=setTimeout(()=>{i.classList.add("show"),window._toastShowTimeout=null,window._toastTimeout=setTimeout(()=>{i.classList.remove("show"),window._toastTimeout=null},t)},80)}function focusFirstFieldInModal(e){if(!e||"function"!=typeof e.querySelector)return;const t=['input.terminal-input:not([type="hidden"]):not(.file-input-hidden):not([disabled])',"textarea.terminal-input:not([disabled])","textarea.terminal-textarea:not([disabled])","select.terminal-select:not([disabled])",'input:not([type="hidden"]):not(.file-input-hidden):not([disabled])',"textarea:not([disabled])","select:not([disabled])"];let a=null;for(const n of t)if(a=e.querySelector(n),a)break;if(!a){const t=[".modal-footer .terminal-btn-primary:not([disabled])",".modal-footer button:not([disabled])","button.terminal-btn-primary:not([disabled])","button:not([disabled])",'[tabindex]:not([tabindex="-1"])'];for(const n of t)if(a=e.querySelector(n),a)break}a&&"function"==typeof a.focus&&setTimeout(()=>{try{a.focus()}catch(e){}},0)}function animateModalClose(e,t={}){if(!e)return;const{removeOnClose:a=!1,onClosed:n}=t;if(e.classList.contains("closing"))return;e.classList.add("closing");const i=e.querySelector(".modal-content")||e;let l=!1;const s=()=>{l||(l=!0,a?e&&e.parentNode&&e.parentNode.removeChild(e):(e.classList.remove("show"),e.classList.remove("closing")),"function"==typeof n&&n())};i&&"function"==typeof i.addEventListener?(i.addEventListener("animationend",s,{once:!0}),setTimeout(s,400)):s()}function closeGenericConfirmModal(){const e=document.getElementById("genericConfirmModal");e&&animateModalClose(e,{removeOnClose:!0})}function closeGenericAlertModal(){const e=document.getElementById("genericAlertModal");e&&animateModalClose(e,{removeOnClose:!0})}function closeRenameModal(){const e=document.getElementById("renameModal");e&&animateModalClose(e,{removeOnClose:!0})}function closeAllEditorModals(){["editDetailsModal","spellEditModal","portraitPromptModal","importModal","duplicateModal","renameModal","shareModal","pendingSharesModal","genericConfirmModal","genericAlertModal","sessionExpiredModal","createCampaignModal","joinCampaignModal","campaignCreatedModal","journalEntryModal","partyMemberSheetModal","pastAdventuresModal"].forEach(e=>{const t=document.getElementById(e);t&&t.classList.contains("show")&&t.classList.remove("show","closing")});const e=document.getElementById("editDetailsModal");if(e&&originalEditModalContent){const t=e.querySelector(".modal-content");t&&(t.innerHTML=originalEditModalContent)}currentEditCharacterId=null,originalEditLevel=null}function showConfirmDialog(e,t,a){const n=document.getElementById("genericConfirmModal");n&&n.remove();const i=`\n      <div id="genericConfirmModal" class="modal show">\n        <div class="modal-content modal-content--narrow">\n          <div class="modal-header">\n            <h2 class="modal-title">CONFIRM</h2>\n            <button class="modal-close" id="genericConfirmClose">&times;</button>\n          </div>\n          <div class="modal-body">\n            <p class="terminal-text">${Utils.escapeHtml(e).replace(/\n/g,"<br>")}</p>\n          </div>\n          <div class="modal-footer modal-footer-end">\n            <button class="terminal-btn" id="genericConfirmCancel">Cancel</button>\n            <button class="terminal-btn terminal-btn-primary" id="genericConfirmOk">OK</button>\n          </div>\n        </div>\n      </div>\n    `;getManagerModalHost().insertAdjacentHTML("beforeend",i);const l=document.getElementById("genericConfirmModal"),s=document.getElementById("genericConfirmClose"),o=document.getElementById("genericConfirmCancel"),r=document.getElementById("genericConfirmOk"),c=(e=!1)=>{l&&(animateModalClose(l,{removeOnClose:!0}),e&&a&&a())};s.addEventListener("click",()=>c(!0)),o.addEventListener("click",()=>c(!0)),r.addEventListener("click",async()=>{c(!1),t&&await t()}),l&&focusFirstFieldInModal(l)}function animateModalContentSwap(e,t,a){const n=e.offsetHeight;e.style.overflow="hidden",e.style.height=n+"px",e.style.transition="opacity 0.15s ease-out",e.style.opacity="0",setTimeout(()=>{e.innerHTML=t,e.style.height="auto";const i=e.offsetHeight;e.style.height=n+"px",e.style.opacity="0",e.offsetHeight,e.style.transition="height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease-out 0.1s",e.style.height=i+"px",e.style.opacity="1",setTimeout(()=>{e.style.height="",e.style.overflow="",e.style.transition="",a&&a()},350)},150)}function showLevelChangeDialog(e,t,a=!1){return new Promise(n=>{const i=document.getElementById("editDetailsModal");if(!i)return void n("manual");const l=i.querySelector(".modal-content");if(!l)return void n("manual");const s=l.innerHTML,o=t-e,r=o>0?"up":"down",c=1===Math.abs(o)?"level":"levels";let d,m;a&&o>0?(d="LEVEL UP!",m=`Your XP has reached the threshold for <strong>Level\xa0${t}</strong>! (${Math.abs(o)} ${c} ${r})`):(d="LEVEL CHANGE",m=`You're changing from <strong>Level\xa0${e}</strong> to <strong>Level\xa0${t}</strong> (${Math.abs(o)} ${c} ${r}).`);animateModalContentSwap(l,`\n          <div class="modal-header">\n            <h2 class="modal-title">${d}</h2>\n            <button class="modal-close" id="levelChangeClose">&times;</button>\n          </div>\n          <div class="modal-body">\n            <p class="terminal-text level-change-text">${m}</p>\n            <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">\n              Would you like to automatically recalculate stats (HP, Proficiency Bonus, Spell Slots) for the new level, or update them manually?\n            </p>\n          </div>\n          <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">\n            <button class="terminal-btn" id="levelChangeManual">Keep manual</button>\n            <button class="terminal-btn terminal-btn-primary" id="levelChangeAuto">Auto-calculate</button>\n          </div>\n        `,()=>{const e=document.getElementById("levelChangeClose"),a=document.getElementById("levelChangeManual"),i=document.getElementById("levelChangeAuto"),o=e=>{if("cancel"===e)animateModalContentSwap(l,s,()=>{const a=document.getElementById("editLevel");a&&(a.value=t),n(e)});else if("auto"===e){animateModalContentSwap(l,`\n                      <div class="modal-header">\n                        <h2 class="modal-title">LEVEL CHANGE</h2>\n                      </div>\n                      <div class="modal-body" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px;">\n                        <div class="panel-loading-cube-container">\n                          <div class="panel-loading-cube">\n                            <i></i><i></i><i></i><i></i><i></i><i></i>\n                          </div>\n                        </div>\n                        <p class="terminal-text-small" style="margin-top: 1rem; opacity: 0.8;">Calculating stats for Level ${t}...</p>\n                      </div>\n                    `,()=>{setTimeout(()=>{n(e)},500)})}else animateModalContentSwap(l,s,()=>{const a=document.getElementById("editLevel");a&&(a.value=t),n(e)})};e?.addEventListener("click",()=>o("cancel")),a?.addEventListener("click",()=>o("manual")),i?.addEventListener("click",()=>o("auto")),i?.focus()})})}function showStandaloneLevelUpDialog(e,t,a=""){return new Promise(n=>{const i=t-e,l=i>0?"up":"down",s=1===Math.abs(i)?"level":"levels",o=`\n          <div id="levelUpStandaloneModal" class="modal show">\n            <div class="modal-content">\n              <div class="modal-header">\n                <h2 class="modal-title">LEVEL UP!</h2>\n                <button class="modal-close" id="levelUpClose">&times;</button>\n              </div>\n              <div class="modal-body">\n                <p class="terminal-text level-change-text">${`XP gained has reached the threshold for <strong>Level\xa0${t}</strong>${a?` for ${a}`:""}! (${Math.abs(i)} ${s} ${l})`}</p>\n                <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">\n                  Would you like to automatically recalculate stats (HP, Proficiency Bonus, Spell Slots) for the new level, or update them manually?\n                </p>\n              </div>\n              <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">\n                <button class="terminal-btn" id="levelUpCancel">Skip</button>\n                <button class="terminal-btn" id="levelUpManual">Level up (manual stats)</button>\n                <button class="terminal-btn terminal-btn-primary" id="levelUpAuto">Level up (auto-calculate)</button>\n              </div>\n            </div>\n          </div>\n        `;getManagerModalHost().insertAdjacentHTML("beforeend",o);const r=document.getElementById("levelUpStandaloneModal"),c=e=>{r&&animateModalClose(r,{removeOnClose:!0}),n(e)};document.getElementById("levelUpClose")?.addEventListener("click",()=>c("cancel")),document.getElementById("levelUpCancel")?.addEventListener("click",()=>c("cancel")),document.getElementById("levelUpManual")?.addEventListener("click",()=>c("manual")),document.getElementById("levelUpAuto")?.addEventListener("click",()=>c("auto")),document.getElementById("levelUpAuto")?.focus()})}const XP_THRESHOLDS=[0,300,900,2700,6500,14e3,23e3,34e3,48e3,64e3,85e3,1e5,12e4,14e4,165e3,195e3,225e3,265e3,305e3,355e3];function calculateLevelFromXP(e){const t=e||0;for(let e=20;e>=1;e--)if(t>=XP_THRESHOLDS[e-1])return e;return 1}function calculateStatsForLevel(e,t){const a={barbarian:12,fighter:10,paladin:10,ranger:10,cleric:8,druid:8,monk:8,rogue:8,bard:8,warlock:8,wizard:6,sorcerer:6},n={1:{1:2},2:{1:3},3:{1:4,2:2},4:{1:4,2:3},5:{1:4,2:3,3:2},6:{1:4,2:3,3:3},7:{1:4,2:3,3:3,4:1},8:{1:4,2:3,3:3,4:2},9:{1:4,2:3,3:3,4:3,5:1},10:{1:4,2:3,3:3,4:3,5:2},11:{1:4,2:3,3:3,4:3,5:2,6:1},12:{1:4,2:3,3:3,4:3,5:2,6:1},13:{1:4,2:3,3:3,4:3,5:2,6:1,7:1},14:{1:4,2:3,3:3,4:3,5:2,6:1,7:1},15:{1:4,2:3,3:3,4:3,5:2,6:1,7:1,8:1},16:{1:4,2:3,3:3,4:3,5:2,6:1,7:1,8:1},17:{1:4,2:3,3:3,4:3,5:2,6:1,7:1,8:1,9:1},18:{1:4,2:3,3:3,4:3,5:3,6:1,7:1,8:1,9:1},19:{1:4,2:3,3:3,4:3,5:3,6:2,7:1,8:1,9:1},20:{1:4,2:3,3:3,4:3,5:3,6:2,7:2,8:1,9:1}},i={1:{slots:1,level:1},2:{slots:2,level:1},3:{slots:2,level:2},4:{slots:2,level:2},5:{slots:2,level:3},6:{slots:2,level:3},7:{slots:2,level:4},8:{slots:2,level:4},9:{slots:2,level:5},10:{slots:2,level:5},11:{slots:3,level:5},12:{slots:3,level:5},13:{slots:3,level:5},14:{slots:3,level:5},15:{slots:3,level:5},16:{slots:3,level:5},17:{slots:4,level:5},18:{slots:4,level:5},19:{slots:4,level:5},20:{slots:4,level:5}},l={1:{},2:{1:2},3:{1:3},4:{1:3},5:{1:4,2:2},6:{1:4,2:2},7:{1:4,2:3},8:{1:4,2:3},9:{1:4,2:3,3:2},10:{1:4,2:3,3:2},11:{1:4,2:3,3:3},12:{1:4,2:3,3:3},13:{1:4,2:3,3:3,4:1},14:{1:4,2:3,3:3,4:1},15:{1:4,2:3,3:3,4:2},16:{1:4,2:3,3:3,4:2},17:{1:4,2:3,3:3,4:3,5:1},18:{1:4,2:3,3:3,4:3,5:1},19:{1:4,2:3,3:3,4:3,5:2},20:{1:4,2:3,3:3,4:3,5:2}},s={sorcerer:{1:{cantrips:4,spellsKnown:2,maxSpellLevel:1},2:{cantrips:4,spellsKnown:3,maxSpellLevel:1},3:{cantrips:4,spellsKnown:4,maxSpellLevel:2},4:{cantrips:5,spellsKnown:5,maxSpellLevel:2},5:{cantrips:5,spellsKnown:6,maxSpellLevel:3},6:{cantrips:5,spellsKnown:7,maxSpellLevel:3},7:{cantrips:5,spellsKnown:8,maxSpellLevel:4},8:{cantrips:5,spellsKnown:9,maxSpellLevel:4},9:{cantrips:5,spellsKnown:10,maxSpellLevel:5},10:{cantrips:6,spellsKnown:11,maxSpellLevel:5},11:{cantrips:6,spellsKnown:12,maxSpellLevel:6},12:{cantrips:6,spellsKnown:12,maxSpellLevel:6},13:{cantrips:6,spellsKnown:13,maxSpellLevel:7},14:{cantrips:6,spellsKnown:13,maxSpellLevel:7},15:{cantrips:6,spellsKnown:14,maxSpellLevel:8},16:{cantrips:6,spellsKnown:14,maxSpellLevel:8},17:{cantrips:6,spellsKnown:15,maxSpellLevel:9},18:{cantrips:6,spellsKnown:15,maxSpellLevel:9},19:{cantrips:6,spellsKnown:15,maxSpellLevel:9},20:{cantrips:6,spellsKnown:15,maxSpellLevel:9}},warlock:{1:{cantrips:2,spellsKnown:2,maxSpellLevel:1},2:{cantrips:2,spellsKnown:3,maxSpellLevel:1},3:{cantrips:2,spellsKnown:4,maxSpellLevel:2},4:{cantrips:3,spellsKnown:5,maxSpellLevel:2},5:{cantrips:3,spellsKnown:6,maxSpellLevel:3},6:{cantrips:3,spellsKnown:7,maxSpellLevel:3},7:{cantrips:3,spellsKnown:8,maxSpellLevel:4},8:{cantrips:3,spellsKnown:9,maxSpellLevel:4},9:{cantrips:3,spellsKnown:10,maxSpellLevel:5},10:{cantrips:4,spellsKnown:10,maxSpellLevel:5},11:{cantrips:4,spellsKnown:11,maxSpellLevel:5},12:{cantrips:4,spellsKnown:11,maxSpellLevel:5},13:{cantrips:4,spellsKnown:12,maxSpellLevel:5},14:{cantrips:4,spellsKnown:12,maxSpellLevel:5},15:{cantrips:4,spellsKnown:13,maxSpellLevel:5},16:{cantrips:4,spellsKnown:13,maxSpellLevel:5},17:{cantrips:4,spellsKnown:14,maxSpellLevel:5},18:{cantrips:4,spellsKnown:14,maxSpellLevel:5},19:{cantrips:4,spellsKnown:15,maxSpellLevel:5},20:{cantrips:4,spellsKnown:15,maxSpellLevel:5}},bard:{1:{cantrips:2,spellsKnown:4,maxSpellLevel:1},2:{cantrips:2,spellsKnown:5,maxSpellLevel:1},3:{cantrips:2,spellsKnown:6,maxSpellLevel:2},4:{cantrips:3,spellsKnown:7,maxSpellLevel:2},5:{cantrips:3,spellsKnown:8,maxSpellLevel:3},6:{cantrips:3,spellsKnown:9,maxSpellLevel:3},7:{cantrips:3,spellsKnown:10,maxSpellLevel:4},8:{cantrips:3,spellsKnown:11,maxSpellLevel:4},9:{cantrips:3,spellsKnown:12,maxSpellLevel:5},10:{cantrips:4,spellsKnown:14,maxSpellLevel:5},11:{cantrips:4,spellsKnown:15,maxSpellLevel:6},12:{cantrips:4,spellsKnown:15,maxSpellLevel:6},13:{cantrips:4,spellsKnown:16,maxSpellLevel:7},14:{cantrips:4,spellsKnown:18,maxSpellLevel:7},15:{cantrips:4,spellsKnown:19,maxSpellLevel:8},16:{cantrips:4,spellsKnown:19,maxSpellLevel:8},17:{cantrips:4,spellsKnown:20,maxSpellLevel:9},18:{cantrips:4,spellsKnown:22,maxSpellLevel:9},19:{cantrips:4,spellsKnown:22,maxSpellLevel:9},20:{cantrips:4,spellsKnown:22,maxSpellLevel:9}},wizard:{1:{cantrips:3,spellsKnown:6,maxSpellLevel:1},2:{cantrips:3,spellsKnown:8,maxSpellLevel:1},3:{cantrips:3,spellsKnown:10,maxSpellLevel:2},4:{cantrips:4,spellsKnown:12,maxSpellLevel:2},5:{cantrips:4,spellsKnown:14,maxSpellLevel:3},6:{cantrips:4,spellsKnown:16,maxSpellLevel:3},7:{cantrips:4,spellsKnown:18,maxSpellLevel:4},8:{cantrips:4,spellsKnown:20,maxSpellLevel:4},9:{cantrips:4,spellsKnown:22,maxSpellLevel:5},10:{cantrips:5,spellsKnown:24,maxSpellLevel:5},11:{cantrips:5,spellsKnown:26,maxSpellLevel:6},12:{cantrips:5,spellsKnown:28,maxSpellLevel:6},13:{cantrips:5,spellsKnown:30,maxSpellLevel:7},14:{cantrips:5,spellsKnown:32,maxSpellLevel:7},15:{cantrips:5,spellsKnown:34,maxSpellLevel:8},16:{cantrips:5,spellsKnown:36,maxSpellLevel:8},17:{cantrips:5,spellsKnown:38,maxSpellLevel:9},18:{cantrips:5,spellsKnown:40,maxSpellLevel:9},19:{cantrips:5,spellsKnown:42,maxSpellLevel:9},20:{cantrips:5,spellsKnown:44,maxSpellLevel:9}},cleric:{1:{cantrips:3,spellsKnown:null,maxSpellLevel:1},2:{cantrips:3,spellsKnown:null,maxSpellLevel:1},3:{cantrips:3,spellsKnown:null,maxSpellLevel:2},4:{cantrips:4,spellsKnown:null,maxSpellLevel:2},5:{cantrips:4,spellsKnown:null,maxSpellLevel:3},6:{cantrips:4,spellsKnown:null,maxSpellLevel:3},7:{cantrips:4,spellsKnown:null,maxSpellLevel:4},8:{cantrips:4,spellsKnown:null,maxSpellLevel:4},9:{cantrips:4,spellsKnown:null,maxSpellLevel:5},10:{cantrips:5,spellsKnown:null,maxSpellLevel:5},11:{cantrips:5,spellsKnown:null,maxSpellLevel:6},12:{cantrips:5,spellsKnown:null,maxSpellLevel:6},13:{cantrips:5,spellsKnown:null,maxSpellLevel:7},14:{cantrips:5,spellsKnown:null,maxSpellLevel:7},15:{cantrips:5,spellsKnown:null,maxSpellLevel:8},16:{cantrips:5,spellsKnown:null,maxSpellLevel:8},17:{cantrips:5,spellsKnown:null,maxSpellLevel:9},18:{cantrips:5,spellsKnown:null,maxSpellLevel:9},19:{cantrips:5,spellsKnown:null,maxSpellLevel:9},20:{cantrips:5,spellsKnown:null,maxSpellLevel:9}},druid:{1:{cantrips:2,spellsKnown:null,maxSpellLevel:1},2:{cantrips:2,spellsKnown:null,maxSpellLevel:1},3:{cantrips:2,spellsKnown:null,maxSpellLevel:2},4:{cantrips:3,spellsKnown:null,maxSpellLevel:2},5:{cantrips:3,spellsKnown:null,maxSpellLevel:3},6:{cantrips:3,spellsKnown:null,maxSpellLevel:3},7:{cantrips:3,spellsKnown:null,maxSpellLevel:4},8:{cantrips:3,spellsKnown:null,maxSpellLevel:4},9:{cantrips:3,spellsKnown:null,maxSpellLevel:5},10:{cantrips:4,spellsKnown:null,maxSpellLevel:5},11:{cantrips:4,spellsKnown:null,maxSpellLevel:6},12:{cantrips:4,spellsKnown:null,maxSpellLevel:6},13:{cantrips:4,spellsKnown:null,maxSpellLevel:7},14:{cantrips:4,spellsKnown:null,maxSpellLevel:7},15:{cantrips:4,spellsKnown:null,maxSpellLevel:8},16:{cantrips:4,spellsKnown:null,maxSpellLevel:8},17:{cantrips:4,spellsKnown:null,maxSpellLevel:9},18:{cantrips:4,spellsKnown:null,maxSpellLevel:9},19:{cantrips:4,spellsKnown:null,maxSpellLevel:9},20:{cantrips:4,spellsKnown:null,maxSpellLevel:9}},ranger:{1:{cantrips:0,spellsKnown:0,maxSpellLevel:0},2:{cantrips:0,spellsKnown:2,maxSpellLevel:1},3:{cantrips:0,spellsKnown:3,maxSpellLevel:1},4:{cantrips:0,spellsKnown:3,maxSpellLevel:1},5:{cantrips:0,spellsKnown:4,maxSpellLevel:2},6:{cantrips:0,spellsKnown:4,maxSpellLevel:2},7:{cantrips:0,spellsKnown:5,maxSpellLevel:2},8:{cantrips:0,spellsKnown:5,maxSpellLevel:2},9:{cantrips:0,spellsKnown:6,maxSpellLevel:3},10:{cantrips:0,spellsKnown:6,maxSpellLevel:3},11:{cantrips:0,spellsKnown:7,maxSpellLevel:3},12:{cantrips:0,spellsKnown:7,maxSpellLevel:3},13:{cantrips:0,spellsKnown:8,maxSpellLevel:4},14:{cantrips:0,spellsKnown:8,maxSpellLevel:4},15:{cantrips:0,spellsKnown:9,maxSpellLevel:4},16:{cantrips:0,spellsKnown:9,maxSpellLevel:4},17:{cantrips:0,spellsKnown:10,maxSpellLevel:5},18:{cantrips:0,spellsKnown:10,maxSpellLevel:5},19:{cantrips:0,spellsKnown:11,maxSpellLevel:5},20:{cantrips:0,spellsKnown:11,maxSpellLevel:5}},paladin:{1:{cantrips:0,spellsKnown:null,maxSpellLevel:0},2:{cantrips:0,spellsKnown:null,maxSpellLevel:1},3:{cantrips:0,spellsKnown:null,maxSpellLevel:1},4:{cantrips:0,spellsKnown:null,maxSpellLevel:1},5:{cantrips:0,spellsKnown:null,maxSpellLevel:2},6:{cantrips:0,spellsKnown:null,maxSpellLevel:2},7:{cantrips:0,spellsKnown:null,maxSpellLevel:2},8:{cantrips:0,spellsKnown:null,maxSpellLevel:2},9:{cantrips:0,spellsKnown:null,maxSpellLevel:3},10:{cantrips:0,spellsKnown:null,maxSpellLevel:3},11:{cantrips:0,spellsKnown:null,maxSpellLevel:3},12:{cantrips:0,spellsKnown:null,maxSpellLevel:3},13:{cantrips:0,spellsKnown:null,maxSpellLevel:4},14:{cantrips:0,spellsKnown:null,maxSpellLevel:4},15:{cantrips:0,spellsKnown:null,maxSpellLevel:4},16:{cantrips:0,spellsKnown:null,maxSpellLevel:4},17:{cantrips:0,spellsKnown:null,maxSpellLevel:5},18:{cantrips:0,spellsKnown:null,maxSpellLevel:5},19:{cantrips:0,spellsKnown:null,maxSpellLevel:5},20:{cantrips:0,spellsKnown:null,maxSpellLevel:5}}};let o=e.hitDie||e.classData?.hitDie||null;if(!o){const t=(e.class||"").toString().trim().toLowerCase().replace(/\s+/g,"-");t&&a[t]&&(o=a[t])}if(!o&&window.DND_DATA&&Array.isArray(window.DND_DATA.classes)){const t=e.class;if(t){const e=window.DND_DATA.classes.find(e=>e.id===t||e.name===t);e&&e.hitDie&&(o=e.hitDie)}}o||(o=8);const r=e.abilities||e.abilityScores||{},c=r.con||10,d=Math.floor((c-10)/2),m=Math.ceil(t/4)+1,p=o+d,u=Math.floor(o/2)+1,h=Math.max(1,u+d),g=1===t?Math.max(1,p):Math.max(1,p+h*(t-1)),v=(e.class||"").toString().trim().toLowerCase().replace(/\s+/g,"-"),S=Math.max(1,Math.min(20,t));let w=null;if("warlock"===v){const e=i[S];e&&e.slots>0&&(w={},w[e.level]=e.slots)}else if(["wizard","sorcerer","bard","cleric","druid"].includes(v))w={...n[S]};else if(["paladin","ranger"].includes(v)){const e=l[S];e&&Object.keys(e).length>0&&(w={...e})}let y=null;const f=s[v];f&&f[S]&&(y={...f[S]});return{proficiencyBonus:m,hpMax:g,hitDie:o,hitDiceMax:t,spellSlots:w,spellProgression:y,classResources:calculateClassResources(v,t,r)}}function calculateClassResources(e,t,a){const n={},i=Math.floor(((a?.cha||10)-10)/2);Math.floor(((a?.wis||10)-10)/2);switch(e){case"monk":t>=2&&(n.ki={current:t,max:t,refresh:"short"});break;case"barbarian":let e=2;t>=20?e=1/0:t>=17?e=6:t>=12?e=5:t>=6?e=4:t>=3&&(e=3),n.rage={current:e===1/0?999:e,max:e===1/0?999:e,refresh:"long",unlimited:t>=20};let a=2;t>=16?a=4:t>=9&&(a=3),n.rageDamage={value:a};break;case"sorcerer":t>=2&&(n.sorceryPoints={current:t,max:t,refresh:"long"});break;case"bard":const l=Math.max(1,i);n.bardicInspiration={current:l,max:l,refresh:"long"};let s="d6";t>=15?s="d12":t>=10?s="d10":t>=5&&(s="d8"),n.bardicInspirationDie={value:s};break;case"cleric":let o=1;t>=18?o=3:t>=6&&(o=2),t>=2&&(n.channelDivinity={current:o,max:o,refresh:"short"});break;case"paladin":const r=5*t;n.layOnHands={current:r,max:r,refresh:"long"},t>=3&&(n.channelDivinity={current:1,max:1,refresh:"short"});break;case"druid":t>=2&&(n.wildShape={current:2,max:2,refresh:"short"});break;case"fighter":if(n.secondWind={current:1,max:1,refresh:"short"},t>=2){const e=t>=17?2:1;n.actionSurge={current:e,max:e,refresh:"short"}}if(t>=9){let e=1;t>=17?e=3:t>=13&&(e=2),n.indomitable={current:e,max:e,refresh:"long"}}break;case"rogue":const c=Math.ceil(t/2);n.sneakAttack={value:`${c}d6`};break;case"warlock":t>=11&&(n.mysticArcanum={current:1,max:1,refresh:"long",note:"6th level"});break;case"wizard":const d=Math.ceil(t/2);n.arcaneRecovery={current:d,max:d,refresh:"long",note:"spell slot levels"}}return n}async function autoRecalculateLevelStats(e){if(!e||!e.class||!e.level)return e;const t=e.level||1,a=(e.class||"").toString().trim().toLowerCase().replace(/\s+/g,"-"),n=["wizard","sorcerer","bard","cleric","druid","warlock","paladin","ranger"].includes(a),i=e.spellSlots||{},l=Object.keys(i).length,s=calculateStatsForLevel(e,t),o=s.spellSlots||{},r=Object.keys(o).length,c=e.classResources||{},d=s.classResources||{},m=Object.keys(d).length>0&&0===Object.keys(c).length,p=n&&r>0&&l<r,u=e.proficiencyBonus||2,h=s.proficiencyBonus,g=u!==h;if(p||m||g){console.log(`\ud83d\udcca Auto-recalculating stats for ${e.name} (level ${t} ${a})`);const n={};p&&(console.log(`  - Updating spell slots: ${l} levels \u2192 ${r} levels`),n.spellSlots=o),m&&(console.log("  - Adding class resources:",Object.keys(d)),n.classResources=d),g&&(console.log(`  - Updating proficiency bonus: +${u} \u2192 +${h}`),n.proficiencyBonus=h);try{if(await CharacterStorage.update(e.id,n),Object.assign(e,n),void 0!==AppState&&AppState&&Array.isArray(AppState.characters)){const t=AppState.characters.findIndex(t=>t&&String(t.id)===String(e.id));-1!==t&&Object.assign(AppState.characters[t],n)}console.log("  \u2713 Stats updated successfully")}catch(e){console.warn("Failed to auto-update character stats:",e)}}return e}function showAlertDialog(e,t){const a=document.getElementById("genericAlertModal");a&&a.remove();const n=Utils.escapeHtml(e).replace(/\n/g,"<br>"),i=t&&t.actionLabel,l=`\n      <div id="genericAlertModal" class="modal show">\n        <div class="modal-content">\n          <div class="modal-header">\n            <h2 class="modal-title">NOTICE</h2>\n            <button class="modal-close" onclick="closeGenericAlertModal()">&times;</button>\n          </div>\n          <div class="modal-body">\n            <p class="terminal-text">${n}</p>\n          </div>\n          <div class="modal-footer modal-footer-end">\n            ${i?`<button class="terminal-btn terminal-btn-secondary" id="genericAlertAction">${Utils.escapeHtml(i)}</button>`:""}\n            <button class="terminal-btn terminal-btn-primary" id="genericAlertOk">OK</button>\n          </div>\n        </div>\n      </div>\n    `;getManagerModalHost().insertAdjacentHTML("beforeend",l);const s=document.getElementById("genericAlertModal"),o=document.getElementById("genericAlertOk"),r=document.getElementById("genericAlertAction"),c=()=>{s&&animateModalClose(s,{removeOnClose:!0})};o.addEventListener("click",c),r&&t&&"function"==typeof t.onAction&&r.addEventListener("click",()=>{c(),t.onAction()}),s&&focusFirstFieldInModal(s)}function showSessionExpiredModal(){closeAllEditorModals();const e=document.getElementById("sessionExpiredModal");e&&e.remove();getManagerModalHost().insertAdjacentHTML("beforeend",'\n      <div id="sessionExpiredModal" class="modal show">\n        <div class="modal-content">\n          <div class="modal-header">\n            <h2 class="modal-title">[!] Your session has expired</h2>\n          </div>\n          <div class="modal-body">\n            <p class="terminal-text">Your local changes are safe, but you\'ll need to log in again to sync with the cloud.</p>\n          </div>\n          <div class="modal-footer modal-footer-end">\n            <button class="terminal-btn terminal-btn-secondary" id="sessionExpiredDismiss">Continue offline</button>\n            <button class="terminal-btn terminal-btn-primary" id="sessionExpiredLogin">Log in</button>\n          </div>\n        </div>\n      </div>\n    ');const t=document.getElementById("sessionExpiredModal"),a=document.getElementById("sessionExpiredDismiss"),n=document.getElementById("sessionExpiredLogin"),i=()=>{t&&animateModalClose(t,{removeOnClose:!0})};a.addEventListener("click",()=>{i(),showNotification("Working offline - log in to sync changes")}),n.addEventListener("click",()=>{i(),setTimeout(()=>{showAuthModal()},200)}),t&&focusFirstFieldInModal(t)}let guestNoticeShownThisSession=!1,userHasMadeChanges=!1;function dismissGuestNotice(){const e=document.getElementById("guestNotice");e&&(e.classList.add("is-hidden"),guestNoticeShownThisSession=!0)}function maybeShowGuestNotice(){if(window.AuthService&&window.AuthService.isAuthenticated())return;if(guestNoticeShownThisSession)return;const e=document.getElementById("guestNotice");e&&(e.classList.remove("is-hidden"),guestNoticeShownThisSession=!0)}function markUserChanges(){userHasMadeChanges||(userHasMadeChanges=!0,maybeShowGuestNotice())}const BUILDER_SESSION_KEY="danddy_builder_session";let sessionNoticeDismissed=!1;function hasBuilderSession(){try{const e=localStorage.getItem(BUILDER_SESSION_KEY);if(!e)return!1;const t=JSON.parse(e),a=t.currentQuestionId&&"intro"!==t.currentQuestionId,n=t.character&&(t.character.name||t.character.race||t.character.class);return a||n}catch{return!1}}function getBuilderSessionPreview(){try{const e=localStorage.getItem(BUILDER_SESSION_KEY);return e?JSON.parse(e):null}catch{return null}}function formatTimeAgo(e){if(!e)return"";const t=new Date(e),a=new Date-t,n=Math.floor(a/6e4),i=Math.floor(a/36e5),l=Math.floor(a/864e5);return n<1?"just now":n<60?`${n}m ago`:i<24?`${i}h ago`:l<7?`${l}d ago`:t.toLocaleDateString()}function maybeShowSessionNotice(){if(sessionNoticeDismissed)return;if(!hasBuilderSession())return;const e=document.getElementById("sessionNotice"),t=document.getElementById("sessionNoticeTime");if(e){const a=getBuilderSessionPreview();a&&a._savedAt&&(t.textContent=`\xb7 ${formatTimeAgo(a._savedAt)}`),e.classList.remove("is-hidden")}}function dismissSessionNotice(){const e=document.getElementById("sessionNotice");e&&(e.classList.add("is-hidden"),sessionNoticeDismissed=!0)}function discardBuilderSession(){try{localStorage.removeItem("danddy_builder_session");const e=document.getElementById("sessionNotice");e&&e.classList.add("is-hidden")}catch(e){console.error("Failed to discard builder session:",e)}}let splashActive=!1,authOpenedFromWelcome=!1;function dismissSplash(e=!1){const t=document.getElementById("splash-content"),a=document.getElementById("main-content");t&&splashActive&&(splashActive=!1,e?(t.classList.add("is-hidden"),a.classList.remove("is-hidden"),a.classList.add("fade-in")):(t.classList.add("fade-out"),setTimeout(()=>{t.classList.add("is-hidden"),a.classList.remove("is-hidden"),setTimeout(()=>{a.classList.add("fade-in")},50)},300)))}const MODAL_ANIMATION_DURATION=350,AUTH_FLOW_MODAL_IDS=["welcomeModal","authModal","passwordResetModal"];function getModalOverlayHost(){return document.querySelector(".app-root")||document.querySelector(".terminal-frame")}function syncAuthFlowDim(){const e=getModalOverlayHost();if(!e)return;const t=AUTH_FLOW_MODAL_IDS.some(e=>{const t=document.getElementById(e);return t&&(t.classList.contains("show")||t.classList.contains("closing"))});e.classList.toggle("auth-flow-dim",t)}function setAuthFlowDim(e){const t=getModalOverlayHost();t&&t.classList.toggle("auth-flow-dim",!!e)}function animateModalClose(e){const t="string"==typeof e?document.getElementById(e):e;return t&&t.classList.contains("show")?new Promise(e=>{t.classList.add("closing"),setTimeout(()=>{t.classList.remove("show","closing"),syncAuthFlowDim(),e()},MODAL_ANIMATION_DURATION)}):Promise.resolve()}async function animateModalTransition(e,t,a){const n="string"==typeof e?document.getElementById(e):e,i="string"==typeof t?document.getElementById(t):t;setAuthFlowDim(!0),i&&!i.classList.contains("show")?(i.classList.add("show"),a&&a(i)):i&&a&&a(i),n&&n.classList.contains("show")&&(n.classList.add("closing"),await new Promise(e=>setTimeout(e,MODAL_ANIMATION_DURATION)),n.classList.remove("show","closing")),syncAuthFlowDim()}async function cancelAuthFlow(){if(authOpenedFromWelcome){await animateModalTransition("authModal","welcomeModal"),document.getElementById("authError").classList.add("is-hidden"),document.getElementById("loginEmail").value="";const e=document.getElementById("loginPassword");e&&(e.value="",e.type="password");const t=document.getElementById("registerUsername");t&&(t.value=""),document.getElementById("registerEmail").value="";const a=document.getElementById("registerPassword");a&&(a.value="",a.type="password");const n=document.getElementById("registerPasswordConfirm");n&&(n.value="",n.type="password"),authOpenedFromWelcome=!1}else await closeAuthModal(!0)}function showAuthModal(){const e=document.getElementById("authModal");e&&e.classList.add("show"),showLoginForm(),syncAuthFlowDim()}function closeAuthModal(e=!1){const t=document.getElementById("authModal"),a=()=>{document.getElementById("authError").classList.add("is-hidden"),document.getElementById("loginEmail").value="";const e=document.getElementById("loginPassword");e&&(e.value="",e.type="password");const t=document.getElementById("registerUsername");t&&(t.value=""),document.getElementById("registerEmail").value="";const a=document.getElementById("registerPassword");a&&(a.value="",a.type="password");const n=document.getElementById("registerPasswordConfirm");n&&(n.value="",n.type="password")};if(e&&t)return animateModalClose(t).then(a);t&&t.classList.remove("show"),a(),syncAuthFlowDim()}function applyAuthFormState(e){const t="register"===e;document.getElementById("loginForm").classList.toggle("is-hidden",t),document.getElementById("registerForm").classList.toggle("is-hidden",!t),document.getElementById("authModalTitle").textContent=t?"REGISTER":"LOG IN",document.getElementById("loginBtn").classList.toggle("is-hidden",t),document.getElementById("registerBtn").classList.toggle("is-hidden",!t),document.getElementById("authError").classList.add("is-hidden");const a=document.getElementById("authModal");a&&focusFirstFieldInModal(a)}function shouldAnimateAuthFormSwap(){const e=document.getElementById("authModal");return!!e&&(!!e.classList.contains("show")&&(!e.classList.contains("closing")&&(!window.matchMedia||!window.matchMedia("(prefers-reduced-motion: reduce)").matches)))}function animateAuthFormSwap(e){const t=document.getElementById("authModal");if(!t)return void applyAuthFormState(e);const a=document.getElementById("loginForm"),n=document.getElementById("registerForm"),i=t.querySelector(".modal-body");if(!a||!n||!i)return void applyAuthFormState(e);const l="register"===e,s=l?a:n,o=l?n:a;if(!o.classList.contains("is-hidden"))return void applyAuthFormState(e);if("1"===t.dataset.authSwapAnimating)return;t.dataset.authSwapAnimating="1";const r=i.offsetHeight;i.style.overflow="hidden",i.style.height=`${r}px`,s.style.transition="opacity 120ms ease-out",s.style.opacity="0",setTimeout(()=>{applyAuthFormState(e),o.style.transition="none",o.style.opacity="0",i.style.height="auto";const a=i.offsetHeight;i.style.height=`${r}px`,i.offsetHeight,i.style.transition="height 260ms cubic-bezier(0.4, 0, 0.2, 1)",i.style.height=`${a}px`,o.style.transition="opacity 180ms ease-out 80ms",o.style.opacity="1",setTimeout(()=>{i.style.transition="",i.style.height="",i.style.overflow="",s.style.transition="",s.style.opacity="",o.style.transition="",o.style.opacity="",delete t.dataset.authSwapAnimating},360)},120)}function showLoginForm(){shouldAnimateAuthFormSwap()?animateAuthFormSwap("login"):applyAuthFormState("login")}function showRegisterForm(){shouldAnimateAuthFormSwap()?animateAuthFormSwap("register"):applyAuthFormState("register")}function setAuthLoading(e,t){const a=document.getElementById("loginBtn"),n=document.getElementById("registerBtn"),i=t||"CONTACTING SERVER...";[a,n,document.getElementById("authCancelBtn")].forEach(t=>{t&&(t.disabled=e)});const l='<span class="spinner-cube-scene"><span class="spinner-cube-tilt"><span class="spinner-cube"><span class="spinner-cube-face spinner-cube-face-front"></span><span class="spinner-cube-face spinner-cube-face-back"></span><span class="spinner-cube-face spinner-cube-face-right"></span><span class="spinner-cube-face spinner-cube-face-left"></span><span class="spinner-cube-face spinner-cube-face-top"></span><span class="spinner-cube-face spinner-cube-face-bottom"></span></span></span></span>';a&&(e?(a.dataset.originalLabel||(a.dataset.originalLabel=a.innerHTML),a.innerHTML=`${l}${i}`):a.dataset.originalLabel?(a.innerHTML=a.dataset.originalLabel,delete a.dataset.originalLabel):a.textContent="LOG IN"),n&&(e?(n.dataset.originalLabel||(n.dataset.originalLabel=n.innerHTML),n.innerHTML=`${l}${i}`):n.dataset.originalLabel?(n.innerHTML=n.dataset.originalLabel,delete n.dataset.originalLabel):n.textContent="Register")}async function handleLogin(){const e=document.getElementById("authError"),t=document.getElementById("loginForm");if(t&&t.classList.contains("is-hidden"))return;await new Promise(e=>setTimeout(e,50));const a=document.getElementById("loginEmail"),n=document.getElementById("loginPassword"),i=a?a.value.trim():"",l=n?n.value:"";if(!i||!l)return e.textContent="Please enter your username/email and password",void e.classList.remove("is-hidden");e.classList.add("is-hidden"),setAuthLoading(!0,"LOGGING IN...");try{const t=await window.AuthService.login(i,l);if(t&&t.success){sessionStorage.setItem("welcomeSplashDismissed","true"),closeAuthModal(),updateAuthUI();const e=window.AuthService.getCurrentUser();if(showNotification(`\u2713 Logged in as ${e?.username?`@${e.username}`:i}`),window.AuthService&&"function"==typeof window.AuthService.startSessionMonitor&&window.AuthService.startSessionMonitor(),window.StorageService&&StorageService.loadPreferencesFromServer&&StorageService.loadPreferencesFromServer(),window.MigrationService&&window.MigrationService.hasLocalCharacters())showMigrationModal();else if(shouldShowDemoMigration())showDemoMigrationModal();else{if(await loadPinnedCharacterIds(),await AppState.loadCharacters(),!AppState.characters||0===AppState.characters.length)return void(window.location.href="builder.html?new=true&required=true");UI.render()}return updateCreationQuotaState(),updateImageQuotaState(),void setTimeout(()=>checkPendingShares(),500)}e.textContent=t&&t.error||"Login failed",e.classList.remove("is-hidden")}catch(t){e.textContent="Login failed. Please try again.",e.classList.remove("is-hidden")}finally{setAuthLoading(!1)}}async function handleRegister(){const e=document.getElementById("authError");await new Promise(e=>setTimeout(e,50));const t=document.getElementById("registerUsername"),a=document.getElementById("registerEmail"),n=document.getElementById("registerPassword"),i=document.getElementById("registerPasswordConfirm"),l=t?t.value.trim():"",s=a?a.value.trim():"",o=n?n.value:"",r=i?i.value:"";if(!(l&&s&&o&&r))return e.textContent="Please fill in all fields",void e.classList.remove("is-hidden");if(!/^[a-zA-Z0-9_]{3,30}$/.test(l))return e.textContent="Username must be 3-30 characters, using only letters, numbers, and underscores",void e.classList.remove("is-hidden");if(o!==r)return e.textContent="Passwords do not match",void e.classList.remove("is-hidden");if(new Blob([o]).size>72)return e.textContent="Password is too long (max 72 bytes)",void e.classList.remove("is-hidden");e.classList.add("is-hidden"),setAuthLoading(!0,"CREATING ACCOUNT...");try{const t=await window.AuthService.register(l,s,o);if(t.success){if(sessionStorage.setItem("welcomeSplashDismissed","true"),closeAuthModal(),updateAuthUI(),showNotification(`\u2713 Registered as @${l}`),window.AuthService&&"function"==typeof window.AuthService.startSessionMonitor&&window.AuthService.startSessionMonitor(),window.StorageService&&StorageService.syncPreferencesToServer&&StorageService.syncPreferencesToServer(),window.MigrationService.hasLocalCharacters())showMigrationModal();else if(shouldShowDemoMigration())showDemoMigrationModal();else{if(await loadPinnedCharacterIds(),await AppState.loadCharacters(),!AppState.characters||0===AppState.characters.length)return void(window.location.href="builder.html?new=true&required=true");UI.render()}updateCreationQuotaState(),updateImageQuotaState(),setTimeout(()=>checkPendingShares(),500)}else e.textContent=t.error||"Registration failed",e.classList.remove("is-hidden")}catch(t){e.textContent="Registration failed. Please try again.",e.classList.remove("is-hidden")}finally{setAuthLoading(!1)}}async function openPasswordResetFromLogin(){await animateModalTransition("authModal","passwordResetModal",e=>{const t=document.getElementById("passwordResetModalTitle"),a=document.getElementById("passwordResetRequestSection"),n=document.getElementById("passwordResetSuccessSection"),i=document.getElementById("passwordResetConfirmSection"),l=document.getElementById("passwordResetCancelBtn"),s=document.getElementById("passwordResetCloseBtn"),o=document.getElementById("passwordResetRequestBtn"),r=document.getElementById("passwordResetConfirmBtn"),c=document.getElementById("passwordResetMessage"),d=document.getElementById("passwordResetConfirmMessage"),m=document.getElementById("passwordResetEmail"),p=document.getElementById("passwordResetToken"),u=document.getElementById("passwordResetNewPassword");t&&(t.textContent="RESET PASSWORD"),a&&a.classList.remove("is-hidden"),n&&n.classList.add("is-hidden"),i&&i.classList.add("is-hidden"),l&&l.classList.remove("is-hidden"),s&&s.classList.add("is-hidden"),o&&o.classList.remove("is-hidden"),r&&r.classList.add("is-hidden"),c&&(c.textContent="",c.classList.remove("terminal-text-error"),c.classList.add("terminal-text-dim")),d&&(d.textContent="",d.classList.remove("terminal-text-error"),d.classList.add("terminal-text-dim")),m&&(m.value=""),p&&(p.value=""),u&&(u.value=""),"function"==typeof focusFirstFieldInModal&&focusFirstFieldInModal(e)}),closeAuthModal(!1)}function showPasswordResetModal(){const e=document.getElementById("passwordResetModal");if(!e)return;const t=document.getElementById("passwordResetModalTitle"),a=document.getElementById("passwordResetRequestSection"),n=document.getElementById("passwordResetSuccessSection"),i=document.getElementById("passwordResetConfirmSection"),l=document.getElementById("passwordResetCancelBtn"),s=document.getElementById("passwordResetCloseBtn"),o=document.getElementById("passwordResetRequestBtn"),r=document.getElementById("passwordResetConfirmBtn"),c=document.getElementById("passwordResetMessage"),d=document.getElementById("passwordResetConfirmMessage"),m=document.getElementById("passwordResetEmail"),p=document.getElementById("passwordResetToken"),u=document.getElementById("passwordResetNewPassword");t&&(t.textContent="RESET PASSWORD"),a&&a.classList.remove("is-hidden"),n&&n.classList.add("is-hidden"),i&&i.classList.add("is-hidden"),l&&l.classList.remove("is-hidden"),s&&s.classList.add("is-hidden"),o&&o.classList.remove("is-hidden"),r&&r.classList.add("is-hidden"),c&&(c.textContent="",c.classList.remove("terminal-text-error"),c.classList.add("terminal-text-dim")),d&&(d.textContent="",d.classList.remove("terminal-text-error"),d.classList.add("terminal-text-dim")),m&&(m.value=""),p&&(p.value=""),u&&(u.value=""),e.classList.add("show"),"function"==typeof focusFirstFieldInModal&&focusFirstFieldInModal(e),syncAuthFlowDim()}function closePasswordResetModal(e=!0){const t=document.getElementById("passwordResetModal");if(!t)return;const a=()=>{const e=document.getElementById("passwordResetModalTitle"),t=document.getElementById("passwordResetRequestSection"),a=document.getElementById("passwordResetSuccessSection"),n=document.getElementById("passwordResetConfirmSection"),i=document.getElementById("passwordResetCancelBtn"),l=document.getElementById("passwordResetCloseBtn"),s=document.getElementById("passwordResetRequestBtn"),o=document.getElementById("passwordResetConfirmBtn"),r=document.getElementById("passwordResetMessage"),c=document.getElementById("passwordResetConfirmMessage"),d=document.getElementById("passwordResetEmail"),m=document.getElementById("passwordResetToken"),p=document.getElementById("passwordResetNewPassword");e&&(e.textContent="RESET PASSWORD"),t&&t.classList.remove("is-hidden"),a&&a.classList.add("is-hidden"),n&&n.classList.add("is-hidden"),i&&i.classList.remove("is-hidden"),l&&l.classList.add("is-hidden"),s&&s.classList.remove("is-hidden"),o&&o.classList.add("is-hidden"),r&&(r.textContent="",r.classList.remove("terminal-text-error"),r.classList.add("terminal-text-dim")),c&&(c.textContent="",c.classList.remove("terminal-text-error"),c.classList.add("terminal-text-dim")),d&&(d.value=""),m&&(m.value=""),p&&(p.value="")};if(e)return animateModalClose(t).then(a);t.classList.remove("show"),setTimeout(a,50),syncAuthFlowDim()}async function openAccountModal(){const e=document.getElementById("accountModal");if(!e)return;let t=window.AuthService?window.AuthService.getCurrentUser():null;if(!t)return;const a=document.getElementById("accountUsername"),n=document.getElementById("accountEmail");a&&(a.textContent=t.username?`@${t.username}`:"Loading..."),n&&(n.textContent=t.email||"Loading..."),e.classList.add("show"),syncAuthFlowDim();try{const e=await window.AuthService.fetchProfile();e?(window.AuthService.setCurrentUser(e),t=e,a&&(a.textContent=t.username?`@${t.username}`:"Not set"),n&&(n.textContent=t.email||"Not set"),updateAuthUI()):(a&&(a.textContent=t.username?`@${t.username}`:"Not set"),n&&(n.textContent=t.email||"Not set"))}catch(e){console.error("Failed to refresh profile:",e),a&&(a.textContent=t.username?`@${t.username}`:"Not set"),n&&(n.textContent=t.email||"Not set")}}function closeAccountModal(e=!0){const t=document.getElementById("accountModal");if(t){if(cancelUsernameEdit(),e)return animateModalClose(t);t.classList.remove("show"),syncAuthFlowDim()}}function animateAccountModeSwap(e,t,a){const n=e.closest(".modal-content");if(!n)return e.classList.add("is-hidden"),t.classList.remove("is-hidden"),void(a&&a());const i=n.offsetHeight;n.style.overflow="hidden",n.style.height=i+"px",n.style.transition="opacity 0.15s ease-out",n.style.opacity="0",setTimeout(()=>{e.classList.add("is-hidden"),t.classList.remove("is-hidden"),n.style.height="auto";const l=n.offsetHeight;n.style.height=i+"px",n.offsetHeight,n.style.transition="height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease-out 0.1s",n.style.height=l+"px",n.style.opacity="1",setTimeout(()=>{n.style.height="",n.style.overflow="",n.style.transition="",a&&a()},350)},150)}function enterUsernameEditMode(){const e=document.getElementById("usernameDisplayMode"),t=document.getElementById("usernameEditMode"),a=document.getElementById("usernameEditInput"),n=document.getElementById("usernameEditError"),i=document.getElementById("accountEmailEdit");if(!e||!t||!a)return;const l=window.AuthService?window.AuthService.getCurrentUser():null;l&&(a.value=l.username||"",i&&(i.textContent=l.email||""),n&&(n.textContent="",n.classList.add("is-hidden")),animateAccountModeSwap(e,t,()=>{a.focus(),a.select()}))}function cancelUsernameEdit(){const e=document.getElementById("usernameDisplayMode"),t=document.getElementById("usernameEditMode"),a=document.getElementById("usernameEditInput"),n=document.getElementById("usernameEditError");e&&t&&(a&&(a.value=""),n&&(n.textContent="",n.classList.add("is-hidden")),animateAccountModeSwap(t,e))}async function saveUsername(){const e=document.getElementById("usernameEditInput"),t=(document.getElementById("usernameEditError"),document.getElementById("saveUsernameBtn"));if(!e)return;const a=e.value.trim();if(!a)return void showUsernameError("Username cannot be empty");if(a.length<3)return void showUsernameError("Username must be at least 3 characters");if(a.length>30)return void showUsernameError("Username must be 30 characters or less");if(!/^[a-zA-Z0-9_]+$/.test(a))return void showUsernameError("Only letters, numbers, and underscores allowed");const n=window.AuthService?window.AuthService.getCurrentUser():null;if(n&&a===n.username)showUsernameError("New username is the same as current");else{t&&(t.disabled=!0,t.textContent="Saving...");try{const e=await window.AuthService.updateUsername(a);if(!e.success)return void showUsernameError(e.error||"Failed to update username");const t=document.getElementById("accountUsername");t&&(t.textContent=`@${a}`),updateAuthUI(),cancelUsernameEdit(),showNotification("Username updated successfully","success")}catch(e){console.error("Failed to update username:",e),showUsernameError(e.message||"Failed to update username")}finally{t&&(t.disabled=!1,t.textContent="Save")}}}function showUsernameError(e){const t=document.getElementById("usernameEditError");t&&(t.textContent=e,t.classList.remove("is-hidden"))}async function handlePasswordResetRequest(){const e=document.getElementById("passwordResetEmail"),t=document.getElementById("passwordResetMessage");if(!e||!t)return;const a=e.value.trim();if(!a)return t.textContent="Please enter your email address.",t.classList.remove("terminal-text-dim"),void t.classList.add("terminal-text-error");t.textContent="Requesting password reset...",t.classList.remove("terminal-text-error"),t.classList.add("terminal-text-dim");const n=await window.AuthService.forgotPassword(a);if(!n.success)return t.textContent=n.error||"Password reset request failed. Please try again.",t.classList.remove("terminal-text-dim"),void t.classList.add("terminal-text-error");const i=document.getElementById("passwordResetModalTitle"),l=document.getElementById("passwordResetRequestSection"),s=document.getElementById("passwordResetSuccessSection"),o=document.getElementById("passwordResetConfirmSection"),r=document.getElementById("passwordResetCancelBtn"),c=document.getElementById("passwordResetCloseBtn"),d=document.getElementById("passwordResetRequestBtn"),m=document.getElementById("passwordResetConfirmBtn"),p=document.getElementById("passwordResetToken");if(n.debugToken&&p){p.value=n.debugToken,i&&(i.textContent="RESET PASSWORD"),l&&l.classList.add("is-hidden"),s&&s.classList.add("is-hidden"),o&&o.classList.remove("is-hidden"),r&&r.classList.remove("is-hidden"),c&&c.classList.add("is-hidden"),d&&d.classList.add("is-hidden"),m&&m.classList.remove("is-hidden");const e=document.getElementById("passwordResetConfirmMessage");e&&(e.textContent="[DEV MODE] Token auto-filled for testing. Enter your new password below.",e.classList.add("terminal-text-dim"))}else i&&(i.textContent="SUCCESS"),l&&l.classList.add("is-hidden"),s&&s.classList.remove("is-hidden"),o&&o.classList.add("is-hidden"),r&&r.classList.add("is-hidden"),c&&c.classList.remove("is-hidden"),d&&d.classList.add("is-hidden"),m&&m.classList.add("is-hidden")}async function handlePasswordResetConfirm(){const e=document.getElementById("passwordResetToken"),t=document.getElementById("passwordResetNewPassword"),a=document.getElementById("passwordResetConfirmMessage");if(!e||!t||!a)return;const n=e.value.trim(),i=t.value;if(!n)return a.textContent="Invalid reset link. Please request a new password reset.",a.classList.remove("terminal-text-dim"),void a.classList.add("terminal-text-error");if(!i)return a.textContent="Please enter a new password.",a.classList.remove("terminal-text-dim"),void a.classList.add("terminal-text-error");a.textContent="Resetting password...",a.classList.remove("terminal-text-error"),a.classList.add("terminal-text-dim");try{const e=await fetch(`${window.DanddyConfig.API_BASE_URL}/auth/password/reset`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:n,new_password:i})});if(!e.ok){const t=await e.json().catch(()=>({}));throw new Error(t.detail||"Password reset failed")}showNotification("\u2713 Password updated successfully! Please log in with your new password."),await animateModalTransition("passwordResetModal","authModal",()=>{showLoginForm()})}catch(e){a.textContent=e.message||"Password reset failed. Please try again.",a.classList.remove("terminal-text-dim"),a.classList.add("terminal-text-error")}}async function handleLogout(){closeAllEditorModals(),void 0!==MobileView&&MobileView.isMobile()&&MobileView.isOpen()&&MobileView.close(),AppState.selectedCharacterId=null,window.AuthService.logout(),updateAuthUI(),showNotification("\u2713 Logged out"),await loadPinnedCharacterIds(),await AppState.loadCharacters();if(void 0!==MobileView&&MobileView.isMobile()&&AppState.filteredCharacters.length>0){const e=AppState.filteredCharacters[0];AppState.selectedCharacterId=e.id,viewCharacter(e.id,{openMobileModal:!1,updateUrl:!1})}UI.render(),sessionStorage.removeItem("welcomeSplashDismissed");const e=document.getElementById("welcomeModal");e&&(e.classList.add("show"),syncAuthFlowDim())}function updateAuthUI(){const e=document.getElementById("authBtn"),t=document.getElementById("userInfoDisplay"),a=document.getElementById("userStatusIcon"),n=document.getElementById("userStatusText"),i=document.getElementById("guestNotice"),l=document.getElementById("overflowAuthIcon"),s=document.getElementById("overflowAuthLabel"),o=document.getElementById("overflowCreateAccountBtn"),r=document.getElementById("overflowAccountBtn");if(e&&t&&a&&n)if(window.AuthService&&window.AuthService.isAuthenticated()){const t=window.AuthService.getCurrentUser();a.textContent="\u2601";const c=t?.username?`@${t.username}`:t?.email||"Logged In";n.textContent=c,n.style.cursor="pointer",n.onclick=openAccountModal,n.title="Manage account",e.textContent="Log out",e.onclick=handleLogout,l&&(l.textContent="\u2190"),s&&(s.textContent="Log out"),o&&o.classList.add("is-hidden"),r&&r.classList.remove("is-hidden"),i&&i.classList.add("is-hidden")}else a.textContent="\u25a3",n.textContent="Guest Mode",n.style.cursor="default",n.onclick=null,n.title="",e.textContent="LOG IN",e.onclick=()=>{authOpenedFromWelcome=!1,showAuthModal()},l&&(l.textContent="\u2192"),s&&(s.textContent="Log In"),o&&o.classList.remove("is-hidden"),r&&r.classList.add("is-hidden")}function showMigrationModal(){const e=window.MigrationService.getLocalCharacterCount();document.getElementById("migrationCount").textContent=e;const t=document.getElementById("migrationModal");t&&(t.classList.add("show"),focusFirstFieldInModal(t))}function closeMigrationModal(){document.getElementById("migrationModal").classList.remove("show"),shouldShowDemoMigration()?showDemoMigrationModal():AppState.loadCharacters().then(()=>UI.render())}async function startMigration(){const e=document.getElementById("migrationStatus");e.classList.remove("is-hidden"),e.textContent="Migrating to cloud...";try{const t=await window.MigrationService.migrateToCloud({includeDemoCharacters:!1});t.success>0?(e.textContent="\u2713 Migrated "+t.success+" character(s) successfully!",t.failed>0&&(e.textContent+="\n\u26a0\ufe0f "+t.failed+" character(s) failed to migrate."),0===t.failed?setTimeout(()=>{window.MigrationService.clearLocalStorage(),showNotification("\u2713 Migrated "+t.success+" characters to cloud"),closeMigrationModal()},2e3):setTimeout(()=>{showNotification("\u26a0\ufe0f Migration completed with "+t.failed+" error(s)"),closeMigrationModal()},3e3)):(e.textContent="Migration failed. Your local data is safe.",setTimeout(()=>closeMigrationModal(),2e3))}catch(t){console.error("Migration error:",t),e.textContent="Migration failed: "+t.message,setTimeout(()=>closeMigrationModal(),3e3)}}function showDemoMigrationModal(){if(!window.DemoCharacters)return;window.DemoCharacters.markMigrationAsked();const e=window.DemoCharacters.getAll(),t=e.length;document.getElementById("demoMigrationCount").textContent=t;const a=document.getElementById("demoCharacterList");a&&(a.innerHTML=e.map(e=>{const t=e.raceData?.name||e.race||"?",a=e.classData?.name||e.class||"?";return`<li><span class="demo-char-name">${Utils.escapeHtml(e.name)}</span> <span class="demo-char-info">\u2013 Level ${e.level} ${t} ${a}</span></li>`}).join(""));const n=document.getElementById("demoMigrationModal");n&&(n.classList.add("show"),focusFirstFieldInModal(n))}function closeDemoMigrationModal(e=!1){const t=document.getElementById("demoMigrationModal");t&&t.classList.remove("show"),e||AppState.loadCharacters().then(()=>UI.render())}async function migrateDemoCharacters(){try{const e=window.DemoCharacters?window.DemoCharacters.getAll():[];if(0===e.length)return void closeDemoMigrationModal();let t=0;for(const a of e)try{const e={...a};delete e.isDemo,delete e.id,await window.CharacterCloudStorage.add(e),t++}catch(e){console.error("Failed to migrate demo character:",a.name,e)}t>0&&showNotification(`\u2713 Added ${t} sample character(s) to your account`),closeDemoMigrationModal()}catch(e){console.error("Demo migration error:",e),showNotification("Failed to add sample characters","error"),closeDemoMigrationModal()}}function shouldShowDemoMigration(){return!!window.DemoCharacters&&(!window.DemoCharacters.hasMigrationBeenAsked()&&window.MigrationService.hasDemoCharacters())}document.addEventListener("DOMContentLoaded",async()=>{if("expanded"===new URL(window.location.href).searchParams.get("view")){PanelManager.setView("sheet-campaign");const e=document.querySelector(".split-layout");e&&e.classList.add("is-sheet-expanded","is-restoring-expanded")}ModalManager.init(),document.addEventListener("focus",e=>{const t=e.target;"INPUT"!==t.tagName||"text"!==t.type&&"email"!==t.type&&"number"!==t.type&&"search"!==t.type||setTimeout(()=>t.select(),0)},!0),MobileView.init(),CharacterNavBar.init(),PortraitLightbox.init(),void 0!==UI&&UI&&"function"==typeof UI.setLoadingState&&UI.setLoadingState(!0);try{const e=window.DANDDY_VERSION||"2.0.0",t=document.querySelector(".terminal-title-text"),a=document.querySelector(".welcome-version");t&&(t.textContent=`D&Dy v${e}`),a&&(a.textContent=`D&Dy v${e}`)}catch(e){console.warn("Version banner update failed:",e)}let e=!1;if(window.AuthService){const t=async()=>{if("function"==typeof window.AuthService.verifyToken)try{return!!await window.AuthService.verifyToken()}catch(e){return console.warn("Auth token verification failed:",e),!1}else if("function"==typeof window.AuthService.isAuthenticated)try{return!!window.AuthService.isAuthenticated()}catch(e){return console.warn("Auth isAuthenticated check failed:",e),!1}return!1},a=(e,t,a)=>{let n;const i=new Promise(e=>{n=setTimeout(()=>{console.warn(`[Boot] ${a} timed out after ${t}ms; continuing in guest mode.`),e(!1)},t)});return Promise.race([e,i]).finally(()=>{clearTimeout(n)})};e=await a(t(),5e3,"AuthService.verifyToken")}updateAuthUI(),e&&window.AuthService&&"function"==typeof window.AuthService.startSessionMonitor&&window.AuthService.startSessionMonitor(),e&&window.StorageService&&StorageService.loadPreferencesFromServer&&StorageService.loadPreferencesFromServer(),window.addEventListener("danddy:sessionExpired",()=>{showSessionExpiredModal()});const t="builder"===new URLSearchParams(window.location.search).get("from"),a="true"===sessionStorage.getItem("welcomeSplashDismissed");if(t||maybeShowSessionNotice(),t&&!e){"true"===sessionStorage.getItem("showGuestNoticeOnReturn")&&(sessionStorage.removeItem("showGuestNoticeOnReturn"),setTimeout(()=>{maybeShowGuestNotice()},100))}const n=document.getElementById("welcomeModal"),i=document.getElementById("welcomeLoginBtn");i&&i.addEventListener("click",async()=>{authOpenedFromWelcome=!0,await animateModalTransition(n,"authModal",()=>{showLoginForm()})});const l=document.getElementById("welcomeRegisterBtn");l&&l.addEventListener("click",async()=>{authOpenedFromWelcome=!0,await animateModalTransition(n,"authModal",()=>{showRegisterForm()})});const s=document.getElementById("welcomeDemoBtn");if(s&&s.addEventListener("click",async()=>{sessionStorage.setItem("welcomeSplashDismissed","true"),await animateModalClose(n),setTimeout(()=>{maybeShowGuestNotice()},100)}),n){const i=Array.from(n.querySelectorAll(".welcome-actions .terminal-btn"));let l=0;const s=e=>{if(!i.length)return;const t=(e+i.length)%i.length;l=t;const a=i[t];a&&a.focus()};e||a||t||(n.classList.add("show"),syncAuthFlowDim()),n.addEventListener("keydown",e=>{if(!n.classList.contains("show"))return;if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Enter"].includes(e.key)){if(e.preventDefault(),e.stopPropagation(),"Enter"===e.key){const e=document.activeElement.classList.contains("terminal-btn")?document.activeElement:i[l]||i[0];return void(e&&"function"==typeof e.click&&e.click())}"ArrowUp"===e.key||"ArrowLeft"===e.key?s(l-1):"ArrowDown"!==e.key&&"ArrowRight"!==e.key||s(l+1)}})}const o=document.getElementById("loginUsername"),r=document.getElementById("loginPassword"),c=document.getElementById("registerEmail"),d=document.getElementById("registerPassword");o&&o.addEventListener("keypress",e=>{"Enter"===e.key&&(e.preventDefault(),handleLogin())}),r&&r.addEventListener("keypress",e=>{"Enter"===e.key&&(e.preventDefault(),handleLogin())}),c&&c.addEventListener("keypress",e=>{"Enter"===e.key&&(e.preventDefault(),handleRegister())}),d&&d.addEventListener("keypress",e=>{"Enter"===e.key&&(e.preventDefault(),handleRegister())});document.querySelectorAll(".password-toggle-btn").forEach(e=>{e.addEventListener("click",()=>{const t=e.getAttribute("data-target");if(!t)return;const a=document.getElementById(t);if(!a)return;const n="password"===a.type;a.type=n?"text":"password",e.textContent=n?"HIDE":"SHOW",e.setAttribute("aria-pressed",String(n)),e.setAttribute("aria-label",n?"Hide password":"Show password")})});(async()=>{if(window.DemoCharacters)try{"function"==typeof window.DemoCharacters.fetchFromApi&&await window.DemoCharacters.fetchFromApi(),"function"==typeof window.DemoCharacters.loadAsciiForAllDemoCharacters&&await window.DemoCharacters.loadAsciiForAllDemoCharacters()}catch(e){console.warn("Failed to load demo characters:",e)}await AppState.init(),"function"==typeof window._updateSortUI&&window._updateSortUI(),!e||AppState.characters&&0!==AppState.characters.length?(ExpandedView.restore(),e&&setTimeout(()=>checkPendingShares(),500)):window.location.href="builder.html?new=true&required=true"})().catch(e=>{console.error("App initialization failed:",e)});const m=document.getElementById("searchInput"),p=document.getElementById("clearSearchBtn"),u=document.getElementById("sortToggleBtn"),h=document.getElementById("sortDropdown"),g=()=>{if(!p||!m)return;const e=m.value.trim().length>0,t=m.disabled;p.classList.toggle("is-hidden",!e||t)};m&&m.addEventListener("input",e=>{AppState.searchTerm=e.target.value,AppState.applyFilters(),UI.render(),g()}),p&&m&&(p.addEventListener("mousedown",e=>{e.preventDefault()}),p.addEventListener("click",()=>{if(!m.disabled){if(m.value="",AppState.searchTerm="",AppState.applyFilters(),UI.render(),MobileView.isMobile()){const e=document.querySelector(".search-bar");e&&e.classList.remove("is-search-expanded"),m.blur()}else m.focus();g()}}),g());const v=document.getElementById("mobileSearchBtn");v&&m&&(v.addEventListener("click",()=>{if(m.disabled)return;const e=document.querySelector(".search-bar");e&&(e.classList.add("is-search-expanded"),setTimeout(()=>{m.focus()},50))}),m.addEventListener("blur",()=>{MobileView.isMobile()&&setTimeout(()=>{const e=document.querySelector(".search-bar");e&&!m.value.trim()&&e.classList.remove("is-search-expanded")},150)}));const S=document.getElementById("headerOverflowBtn");let w;if(S&&S.addEventListener("touchend",e=>{1===e.changedTouches.length&&(e.preventDefault(),CharacterSheet.toggleSelectorMenu(S))}),window.addEventListener("resize",()=>{clearTimeout(w),w=setTimeout(()=>{UI.updateCount()},100)}),u&&h){const e=()=>{const e=h.querySelectorAll(".sort-option");if(!e.length)return;let t=0;e.forEach(e=>{const a=(e.textContent||"").trim();a.length>t&&(t=a.length)});const a=t+2;u.style.minWidth=`${a}ch`},t=()=>{const t={alphabetical:"Alphabetical",dateModified:"Date modified",inCampaign:"In campaign",pinned:"Pinned"}[AppState.sortMode]||"Date modified";u.textContent=t;h.querySelectorAll(".sort-option").forEach(e=>{const t=e.getAttribute("data-sort-value")===AppState.sortMode;e.classList.toggle("is-selected",t),e.setAttribute("aria-selected",t?"true":"false")}),e()};Array.from(h.querySelectorAll(".sort-option")).forEach(e=>{e.addEventListener("click",a=>{a.stopPropagation();const n=e.getAttribute("data-sort-value");"alphabetical"!==n&&"dateModified"!==n&&"inCampaign"!==n&&"pinned"!==n||(AppState.sortMode=n,window.StorageService&&StorageService.setSortMode&&StorageService.setSortMode(n),AppState.applyFilters(),UI.render()),t()})}),e(),t(),window._updateSortUI=t}const y=document.getElementById("gridNewCharacterBtn"),f=document.getElementById("gridNewCharacterTooltip");if(y&&(y.addEventListener("click",createNewCharacter),f)){const e=()=>{f.textContent&&f.classList.add("show")},t=()=>{f.classList.remove("show")};y.addEventListener("mouseenter",e),y.addEventListener("mouseleave",t),y.addEventListener("focus",e),y.addEventListener("blur",t)}updateCreationQuotaState(),window.addEventListener("danddy:creationQuotaUpdate",e=>{if(e.detail&&"number"==typeof e.detail.remaining){_creationQuotaRemaining=e.detail.remaining,window._creationQuotaRemaining=e.detail.remaining,window._creationQuotaLimit="number"==typeof e.detail.limit?e.detail.limit:window._creationQuotaLimit,window._creationQuotaResetAt=e.detail.resetAt||window._creationQuotaResetAt;const t=document.getElementById("overflowNewCharBtn"),a=document.getElementById("gridNewCharacterBtn"),n=document.getElementById("gridNewCharacterTooltip");let i="";[t,a].forEach(t=>{t&&(-1===e.detail.remaining?(t.disabled=!1,t.title="",t.classList.remove("is-quota-exhausted"),i=""):0===e.detail.remaining?(t.disabled=!0,t.title="",t.classList.add("is-quota-exhausted"),i="Daily limit reached"):(t.disabled=!1,t.title="",t.classList.remove("is-quota-exhausted"),i=`${e.detail.remaining} creation${1===e.detail.remaining?"":"s"} remaining`))}),n&&(_updateQuotaTooltipText(),n.textContent||(n.textContent=i))}}),updateImageQuotaState(),window.addEventListener("danddy:imageQuotaUpdate",e=>{if(e.detail&&"number"==typeof e.detail.remaining){const t=window._imageQuotaRemaining;window._imageQuotaRemaining=e.detail.remaining,0===e.detail.remaining&&0!==t&&AppState.selectedCharacterId&&viewCharacter(AppState.selectedCharacterId,{skipKeyboardSync:!0})}});const C=document.getElementById("importBtn");function E(e){const t=e.querySelector(".custom-tooltip");if(!t)return;t.style.setProperty("--tooltip-offset-x","0px"),t.classList.add("show"),t.offsetWidth;const a=t.getBoundingClientRect(),n=function(e){let t=e.parentElement;for(;t&&t!==document.body;){const e=getComputedStyle(t),a=e.overflowX,n=e.overflowY;if("hidden"===a||"auto"===a||"scroll"===a||"hidden"===n||"auto"===n||"scroll"===n)return t.getBoundingClientRect();t=t.parentElement}return{left:0,top:0,right:window.innerWidth,bottom:window.innerHeight}}(e);let i=0;a.left<n.left+12?i=n.left+12-a.left:a.right>n.right-12&&(i=n.right-12-a.right),t.style.setProperty("--tooltip-offset-x",`${i}px`),t.classList.remove("show")}C&&C.addEventListener("click",showImportModal),document.getElementById("importFile").addEventListener("change",e=>{const t=document.getElementById("fileName"),a=document.querySelector("#importModal .modal-footer .terminal-btn-primary");e.target.files.length>0?(t.textContent=e.target.files[0].name,a&&(a.disabled=!1)):(t.textContent="",a&&(a.disabled=!0))}),document.getElementById("importModal").addEventListener("click",e=>{"importModal"===e.target.id&&closeImportModal()}),document.getElementById("duplicateModal").addEventListener("click",e=>{"duplicateModal"===e.target.id&&closeDuplicateModal()}),document.getElementById("portraitPromptModal").addEventListener("click",e=>{"portraitPromptModal"===e.target.id&&closePortraitPromptModal()}),document.getElementById("passwordResetModal").addEventListener("click",e=>{"passwordResetModal"===e.target.id&&closePasswordResetModal()}),document.addEventListener("click",e=>{if(!e.target||"function"!=typeof e.target.closest)return;if(!window.matchMedia("(hover: none), (pointer: coarse)").matches)return;const t=e.target.closest(".sheet-spell-tag.has-tooltip"),a=e.target.closest(".custom-tooltip"),n=document.querySelector(".sheet-spell-tag.tooltip-active");if(t)e.stopPropagation(),n&&n!==t&&n.classList.remove("tooltip-active"),t.classList.toggle("tooltip-active"),t.classList.contains("tooltip-active")&&E(t);else if(a){e.stopPropagation();const t=a.closest(".sheet-spell-tag.has-tooltip");t&&t.classList.remove("tooltip-active")}else n&&n.classList.remove("tooltip-active")}),document.addEventListener("mouseenter",e=>{if(!e.target||"function"!=typeof e.target.closest)return;const t=e.target.closest(".sheet-spell-tag.has-tooltip");t&&E(t)},!0);try{const e=window.location.hash||"";"#password-reset"===e&&(showPasswordResetModal(),history.replaceState(null,document.title,window.location.pathname+window.location.search));const t=e.match(/reset-token=([^&]+)/);if(t&&t[1]){const e=decodeURIComponent(t[1]);showPasswordResetModal();const a=document.getElementById("passwordResetToken");a&&(a.value=e);const n=document.getElementById("passwordResetModalTitle"),i=document.getElementById("passwordResetRequestSection"),l=document.getElementById("passwordResetSuccessSection"),s=document.getElementById("passwordResetConfirmSection"),o=document.getElementById("passwordResetCancelBtn"),r=document.getElementById("passwordResetCloseBtn"),c=document.getElementById("passwordResetRequestBtn"),d=document.getElementById("passwordResetConfirmBtn");n&&(n.textContent="RESET PASSWORD"),i&&i.classList.add("is-hidden"),l&&l.classList.add("is-hidden"),s&&s.classList.remove("is-hidden"),o&&o.classList.remove("is-hidden"),r&&r.classList.add("is-hidden"),c&&c.classList.add("is-hidden"),d&&d.classList.remove("is-hidden"),setTimeout(()=>{document.getElementById("passwordResetNewPassword")?.focus()},100),history.replaceState(null,document.title,window.location.pathname+window.location.search)}}catch(e){console.warn("Failed to process reset-token from URL hash",e)}const I=document.getElementById("characterGrid");I&&(I.addEventListener("mouseover",e=>{if(!e.target||"function"!=typeof e.target.closest)return;const t=e.target.closest(".character-card");document.querySelectorAll(".character-card.is-hovered").forEach(e=>{e!==t&&e.classList.remove("is-hovered")}),t&&(t.classList.add("is-hovered"),void 0!==KeyboardNav&&KeyboardNav.clearAll&&KeyboardNav.clearAll())}),I.addEventListener("mouseleave",()=>{document.querySelectorAll(".character-card.is-hovered").forEach(e=>{e.classList.remove("is-hovered")})})),window.addEventListener("keydown",e=>{if(splashActive)return;const t=document.querySelector(".modal.show");if(t){const a=t.id;if("Escape"===e.key){e.preventDefault();const n=t.querySelector(".modal-discard-confirm.show");return n?void n.classList.remove("show"):void ModalManager.requestClose(a)}if("Enter"===e.key&&e.metaKey){const a=t.querySelector(".modal-footer .terminal-btn-primary");return void(a&&!a.disabled&&(e.preventDefault(),a.click()))}return}!document.activeElement||"INPUT"!==document.activeElement.tagName&&"TEXTAREA"!==document.activeElement.tagName&&"SELECT"!==document.activeElement.tagName?"/"===e.key||"f"===e.key&&e.ctrlKey?(e.preventDefault(),KeyboardNav.focusSearch()):"ArrowUp"===e.key?(e.preventDefault(),KeyboardNav.moveUp()):"ArrowDown"===e.key?(e.preventDefault(),KeyboardNav.moveDown()):"ArrowLeft"===e.key?(e.preventDefault(),KeyboardNav.moveLeft()):"ArrowRight"===e.key?(e.preventDefault(),KeyboardNav.moveRight()):"Enter"===e.key&&(e.preventDefault(),KeyboardNav.select()):"Escape"===e.key&&(e.preventDefault(),document.activeElement.blur(),KeyboardNav.focusFirstCard())})});let spellPickerState={isOpen:!1,mode:"cantrips",characterClass:null,maxSpellLevel:0,selectedSpells:new Set,existingSpells:[],onConfirm:null,maxSelections:null};function ensureDndDataBundleLoaded(){return window.SPELL_DATABASE?Promise.resolve(!0):(window.__danddyDndDataBundlePromise||(window.__danddyDndDataBundlePromise=new Promise((e,t)=>{try{if(document.querySelector('script[data-danddy-dnd-data="1"]'))return void setTimeout(()=>e(!!window.SPELL_DATABASE),0);const a=document.createElement("script");a.defer=!0,a.dataset.danddyDndData="1";const n=window.DANDDY_VERSION?`?v=${encodeURIComponent(window.DANDDY_VERSION)}`:"";a.src=`dnd-data.bundle.js${n}`,a.onload=()=>e(!!window.SPELL_DATABASE),a.onerror=()=>t(new Error("Failed to load dnd-data.bundle.js")),document.head.appendChild(a)}catch(e){t(e)}})),window.__danddyDndDataBundlePromise)}async function openSpellPicker(e){const{characterClass:t,level:a,maxSpellLevel:n=9,existingSpells:i=[],onConfirm:l,maxSelections:s=null}=e;if(!window.SPELL_DATABASE)try{await ensureDndDataBundleLoaded()}catch(e){console.error("Spell database failed to load",e)}if(!window.SPELL_DATABASE)return console.error("Spell database not loaded"),void showNotification("Spell database not available","error");const o=i.map(e=>("string"==typeof e?e:e.name||e.id).toLowerCase()),r=new Set,c="cantrips"===a?0:parseInt(a,10),d=window.SPELL_DATABASE.getSpellsByLevel(c)||[];for(const e of d)(o.includes(e.name.toLowerCase())||o.includes(e.id))&&r.add(e.id);spellPickerState={isOpen:!0,mode:a,characterClass:t?.toLowerCase(),maxSpellLevel:n,selectedSpells:r,existingSpells:o,originalSelection:new Set(r),onConfirm:l,maxSelections:s},renderSpellPicker();const m=document.getElementById("spellPickerInfo");if(m){const e="cantrips"===a||0===a?"Cantrips":`Level ${a} Spells`,n=t?t.charAt(0).toUpperCase()+t.slice(1):"";m.textContent=`Selecting ${e}${n?` for ${n}`:""}`}const p=document.getElementById("spellPickerModal");p&&(p.classList.add("show"),setTimeout(()=>{const e=document.getElementById("spellSearchInput");e&&e.focus()},100)),updateSpellPickerCount()}let standaloneSpellSchoolFilter="";function selectStandaloneSpellSchool(e){standaloneSpellSchoolFilter=e;const t=document.getElementById("spellSchoolFilterTrigger"),a=document.getElementById("spellSchoolFilterMenu");if(t){const a=t.querySelector(".selector-trigger-label");a&&(a.textContent=e||"All Schools")}a&&a.querySelectorAll(".selector-option").forEach(t=>{t.classList.toggle("is-selected",t.dataset.value===e)}),filterSpellPicker()}function closeSpellPicker(){const e=document.getElementById("spellPickerModal");e&&e.classList.remove("show");const t=document.getElementById("spellSearchInput");t&&(t.value=""),standaloneSpellSchoolFilter="";const a=document.getElementById("spellSchoolFilterTrigger");if(a){const e=a.querySelector(".selector-trigger-label");e&&(e.textContent="All Schools")}const n=document.getElementById("spellSchoolFilterMenu");n&&n.querySelectorAll(".selector-option").forEach(e=>{e.classList.toggle("is-selected",""===e.dataset.value)}),spellPickerState.isOpen=!1,spellPickerState.selectedSpells.clear()}function renderSpellPicker(){const e=document.getElementById("spellPickerList");if(!e||!window.SPELL_DATABASE)return;const t=document.getElementById("spellSearchInput")?.value||"",a=standaloneSpellSchoolFilter,n="cantrips"===spellPickerState.mode?0:parseInt(spellPickerState.mode,10);let i=window.SPELL_DATABASE.getSpellsByLevel(n)||[];if(spellPickerState.characterClass&&(i=i.filter(e=>e.classes.includes(spellPickerState.characterClass))),t){const e=t.toLowerCase();i=i.filter(t=>t.name.toLowerCase().includes(e)||t.description.toLowerCase().includes(e)||t.school.toLowerCase().includes(e))}a&&(i=i.filter(e=>e.school===a)),i.sort((e,t)=>e.name.localeCompare(t.name)),0!==i.length?e.innerHTML=i.map(e=>{const t=spellPickerState.selectedSpells.has(e.id),a=spellPickerState.originalSelection?.has(e.id),n=["spell-picker-item"];return t&&n.push("is-selected"),a&&n.push("is-existing"),`\n            <div class="${n.join(" ")}" data-spell-id="${Utils.escapeHtml(e.id)}" onclick="toggleSpellSelection('${Utils.escapeHtml(e.id)}')">\n                <input type="checkbox" class="spell-picker-checkbox" ${t?"checked":""}>\n                <div class="spell-picker-item-content">\n                    <div class="spell-picker-item-header">\n                        <span class="spell-picker-item-name">${Utils.escapeHtml(e.name)}${a?' <span class="spell-existing-badge">current</span>':""}</span>\n                        <span class="spell-picker-item-school">${Utils.escapeHtml(e.school)}</span>\n                    </div>\n                    <div class="spell-picker-item-meta">\n                        ${Utils.escapeHtml(e.castingTime)} \xb7 ${Utils.escapeHtml(e.range)} \xb7 ${Utils.escapeHtml(e.components)}\n                    </div>\n                    <div class="spell-picker-item-desc">${Utils.escapeHtml(e.description)}</div>\n                </div>\n            </div>\n        `}).join(""):e.innerHTML='<div class="spell-picker-empty">No spells found matching your criteria.</div>'}function toggleSpellSelection(e){if(spellPickerState.selectedSpells.has(e))spellPickerState.selectedSpells.delete(e);else{if(null!==spellPickerState.maxSelections&&spellPickerState.selectedSpells.size>=spellPickerState.maxSelections)return void showNotification(`You can only select ${spellPickerState.maxSelections} spell${1===spellPickerState.maxSelections?"":"s"}`,"warning");spellPickerState.selectedSpells.add(e)}const t=document.querySelector(`.spell-picker-item[data-spell-id="${e}"]`);if(t){t.classList.toggle("is-selected",spellPickerState.selectedSpells.has(e));const a=t.querySelector(".spell-picker-checkbox");a&&(a.checked=spellPickerState.selectedSpells.has(e))}updateSpellPickerCount()}function updateSpellPickerCount(){const e=document.getElementById("spellPickerSelectedCount");if(e){const t=spellPickerState.selectedSpells.size;null!==spellPickerState.maxSelections?(e.textContent=t+" of "+spellPickerState.maxSelections+" selected",e.classList.toggle("at-limit",t>=spellPickerState.maxSelections)):(e.textContent=t+" selected",e.classList.remove("at-limit"))}}function filterSpellPicker(){renderSpellPicker()}function confirmSpellSelection(){const e="cantrips"===spellPickerState.mode?0:parseInt(spellPickerState.mode,10),t=(window.SPELL_DATABASE.getSpellsByLevel(e)||[]).filter(e=>spellPickerState.selectedSpells.has(e.id));"function"==typeof spellPickerState.onConfirm&&spellPickerState.onConfirm(t),closeSpellPicker()}window.selectStandaloneSpellSchool=selectStandaloneSpellSchool,window.openSpellPicker=openSpellPicker,window.closeSpellPicker=closeSpellPicker,window.filterSpellPicker=filterSpellPicker,window.toggleSpellSelection=toggleSpellSelection,window.confirmSpellSelection=confirmSpellSelection;let editSpellsState={cantrips:[],spells:{},characterClass:null,maxSpellLevel:0,characterLevel:1,cantripsAllowed:0,spellsAllowed:null};const SPELLCASTING_CLASSES={bard:{type:"full",cantrips:!0},cleric:{type:"full",cantrips:!0},druid:{type:"full",cantrips:!0},sorcerer:{type:"full",cantrips:!0},wizard:{type:"full",cantrips:!0},warlock:{type:"pact",cantrips:!0},paladin:{type:"half",cantrips:!1},ranger:{type:"half",cantrips:!1}};function validateSpellSelection(e,t){const a=t.length;if("cantrips"===e){const e=editSpellsState.cantripsAllowed;if(e>0&&a>e){const t=a-e;return{valid:!1,message:`Too many cantrips! You have ${a} selected but your limit is ${e}. Please remove ${t} cantrip${t>1?"s":""}.`,overBy:t}}}else{const t=editSpellsState.spellsAllowed;if(null!==t){const n="string"==typeof e?parseInt(e,10):e;let i=a;for(const[e,t]of Object.entries(editSpellsState.spells))parseInt(e,10)!==n&&(i+=t.length);if(i>t){const e=i-t;return{valid:!1,message:`Too many spells! You have ${i} total but your limit is ${t}. Please remove ${e} spell${e>1?"s":""}.`,overBy:e}}}}return{valid:!0,message:"",overBy:0}}function validateAllSpellLimits(){const e=editSpellsState.cantrips.length,t=editSpellsState.cantripsAllowed,a=Object.values(editSpellsState.spells).flat().length,n=editSpellsState.spellsAllowed,i=t>0?Math.max(0,e-t):0,l=null!==n?Math.max(0,a-n):0;if(i>0||l>0){const s=[];return i>0&&s.push(`Remove ${i} cantrip${i>1?"s":""} (${e}/${t})`),l>0&&s.push(`Remove ${l} spell${l>1?"s":""} (${a}/${n})`),{valid:!1,message:`You are over your spell limit.\n\n${s.join("\n")}`,cantripsOver:i,spellsOver:l}}return{valid:!0,message:"",cantripsOver:0,spellsOver:0}}function animateModalOpen(e,t){getManagerModalHost().insertAdjacentHTML("beforeend",e);const a=document.getElementById(t);a&&requestAnimationFrame(()=>{requestAnimationFrame(()=>{a.classList.add("show")})})}function showSpellLimitModal(e,t){const a="cantrips"===t,n=e.overBy||1,i=a?"cantrips":"spells";animateModalOpen(`\n        <div id="spellLimitModal" class="modal">\n            <div class="modal-content modal-content--narrow">\n                <div class="modal-header">\n                    <h2 class="modal-title">Too Many ${a?"Cantrips":"Spells"}</h2>\n                    <button class="modal-close" onclick="closeSpellLimitModal()">&times;</button>\n                </div>\n                <div class="modal-body">\n                    <p class="terminal-text">\n                        You've selected more ${i} than allowed for your class and level.\n                    </p>\n                    <p class="terminal-text" style="margin-top: 0.75rem;">\n                        Please remove <strong>${n}</strong> ${1===n?a?"cantrip":"spell":i} to continue.\n                    </p>\n                </div>\n                <div class="modal-footer modal-footer-end" style="gap: 0.5rem;">\n                    <button class="terminal-btn" onclick="closeSpellLimitModal()">Cancel</button>\n                    <button class="terminal-btn" onclick="closeSpellLimitModal()">Edit Spells</button>\n                </div>\n            </div>\n        </div>\n    `,"spellLimitModal")}function closeSpellLimitModal(){const e=document.getElementById("spellLimitModal");e&&animateModalClose(e,{removeOnClose:!0})}function showSpellLimitSaveModal(e){const{cantripsOver:t,spellsOver:a}=e,n=[];t>0&&n.push(`${t} cantrip${t>1?"s":""}`),a>0&&n.push(`${a} spell${a>1?"s":""}`);animateModalOpen(`\n        <div id="spellLimitSaveModal" class="modal">\n            <div class="modal-content modal-content--narrow">\n                <div class="modal-header">\n                    <h2 class="modal-title">Over Spell Limit</h2>\n                    <button class="modal-close" onclick="closeSpellLimitSaveModal()">&times;</button>\n                </div>\n                <div class="modal-body">\n                    <p class="terminal-text">\n                        You have more spells than allowed for your class and level.\n                    </p>\n                    <p class="terminal-text" style="margin-top: 0.75rem;">\n                        Please remove <strong>${n.join(" and ")}</strong> to save your changes.\n                    </p>\n                </div>\n                <div class="modal-footer modal-footer-end" style="gap: 0.5rem;">\n                    <button class="terminal-btn" onclick="closeSpellLimitSaveModal()">Cancel</button>\n                    <button class="terminal-btn" onclick="closeSpellLimitSaveModal()">OK</button>\n                </div>\n            </div>\n        </div>\n    `,"spellLimitSaveModal")}function closeSpellLimitSaveModal(){const e=document.getElementById("spellLimitSaveModal");e&&animateModalClose(e,{removeOnClose:!0})}function scrollToSpellSection(){const e=document.getElementById("spellEditSection");e&&e.scrollIntoView({behavior:"smooth",block:"start"})}function initializeSpellEditSection(e,t){const a=document.getElementById("spellEditSection");if(!a)return;const n=(e.class||"").toLowerCase(),i=SPELLCASTING_CLASSES[n];if(!i)return void a.classList.add("is-hidden");a.classList.remove("is-hidden");const l=t.level||e.level||1;let s=0;"full"===i.type?(s=Math.min(9,Math.ceil(l/2)),s=l>=17?9:l>=15?8:l>=13?7:l>=11?6:l>=9?5:l>=7?4:l>=5?3:l>=3?2:1):"half"===i.type?s=l<2?0:l<5?1:l<9?2:l<13?3:l<17?4:5:"pact"===i.type&&(s=l<3?1:l<5?2:l<7?3:l<9?4:5);const o=calculateStatsForLevel(e,l).spellProgression||{cantrips:0,spellsKnown:null,maxSpellLevel:0};editSpellsState={cantrips:[...t.cantrips||[]],spells:{},characterClass:n,maxSpellLevel:s,characterLevel:l,cantripsAllowed:o.cantrips||0,spellsAllowed:o.spellsKnown};const r=t.spellsKnown||[];for(const e of r)if(window.SPELL_DATABASE){const t=window.SPELL_DATABASE.getSpellByName(e);t&&t.level>0&&(editSpellsState.spells[t.level]||(editSpellsState.spells[t.level]=[]),editSpellsState.spells[t.level].push(e))}const c=document.getElementById("spellEditCantripsRow");c&&c.classList.toggle("is-hidden",!i.cantrips);for(let e=1;e<=9;e++){const t=document.getElementById(`spellEditLevel${e}Row`);t&&t.classList.toggle("is-hidden",e>s||0===s)}renderSpellTags()}function updateSpellLimitsSummary(){const e=document.getElementById("spellLimitsSummary");if(!e)return;const t=[],a=editSpellsState.cantrips.length,n=editSpellsState.cantripsAllowed,i=n>0?Math.max(0,a-n):0;if(n>0){const e=i>0?"\u26a0 ":"";t.push(`${e}Cantrips: ${a}/${n}`)}const l=Object.values(editSpellsState.spells).flat().length,s=editSpellsState.spellsAllowed,o=null!==s?Math.max(0,l-s):0;if(null!==s){const e=o>0?"\u26a0 ":"";t.push(`${e}Spells: ${l}/${s}`)}else editSpellsState.characterClass&&t.push("Spells: "+l+" (no limit)");e.textContent=t.join(" \xb7 ");const r=i>0||o>0,c=!r&&(n>0&&a>=n||null!==s&&l>=s);e.classList.toggle("at-limit",c),e.classList.toggle("over-limit",r)}function renderSpellTags(){const e=document.getElementById("editCantrips");e&&renderSpellTagsInContainer(e,editSpellsState.cantrips,"cantrips");for(let e=1;e<=9;e++){const t=document.getElementById(`editSpells${e}`);if(t){renderSpellTagsInContainer(t,editSpellsState.spells[e]||[],e)}}updateSpellLimitsSummary()}function renderSpellTagsInContainer(e,t,a){const n="cantrips"===a?"'cantrips'":a,i=t.map(e=>`\n        <span class="spell-tag">\n            ${Utils.escapeHtml(e)}\n            <span class="spell-tag-remove" onclick="removeSpellFromEdit('${Utils.escapeHtml(e.replace(/'/g,"\\'"))}', '${a}')">&times;</span>\n        </span>\n    `).join(""),l=`<button type="button" class="spell-add-btn-inline" onclick="openSpellPickerForEdit(${n})">+ Add</button>`;e.innerHTML=i+l}function removeSpellFromEdit(e,t){if("cantrips"===t)editSpellsState.cantrips=editSpellsState.cantrips.filter(t=>t!==e);else{const a=parseInt(t,10);editSpellsState.spells[a]&&(editSpellsState.spells[a]=editSpellsState.spells[a].filter(t=>t!==e))}renderSpellTags(),ModalManager.markDirty("editDetailsModal")}window.closeSpellLimitModal=closeSpellLimitModal,window.closeSpellLimitSaveModal=closeSpellLimitSaveModal,window.scrollToSpellSection=scrollToSpellSection;let editModalOriginalContent=null,editModalFormValues=null;function captureEditFormValues(){const e=document.getElementById("editDetailsModal");if(!e)return null;const t={};return e.querySelectorAll("input, textarea, select").forEach(e=>{e.id&&(t[e.id]=e.value)}),t}function restoreEditFormValues(e){e&&Object.entries(e).forEach(([e,t])=>{const a=document.getElementById(e);a&&(a.value=t)})}function openSpellPickerForEdit(e){const t=document.getElementById("editDetailsModal");if(!t)return;const a=t.querySelector(".modal-content");if(!a)return;let n;editModalFormValues=captureEditFormValues(),editModalOriginalContent=a.innerHTML,n="cantrips"===e?editSpellsState.cantrips:editSpellsState.spells[e]||[];let i=null;if("cantrips"===e){if(editSpellsState.cantripsAllowed>0){const e=editSpellsState.cantrips.length;i=Math.max(0,editSpellsState.cantripsAllowed-e)}}else if(null!==editSpellsState.spellsAllowed){const e=Object.values(editSpellsState.spells).flat().length;i=Math.max(0,editSpellsState.spellsAllowed-e)}const l=n.map(e=>("string"==typeof e?e:e.name||e.id).toLowerCase()),s=new Set,o="cantrips"===e?0:parseInt(e,10),r=window.SPELL_DATABASE?.getSpellsByLevel(o)||[];for(const e of r)(l.includes(e.name.toLowerCase())||l.includes(e.id))&&s.add(e.id);spellPickerState={isOpen:!0,mode:e,characterClass:editSpellsState.characterClass?.toLowerCase(),maxSpellLevel:editSpellsState.maxSpellLevel,selectedSpells:s,existingSpells:l,originalSelection:new Set(s),onConfirm:null,inlineMode:!0,targetLevel:e,maxSelections:null};const c=editSpellsState.characterClass?editSpellsState.characterClass.charAt(0).toUpperCase()+editSpellsState.characterClass.slice(1):"";let d;d="cantrips"===e||0===e?c?c+" cantrips":"Cantrips":"Level "+e+(c?" "+c:"")+" spells";const m=null!==i?i+" remaining slot"+(1===i?"":"s"):"";currentSpellSchoolFilter="";animateModalContentSwap(a,`\n        <div class="modal-header modal-header-left">\n            <h2 class="modal-title">${d}</h2>\n            <button class="modal-close" onclick="ModalManager.requestClose('editDetailsModal')">&times;</button>\n        </div>\n        <div class="modal-body spell-picker-loading">\n            <div class="panel-loading-cube-container">\n                <div class="panel-loading-cube">\n                    <i></i><i></i><i></i><i></i><i></i><i></i>\n                </div>\n            </div>\n            <p class="panel-loading-text">Loading spells...</p>\n        </div>\n    `,()=>{const e=generateInlineSpellListHtml(),t=`\n            <div class="modal-header modal-header-left">\n                <h2 class="modal-title">${d}</h2>\n                <button class="modal-close" onclick="ModalManager.requestClose('editDetailsModal')">&times;</button>\n            </div>\n            <div class="modal-body">\n                <div class="spell-picker-info${0===i?" at-limit":""}">\n                    <span class="spell-picker-info-text">Select spells</span>\n                    <span class="spell-picker-selected-count" id="inlineSpellCount">${m}</span>\n                </div>\n                <div class="spell-picker-filters">\n                    <input type="text" id="inlineSpellSearch" class="terminal-input" placeholder="Search spells..." oninput="filterInlineSpellPicker()" data-1p-ignore>\n                    <div class="selector-shell selector-shell--listbox" id="spellSchoolSelector">\n                        <button type="button" \n                                class="terminal-btn-small selector-trigger" \n                                id="spellSchoolTrigger"\n                                aria-haspopup="listbox"\n                                aria-expanded="false"\n                                onclick="CharacterSheet.toggleSelectorMenu(this)">\n                            <span class="selector-trigger-label">All Schools</span>\n                        </button>\n                        <div class="selector-menu" id="spellSchoolMenu" role="listbox">\n                            <button class="selector-option is-selected" role="option" data-value="" onclick="selectSpellSchool('')">All Schools</button>\n                            <button class="selector-option" role="option" data-value="Abjuration" onclick="selectSpellSchool('Abjuration')">Abjuration</button>\n                            <button class="selector-option" role="option" data-value="Conjuration" onclick="selectSpellSchool('Conjuration')">Conjuration</button>\n                            <button class="selector-option" role="option" data-value="Divination" onclick="selectSpellSchool('Divination')">Divination</button>\n                            <button class="selector-option" role="option" data-value="Enchantment" onclick="selectSpellSchool('Enchantment')">Enchantment</button>\n                            <button class="selector-option" role="option" data-value="Evocation" onclick="selectSpellSchool('Evocation')">Evocation</button>\n                            <button class="selector-option" role="option" data-value="Illusion" onclick="selectSpellSchool('Illusion')">Illusion</button>\n                            <button class="selector-option" role="option" data-value="Necromancy" onclick="selectSpellSchool('Necromancy')">Necromancy</button>\n                            <button class="selector-option" role="option" data-value="Transmutation" onclick="selectSpellSchool('Transmutation')">Transmutation</button>\n                        </div>\n                    </div>\n                </div>\n                <div class="spell-picker-list" id="inlineSpellList">\n                    ${e}\n                </div>\n            </div>\n            <div class="modal-footer modal-footer-end">\n                <button class="terminal-btn" onclick="closeInlineSpellPicker()">\u2190 Back</button>\n                <button class="terminal-btn terminal-btn-primary" onclick="confirmInlineSpellSelection()">Confirm</button>\n            </div>\n        `;setTimeout(()=>{animateModalContentSwap(a,t,()=>{updateInlineSpellCount(),setTimeout(()=>{const e=document.getElementById("inlineSpellSearch");e&&e.focus()},50)})},150)})}function generateInlineSpellListHtml(){if(!window.SPELL_DATABASE)return'<div class="spell-picker-empty">Spell database not available.</div>';const e=currentSpellSchoolFilter,t="cantrips"===spellPickerState.mode?0:parseInt(spellPickerState.mode,10);let a=window.SPELL_DATABASE.getSpellsByLevel(t)||[];return spellPickerState.characterClass&&(a=a.filter(e=>e.classes.includes(spellPickerState.characterClass))),e&&(a=a.filter(t=>t.school===e)),a.sort((e,t)=>e.name.localeCompare(t.name)),0===a.length?'<div class="spell-picker-empty">No spells found matching your criteria.</div>':a.map(e=>{const t=spellPickerState.selectedSpells.has(e.id),a=spellPickerState.originalSelection?.has(e.id),n=["spell-picker-item"];return t&&n.push("is-selected"),a&&n.push("is-existing"),`\n            <div class="${n.join(" ")}" data-spell-id="${Utils.escapeHtml(e.id)}" onclick="toggleInlineSpellSelection('${Utils.escapeHtml(e.id)}')">\n                <input type="checkbox" class="spell-picker-checkbox" ${t?"checked":""}>\n                <div class="spell-picker-item-content">\n                    <div class="spell-picker-item-header">\n                        <span class="spell-picker-item-name">${Utils.escapeHtml(e.name)}${a?' <span class="spell-existing-badge">current</span>':""}</span>\n                        <span class="spell-picker-item-school">${Utils.escapeHtml(e.school)}</span>\n                    </div>\n                    <div class="spell-picker-item-meta">\n                        ${Utils.escapeHtml(e.castingTime)} \xb7 ${Utils.escapeHtml(e.range)} \xb7 ${Utils.escapeHtml(e.components)}\n                    </div>\n                    <div class="spell-picker-item-desc">${Utils.escapeHtml(e.description)}</div>\n                </div>\n            </div>\n        `}).join("")}let currentSpellSchoolFilter="";function selectSpellSchool(e){currentSpellSchoolFilter=e;const t=document.getElementById("spellSchoolTrigger"),a=document.getElementById("spellSchoolMenu");if(t){const a=t.querySelector(".selector-trigger-label");a&&(a.textContent=e||"All Schools")}a&&a.querySelectorAll(".selector-option").forEach(t=>{t.classList.toggle("is-selected",t.dataset.value===e)}),filterInlineSpellPicker()}function renderInlineSpellPicker(){const e=document.getElementById("inlineSpellList");if(!e||!window.SPELL_DATABASE)return;const t=document.getElementById("inlineSpellSearch")?.value||"",a=currentSpellSchoolFilter,n="cantrips"===spellPickerState.mode?0:parseInt(spellPickerState.mode,10);let i=window.SPELL_DATABASE.getSpellsByLevel(n)||[];if(spellPickerState.characterClass&&(i=i.filter(e=>e.classes.includes(spellPickerState.characterClass))),t){const e=t.toLowerCase();i=i.filter(t=>t.name.toLowerCase().includes(e)||t.description.toLowerCase().includes(e)||t.school.toLowerCase().includes(e))}a&&(i=i.filter(e=>e.school===a)),i.sort((e,t)=>e.name.localeCompare(t.name)),0!==i.length?e.innerHTML=i.map(e=>{const t=spellPickerState.selectedSpells.has(e.id),a=spellPickerState.originalSelection?.has(e.id),n=["spell-picker-item"];return t&&n.push("is-selected"),a&&n.push("is-existing"),`\n            <div class="${n.join(" ")}" data-spell-id="${Utils.escapeHtml(e.id)}" onclick="toggleInlineSpellSelection('${Utils.escapeHtml(e.id)}')">\n                <input type="checkbox" class="spell-picker-checkbox" ${t?"checked":""}>\n                <div class="spell-picker-item-content">\n                    <div class="spell-picker-item-header">\n                        <span class="spell-picker-item-name">${Utils.escapeHtml(e.name)}${a?' <span class="spell-existing-badge">current</span>':""}</span>\n                        <span class="spell-picker-item-school">${Utils.escapeHtml(e.school)}</span>\n                    </div>\n                    <div class="spell-picker-item-meta">\n                        ${Utils.escapeHtml(e.castingTime)} \xb7 ${Utils.escapeHtml(e.range)} \xb7 ${Utils.escapeHtml(e.components)}\n                    </div>\n                    <div class="spell-picker-item-desc">${Utils.escapeHtml(e.description)}</div>\n                </div>\n            </div>\n        `}).join(""):e.innerHTML='<div class="spell-picker-empty">No spells found matching your criteria.</div>'}function filterInlineSpellPicker(){renderInlineSpellPicker()}function toggleInlineSpellSelection(e){if(spellPickerState.selectedSpells.has(e))spellPickerState.selectedSpells.delete(e);else{if(null!==spellPickerState.maxSelections&&spellPickerState.selectedSpells.size>=spellPickerState.maxSelections)return void showNotification(`You can only select ${spellPickerState.maxSelections} spell${1===spellPickerState.maxSelections?"":"s"}`,"warning");spellPickerState.selectedSpells.add(e)}const t=document.querySelector(`.spell-picker-item[data-spell-id="${e}"]`);if(t){t.classList.toggle("is-selected",spellPickerState.selectedSpells.has(e));const a=t.querySelector(".spell-picker-checkbox");a&&(a.checked=spellPickerState.selectedSpells.has(e))}updateInlineSpellCount()}function updateInlineSpellCount(){const e=document.getElementById("inlineSpellCount"),t=document.querySelector(".spell-picker-info");if(!e)return;const a=spellPickerState.selectedSpells.size,n=spellPickerState.targetLevel;let i=null,l=a;if("cantrips"===n)i=editSpellsState.cantripsAllowed;else if(i=editSpellsState.spellsAllowed,null!==i){const e="string"==typeof n?parseInt(n,10):n;l=a;for(const[t,a]of Object.entries(editSpellsState.spells))parseInt(t,10)!==e&&(l+=a.length)}if(null!==i&&i>0){const a=i-l,n=a<0,s=0===a,o=n?"\u26a0 ":"";e.textContent=`${o}${l}/${i}`,e.classList.toggle("at-limit",s),e.classList.toggle("over-limit",n),t&&(t.classList.toggle("at-limit",s),t.classList.toggle("over-limit",n))}else e.textContent=`${a} selected`,e.classList.remove("at-limit","over-limit"),t&&t.classList.remove("at-limit","over-limit")}function closeInlineSpellPicker(){const e=document.getElementById("editDetailsModal");if(!e||!editModalOriginalContent)return;const t=e.querySelector(".modal-content");t&&animateModalContentSwap(t,editModalOriginalContent,()=>{restoreEditFormValues(editModalFormValues),renderSpellTags(),updateSpellLimitsSummary(),spellPickerState.isOpen=!1,spellPickerState.selectedSpells.clear(),editModalOriginalContent=null,editModalFormValues=null})}function confirmInlineSpellSelection(){const e=spellPickerState.targetLevel,t="cantrips"===e?0:parseInt(e,10),a=(window.SPELL_DATABASE.getSpellsByLevel(t)||[]).filter(e=>spellPickerState.selectedSpells.has(e.id)),n=validateSpellSelection(e,a);if(!n.valid)return void showSpellLimitModal(n,e);if("cantrips"===e)editSpellsState.cantrips=a.map(e=>e.name);else{const t="string"==typeof e?parseInt(e,10):e;editSpellsState.spells[t]=a.map(e=>e.name)}ModalManager.markDirty("editDetailsModal");const i=document.getElementById("editDetailsModal");if(!i||!editModalOriginalContent)return;const l=i.querySelector(".modal-content");l&&animateModalContentSwap(l,editModalOriginalContent,()=>{restoreEditFormValues(editModalFormValues),renderSpellTags(),updateSpellLimitsSummary();const e=document.getElementById("spellEditSection");e&&e.scrollIntoView({behavior:"smooth",block:"start"}),showNotification(`Added ${a.length} spell${a.length>1?"s":""}!`),spellPickerState.isOpen=!1,spellPickerState.selectedSpells.clear(),editModalOriginalContent=null,editModalFormValues=null})}function getEditSpells(){return{cantrips:[...editSpellsState.cantrips],spellsKnown:Object.values(editSpellsState.spells).flat(),spellsByLevel:{...editSpellsState.spells}}}async function checkAndPromptForNewSpells(e,t,a){const n=(e.class||"").toLowerCase();if(!SPELLCASTING_CLASSES[n])return;const i=calculateStatsForLevel(e,a);if(!i.spellProgression)return;const{cantrips:l,spellsKnown:s,maxSpellLevel:o}=i.spellProgression,r=e.cantrips||[],c=e.spellsKnown||[],d=Math.max(0,l-r.length),m=Math.max(0,(s||0)-c.length),p=Math.max(0,r.length-l),u=null!==s?Math.max(0,c.length-s):0,h=[];if(window.SPELL_DATABASE&&o>0)for(const e of c){const t=window.SPELL_DATABASE.getSpellByName(e);t&&t.level>o&&h.push({name:e,level:t.level})}p>0||u>0||h.length>0?showSpellRemovalPrompt(e,{cantripSurplus:p,spellSurplus:u,cantripsKnown:l,spellsKnown:s,maxSpellLevel:o,currentCantrips:r,currentSpells:c,tooHighLevelSpells:h}):(d>0||m>0)&&showSpellLevelUpPrompt(e,{cantripDeficit:d,spellDeficit:m,cantripsKnown:l,spellsKnown:s,maxSpellLevel:o,currentCantrips:r,currentSpells:c})}function showSpellLevelUpPrompt(e,t){const{cantripDeficit:a,spellDeficit:n,cantripsKnown:i,spellsKnown:l,maxSpellLevel:s,currentCantrips:o,currentSpells:r}=t;(e.class||"").toLowerCase();let c=`As a Level ${e.level} ${e.class}, you can know:\n`;i>0&&(c+=`\u2022 ${i} cantrips (you have ${o.length})\n`),l>0&&(c+=`\u2022 ${l} spells (you have ${r.length})\n`),(a>0||n>0)&&(c+="\n",a>0&&(c+=`You can select ${a} more cantrip${a>1?"s":""}.\n`),n>0&&(c+=`You can select ${n} more spell${n>1?"s":""}.`));const d=getManagerModalHost(),m=document.getElementById("spellLevelUpModal");m&&m.remove();const p=`\n        <div id="spellLevelUpModal" class="modal show">\n            <div class="modal-content">\n                <div class="modal-header">\n                    <h2 class="modal-title">NEW SPELLS AVAILABLE</h2>\n                    <button class="modal-close" onclick="closeSpellLevelUpPrompt()">&times;</button>\n                </div>\n                <div class="modal-body">\n                    <p class="terminal-text" style="white-space: pre-line;">${Utils.escapeHtml(c)}</p>\n                </div>\n                <div class="modal-footer" style="gap: 0.5rem;">\n                    <button class="terminal-btn terminal-btn-secondary" onclick="closeSpellLevelUpPrompt()">Later</button>\n                    <button class="terminal-btn terminal-btn-secondary" onclick="closeSpellLevelUpPrompt(); openSpellEditModal('${e.id}')">Select spells</button>\n                </div>\n            </div>\n        </div>\n    `;d.insertAdjacentHTML("beforeend",p)}function closeSpellLevelUpPrompt(){const e=document.getElementById("spellLevelUpModal");e&&animateModalClose(e,{removeOnClose:!0})}window.selectSpellSchool=selectSpellSchool;let spellEditModalState={characterId:null,cantrips:[],spells:{},characterClass:null,maxSpellLevel:0,characterLevel:1,cantripsAllowed:0,spellsAllowed:null},spellEditModalOriginalContent=null,spellEditModalFormValues=null,_spellEditModalBaseContent=null;function _ensureSpellEditModalBaseContentRestored(){const e=document.getElementById("spellEditModal");if(!e)return;const t=e.querySelector(".modal-content");if(!t)return;_spellEditModalBaseContent||(_spellEditModalBaseContent=t.innerHTML);!!t.querySelector("#spellEditModalSection")&&!!t.querySelector("#spellEditLoading")&&!!t.querySelector("#spellEditModalLimitsSummary")||(t.innerHTML=_spellEditModalBaseContent),spellEditModalOriginalContent=null}function _getCachedCharacterById(e){const t=String(e);if(void 0!==AppState&&AppState){if(Array.isArray(AppState.filteredCharacters)){const e=AppState.filteredCharacters.find(e=>e&&String(e.id)===t);if(e)return e}if(Array.isArray(AppState.characters)){const e=AppState.characters.find(e=>e&&String(e.id)===t);if(e)return e}}return null}async function openSpellEditModal(e){_ensureSpellEditModalBaseContentRestored();const t=document.getElementById("spellEditModal");t&&t.classList.add("show");const a=document.getElementById("spellEditLoading");if(a){const e=a.querySelector(".panel-loading-text");e&&(e.textContent="Loading..."),a.classList.add("is-visible")}if(!window.SPELL_DATABASE)try{await ensureDndDataBundleLoaded()}catch(e){console.error("Spell database failed to load",e)}let n=_getCachedCharacterById(e);if(n&&n._isLite&&(n=null),!n)try{n=await CharacterStorage.getById(e)}catch(e){return e&&e.message&&e.message.toLowerCase().includes("session has expired")?"function"==typeof showSessionExpiredModal&&showSessionExpiredModal():(console.warn("Failed to load character for spell edit modal:",e),"function"==typeof showNotification&&showNotification("Failed to load character","error")),void(a&&a.classList.remove("is-visible"))}if(!n)return void(a&&a.classList.remove("is-visible"));const i=(n.class||"").toLowerCase(),l=SPELLCASTING_CLASSES[i];if(!l)return void showNotification("This character is not a spellcaster","error");const s=CharacterSheet._parseCharacterData(n),o=s.level||n.level||1;let r=0;"full"===l.type?r=o>=17?9:o>=15?8:o>=13?7:o>=11?6:o>=9?5:o>=7?4:o>=5?3:o>=3?2:1:"half"===l.type?r=o<2?0:o<5?1:o<9?2:o<13?3:o<17?4:5:"pact"===l.type&&(r=o<3?1:o<5?2:o<7?3:o<9?4:5);const c=calculateStatsForLevel(n,o).spellProgression||{cantrips:0,spellsKnown:null,maxSpellLevel:0};spellEditModalState={characterId:e,cantrips:[...s.cantrips||[]],spells:{},characterClass:i,maxSpellLevel:r,characterLevel:o,cantripsAllowed:c.cantrips||0,spellsAllowed:c.spellsKnown};const d=s.spellsKnown||[];for(const e of d)if(window.SPELL_DATABASE){const t=window.SPELL_DATABASE.getSpellByName(e);t&&t.level>0&&(spellEditModalState.spells[t.level]||(spellEditModalState.spells[t.level]=[]),spellEditModalState.spells[t.level].push(e))}const m=document.getElementById("spellEditModalCantripsRow");m&&m.classList.toggle("is-hidden",!l.cantrips);for(let e=1;e<=9;e++){const t=document.getElementById(`spellEditModalLevel${e}Row`);t&&t.classList.toggle("is-hidden",e>r||0===r)}renderSpellEditModalTags(),a&&a.classList.remove("is-visible"),t&&setTimeout(()=>ModalManager.snapshotForm("spellEditModal"),50)}function closeSpellEditModal(){const e=document.getElementById("spellEditModal");if(!e)return void(spellEditModalState.characterId=null);const t=document.getElementById("spellEditLoading");t&&t.classList.remove("is-visible"),animateModalClose(e,{removeOnClose:!1,onClosed:()=>{spellEditModalState.characterId=null,_ensureSpellEditModalBaseContentRestored()}})}async function saveSpellEditModal(){if(!spellEditModalState.characterId)return void closeSpellEditModal();if(!await CharacterStorage.getById(spellEditModalState.characterId))return void closeSpellEditModal();const e=validateSpellEditModalLimits();if(!e.valid)return void showSpellLimitSaveModal(e);const t=document.getElementById("spellEditLoading");if(t){const e=t.querySelector(".panel-loading-text");e&&(e.textContent="Saving..."),t.classList.add("is-visible")}const a={cantrips:[...spellEditModalState.cantrips],spellsKnown:Object.values(spellEditModalState.spells).flat()};try{await CharacterStorage.update(spellEditModalState.characterId,a),markUserChanges(),await AppState.loadCharacters(),UI.render(),viewCharacter(spellEditModalState.characterId),showNotification("Spells updated"),closeSpellEditModal()}catch(e){console.error("Failed to save spells:",e),showNotification("Failed to save spells","error")}finally{t&&t.classList.remove("is-visible")}}function validateSpellEditModalLimits(){const e=spellEditModalState.cantrips.length,t=spellEditModalState.cantripsAllowed,a=Object.values(spellEditModalState.spells).flat().length,n=spellEditModalState.spellsAllowed,i=[];return t>0&&e>t&&i.push(`You have ${e} cantrips but can only know ${t}.`),null!==n&&a>n&&i.push(`You have ${a} spells but can only know ${n}.`),{valid:0===i.length,issues:i,cantripsOver:t>0?Math.max(0,e-t):0,spellsOver:null!==n?Math.max(0,a-n):0}}function updateSpellEditModalLimitsSummary(){const e=document.getElementById("spellEditModalLimitsSummary");if(!e)return;const t=[],a=spellEditModalState.cantrips.length,n=spellEditModalState.cantripsAllowed,i=n>0?Math.max(0,a-n):0;if(n>0){const e=i>0?"\u26a0 ":"";t.push(`${e}Cantrips: ${a}/${n}`)}const l=Object.values(spellEditModalState.spells).flat().length,s=spellEditModalState.spellsAllowed,o=null!==s?Math.max(0,l-s):0;if(null!==s){const e=o>0?"\u26a0 ":"";t.push(`${e}Spells: ${l}/${s}`)}else spellEditModalState.characterClass&&t.push("Spells: "+l+" (no limit)");e.textContent=t.join(" \xb7 ");const r=i>0||o>0,c=!r&&(n>0&&a>=n||null!==s&&l>=s);e.classList.toggle("at-limit",c),e.classList.toggle("over-limit",r)}function renderSpellEditModalTags(){const e=document.getElementById("spellEditModalCantrips");e&&renderSpellEditModalTagsInContainer(e,spellEditModalState.cantrips,"cantrips");for(let e=1;e<=9;e++){const t=document.getElementById(`spellEditModalSpells${e}`);if(t){renderSpellEditModalTagsInContainer(t,spellEditModalState.spells[e]||[],e)}}updateSpellEditModalLimitsSummary()}function renderSpellEditModalTagsInContainer(e,t,a){const n="cantrips"===a?"'cantrips'":a,i=t.map(e=>{let t="";if(window.SPELL_DATABASE){const a=window.SPELL_DATABASE.getSpellByName(e);a&&a.description&&(t=a.description)}const a=t?Utils.escapeHtml(t):"",n=a?`<span class="custom-tooltip" data-position="top">${a}</span>`:"";return`<span class="sheet-spell-tag spell-edit-tag${a?" has-tooltip":""}">${Utils.escapeHtml(e)}${n}</span>`}).join(""),l=`<button type="button" class="spell-add-btn-inline" onclick="openSpellPickerForSpellEditModal(${n})">Edit</button>`;e.innerHTML=i+l}function removeSpellFromSpellEditModal(e,t){if("cantrips"===t)spellEditModalState.cantrips=spellEditModalState.cantrips.filter(t=>t!==e);else{const a=parseInt(t,10);spellEditModalState.spells[a]&&(spellEditModalState.spells[a]=spellEditModalState.spells[a].filter(t=>t!==e))}renderSpellEditModalTags(),ModalManager.markDirty("spellEditModal")}let spellPickerTempState={level:null,originalSelections:[],currentSelections:[],maxAllowed:null,schoolFilter:""};function openSpellPickerForSpellEditModal(e){const t=document.getElementById("spellEditModal");if(!t)return;const a=t.querySelector(".modal-content");if(!a)return;spellEditModalOriginalContent=a.innerHTML;const n="cantrips"===e?[...spellEditModalState.cantrips]:[...spellEditModalState.spells[e]||[]];let i=null;i="cantrips"===e?spellEditModalState.cantripsAllowed>0?spellEditModalState.cantripsAllowed:null:spellEditModalState.spellsAllowed,spellPickerTempState={level:e,originalSelections:[...n],currentSelections:[...n],maxAllowed:i,schoolFilter:""};const l=`SELECT ${"cantrips"===e?"CANTRIPS":(1===e?"1ST":2===e?"2ND":3===e?"3RD":e+"TH")+" LEVEL SPELLS"}`,s=a.querySelector(".modal-content-inner");if(s){const e=document.createElement("div");e.className="spell-picker-transition-loader",e.innerHTML='\n            <div class="panel-loading-cube-container">\n                <div class="panel-loading-cube">\n                    <i></i><i></i><i></i><i></i><i></i><i></i>\n                </div>\n            </div>\n        ',s.appendChild(e),setTimeout(()=>{e.classList.add("is-visible")},10)}setTimeout(()=>{const t=getSpellsForPicker(spellEditModalState.characterClass,e),n=`\n            <div class="modal-content-inner slide-in-right">\n                <div class="modal-header modal-header-left">\n                    <h2 class="modal-title">${l}</h2>\n                    <button class="modal-close" onclick="ModalManager.requestClose('spellEditModal')">&times;</button>\n                </div>\n                <div class="modal-body">\n                    <div class="spell-picker-info" id="spellPickerInfoText">\n                        ${getSpellPickerInfoText()}\n                    </div>\n                    <div class="spell-picker-filters">\n                        <input type="text" id="spellEditModalSearchInput" class="terminal-input" placeholder="Search spells..." oninput="filterSpellEditModalPicker()" data-1p-ignore>\n                        <div class="selector-shell selector-shell--listbox" id="spellEditSchoolSelector">\n                            <button type="button" \n                                    class="terminal-btn-small selector-trigger" \n                                    id="spellEditSchoolTrigger"\n                                    aria-haspopup="listbox"\n                                    aria-expanded="false"\n                                    onclick="CharacterSheet.toggleSelectorMenu(this)">\n                                <span class="selector-trigger-label">All Schools</span>\n                            </button>\n                            <div class="selector-menu" id="spellEditSchoolMenu" role="listbox">\n                                <button class="selector-option is-selected" role="option" data-value="" onclick="selectSpellEditSchool('')">All Schools</button>\n                                <button class="selector-option" role="option" data-value="Abjuration" onclick="selectSpellEditSchool('Abjuration')">Abjuration</button>\n                                <button class="selector-option" role="option" data-value="Conjuration" onclick="selectSpellEditSchool('Conjuration')">Conjuration</button>\n                                <button class="selector-option" role="option" data-value="Divination" onclick="selectSpellEditSchool('Divination')">Divination</button>\n                                <button class="selector-option" role="option" data-value="Enchantment" onclick="selectSpellEditSchool('Enchantment')">Enchantment</button>\n                                <button class="selector-option" role="option" data-value="Evocation" onclick="selectSpellEditSchool('Evocation')">Evocation</button>\n                                <button class="selector-option" role="option" data-value="Illusion" onclick="selectSpellEditSchool('Illusion')">Illusion</button>\n                                <button class="selector-option" role="option" data-value="Necromancy" onclick="selectSpellEditSchool('Necromancy')">Necromancy</button>\n                                <button class="selector-option" role="option" data-value="Transmutation" onclick="selectSpellEditSchool('Transmutation')">Transmutation</button>\n                            </div>\n                        </div>\n                    </div>\n                    <div class="spell-picker-list" id="spellEditModalPickerList">\n                        ${renderSpellPickerListWithState(t,e)}\n                    </div>\n                </div>\n                <div class="modal-footer modal-footer-end">\n                    <button class="terminal-btn" onclick="cancelSpellEditModalPicker()">Cancel</button>\n                    <button id="spellPickerSaveBtn" class="terminal-btn terminal-btn-primary" onclick="saveSpellEditModalPicker()">Done</button>\n                </div>\n            </div>\n        `;s&&s.classList.add("slide-out-left"),setTimeout(()=>{a.innerHTML=n,setTimeout(()=>{const e=document.getElementById("spellEditModalSearchInput");e&&e.focus()},350)},s?150:0)},50)}function getSpellPickerInfoText(){const{currentSelections:e,maxAllowed:t}=spellPickerTempState,a=e.length;if(null===t)return`Select spells for your character. <span class="spell-picker-count">${a} selected</span>`;const n=t-a,i=n<0,l=i?"spell-picker-count over-limit":"spell-picker-count",s=`${i?"\u26a0 ":""}${a}/${t}`;if(i){const e=Math.abs(n);return`<span class="spell-picker-warning">Remove ${e} spell${1!==e?"s":""} to continue.</span> <span class="${l}">${s}</span>`}return 0===n?`Selection complete. <span class="${l}">${s}</span>`:`You can select ${n} more spell${1!==n?"s":""}. <span class="${l}">${s}</span>`}function updateSpellPickerInfo(){const e=document.getElementById("spellPickerInfoText");if(e){e.innerHTML=getSpellPickerInfoText();const{currentSelections:t,maxAllowed:a}=spellPickerTempState,n=null!==a&&t.length>a,i=null!==a&&t.length===a;e.classList.toggle("over-limit",n),e.classList.toggle("at-limit",i&&!n)}const t=document.getElementById("spellPickerSaveBtn");if(t){const{currentSelections:e,maxAllowed:a}=spellPickerTempState,n=null!==a&&e.length>a;t.disabled=n}}function renderSpellPickerListWithState(e,t){if(!e||0===e.length)return'<div class="spell-picker-empty">No spells available at this level for this class.</div>';const{originalSelections:a,currentSelections:n}=spellPickerTempState,i=new Set(a.map(e=>e.toLowerCase())),l=new Set(n.map(e=>e.toLowerCase()));return e.map(e=>{const a=e.name.toLowerCase(),n=l.has(a),s=i.has(a),o=Utils.escapeHtml(e.name),r=Utils.escapeHtml(e.description||""),c=["spell-picker-item"];return n&&c.push("is-selected"),s&&c.push("is-existing"),`\n            <div class="${c.join(" ")}" \n                 data-spell-name="${o.toLowerCase()}"\n                 data-spell-school="${e.school||""}"\n                 onclick="toggleSpellInSpellEditModal('${o.replace(/'/g,"\\'")}', '${t}', this)">\n                <div class="spell-picker-item-header">\n                    <span class="spell-picker-item-name">${o}</span>\n                    <span class="spell-picker-item-school">${e.school||""}</span>\n                </div>\n                <div class="spell-picker-item-desc">${r}</div>\n            </div>\n        `}).join("")}function getSpellsForPicker(e,t){if(!window.SPELL_DATABASE)return[];const a="cantrips"===t?0:t;return window.SPELL_DATABASE.getSpellsByClassAndLevel(e,a)||[]}function toggleSpellInSpellEditModal(e,t,a){a.classList.contains("is-selected")?(spellPickerTempState.currentSelections=spellPickerTempState.currentSelections.filter(t=>t!==e),a.classList.remove("is-selected")):(spellPickerTempState.currentSelections.push(e),a.classList.add("is-selected")),updateSpellPickerInfo()}function saveSpellEditModalPicker(){const{level:e,currentSelections:t,maxAllowed:a}=spellPickerTempState;if(null!==a&&t.length>a){const e=t.length-a;return void showNotification(`Remove ${e} spell${1!==e?"s":""} before saving`,"error")}if("cantrips"===e)spellEditModalState.cantrips=[...t];else{const a=parseInt(e,10);spellEditModalState.spells[a]=[...t]}ModalManager.markDirty("spellEditModal"),returnToSpellEditScreen()}function cancelSpellEditModalPicker(){returnToSpellEditScreen()}function returnToSpellEditScreen(){const e=document.getElementById("spellEditModal");if(!e||!spellEditModalOriginalContent)return;const t=e.querySelector(".modal-content");if(!t)return;const a=t.querySelector(".modal-content-inner");a&&a.classList.add("slide-out-right"),setTimeout(()=>{t.innerHTML=spellEditModalOriginalContent,spellEditModalOriginalContent=null;const e=t.querySelector(".modal-content-inner");e&&e.classList.add("slide-in-left"),spellPickerTempState={level:null,originalSelections:[],currentSelections:[],maxAllowed:null},renderSpellEditModalTags();const a=spellEditModalState.characterClass,n=SPELLCASTING_CLASSES[a],i=document.getElementById("spellEditModalCantripsRow");i&&n&&i.classList.toggle("is-hidden",!n.cantrips);for(let e=1;e<=9;e++){const t=document.getElementById(`spellEditModalLevel${e}Row`);t&&t.classList.toggle("is-hidden",e>spellEditModalState.maxSpellLevel||0===spellEditModalState.maxSpellLevel)}},a?150:0)}function selectSpellEditSchool(e){spellPickerTempState.schoolFilter=e;const t=document.getElementById("spellEditSchoolTrigger"),a=document.getElementById("spellEditSchoolMenu");if(t){const a=t.querySelector(".selector-trigger-label");a&&(a.textContent=e||"All Schools")}a&&a.querySelectorAll(".selector-option").forEach(t=>{t.classList.toggle("is-selected",t.dataset.value===e)}),filterSpellEditModalPicker()}function filterSpellEditModalPicker(){const e=document.getElementById("spellEditModalSearchInput"),t=document.getElementById("spellEditModalPickerList");if(!e||!t)return;const a=e.value.toLowerCase().trim(),n=spellPickerTempState.schoolFilter;t.querySelectorAll(".spell-picker-item").forEach(e=>{const t=e.getAttribute("data-spell-name")||"",i=e.getAttribute("data-spell-school")||"",l=!a||t.includes(a),s=!n||i===n;e.style.display=l&&s?"":"none"})}window.openSpellEditModal=openSpellEditModal,window.closeSpellEditModal=closeSpellEditModal,window.saveSpellEditModal=saveSpellEditModal,window.removeSpellFromSpellEditModal=removeSpellFromSpellEditModal,window.openSpellPickerForSpellEditModal=openSpellPickerForSpellEditModal,window.toggleSpellInSpellEditModal=toggleSpellInSpellEditModal,window.filterSpellEditModalPicker=filterSpellEditModalPicker,window.selectSpellEditSchool=selectSpellEditSchool,window.saveSpellEditModalPicker=saveSpellEditModalPicker,window.cancelSpellEditModalPicker=cancelSpellEditModalPicker;let spellRemovalState={characterId:null,selectedCantrips:new Set,selectedSpells:new Set,requiredCantripRemovals:0,requiredSpellRemovals:0,forcedSpellRemovals:[]};function showSpellRemovalPrompt(e,t){const{cantripSurplus:a,spellSurplus:n,cantripsKnown:i,spellsKnown:l,maxSpellLevel:s,currentCantrips:o,currentSpells:r,tooHighLevelSpells:c}=t;spellRemovalState={characterId:e.id,selectedCantrips:new Set,selectedSpells:new Set,requiredCantripRemovals:a,requiredSpellRemovals:n,forcedSpellRemovals:c.map(e=>e.name)},c.forEach(e=>spellRemovalState.selectedSpells.add(e.name));let d=`As a Level ${e.level} ${e.class}, you can know:\n`;i>0&&(d+=`\u2022 ${i} cantrips (you have ${o.length})\n`),null!==l&&l>0&&(d+=`\u2022 ${l} spells (you have ${r.length})\n`),d+="\n",a>0&&(d+=`You must remove ${a} cantrip${a>1?"s":""}.\n`),n>0&&(d+=`You must remove ${n} spell${n>1?"s":""}.\n`),c.length>0&&(d+=`\n${c.length} spell${c.length>1?"s are":" is"} above your max spell level (${s}) and must be removed.`);let m="";a>0&&o.length>0&&(m=`\n            <div class="spell-removal-section">\n                <h4 class="spell-removal-header">Cantrips (remove ${a})</h4>\n                <div class="spell-removal-list">\n                    ${o.map(e=>`\n                        <label class="spell-removal-item">\n                            <input type="checkbox" \n                                   onchange="toggleSpellRemoval('cantrip', '${Utils.escapeHtml(e.replace(/'/g,"\\'"))}')"\n                                   ${spellRemovalState.selectedCantrips.has(e)?"checked":""}>\n                            <span>${Utils.escapeHtml(e)}</span>\n                        </label>\n                    `).join("")}\n                </div>\n            </div>\n        `);let p="";if((n>0||c.length>0)&&r.length>0){const e={};for(const t of r){let a=1;if(window.SPELL_DATABASE){const e=window.SPELL_DATABASE.getSpellByName(t);e&&(a=e.level)}e[a]||(e[a]=[]),e[a].push(t)}p=`\n            <div class="spell-removal-section">\n                <h4 class="spell-removal-header">Spells (remove ${n+c.length})</h4>\n                <div class="spell-removal-list">\n                    ${Object.entries(e).sort(([e],[t])=>Number(e)-Number(t)).map(([e,t])=>t.map(t=>{const a=spellRemovalState.forcedSpellRemovals.includes(t),n=c.some(e=>e.name===t);return`\n                                <label class="spell-removal-item${a?" forced":""}">\n                                    <input type="checkbox" \n                                           onchange="toggleSpellRemoval('spell', '${Utils.escapeHtml(t.replace(/'/g,"\\'"))}')"\n                                           ${spellRemovalState.selectedSpells.has(t)?"checked":""}\n                                           ${a?"disabled checked":""}>\n                                    <span>${Utils.escapeHtml(t)} (${"0"===e?"cantrip":`lvl ${e}`})${n?" \u26a0\ufe0f too high":""}</span>\n                                </label>\n                            `}).join("")).join("")}\n                </div>\n            </div>\n        `}const u=getManagerModalHost(),h=document.getElementById("spellRemovalModal");h&&h.remove();const g=`\n        <div id="spellRemovalModal" class="modal show">\n            <div class="modal-content">\n                <div class="modal-header">\n                    <h2 class="modal-title">REMOVE EXCESS SPELLS</h2>\n                    <button class="modal-close" onclick="closeSpellRemovalPrompt()">&times;</button>\n                </div>\n                <div class="modal-body">\n                    <p class="terminal-text" style="white-space: pre-line;">${Utils.escapeHtml(d)}</p>\n                    ${m}\n                    ${p}\n                    <p id="spellRemovalStatus" class="terminal-text-small terminal-text-dim" style="margin-top: 1rem;"></p>\n                </div>\n                <div class="modal-footer" style="gap: 0.5rem;">\n                    <button class="terminal-btn terminal-btn-secondary" onclick="closeSpellRemovalPrompt()">Later</button>\n                    <button id="confirmSpellRemovalBtn" class="terminal-btn" onclick="confirmSpellRemoval()">Remove selected</button>\n                </div>\n            </div>\n        </div>\n    `;u.insertAdjacentHTML("beforeend",g),updateSpellRemovalStatus()}function toggleSpellRemoval(e,t){if("cantrip"===e)spellRemovalState.selectedCantrips.has(t)?spellRemovalState.selectedCantrips.delete(t):spellRemovalState.selectedCantrips.add(t);else{if(spellRemovalState.forcedSpellRemovals.includes(t))return;spellRemovalState.selectedSpells.has(t)?spellRemovalState.selectedSpells.delete(t):spellRemovalState.selectedSpells.add(t)}updateSpellRemovalStatus()}function updateSpellRemovalStatus(){const e=document.getElementById("spellRemovalStatus"),t=document.getElementById("confirmSpellRemovalBtn");if(!e||!t)return;const a=spellRemovalState.selectedCantrips.size,n=spellRemovalState.selectedSpells.size,i=spellRemovalState.requiredCantripRemovals,l=spellRemovalState.requiredSpellRemovals+spellRemovalState.forcedSpellRemovals.length,s=a>=i,o=n>=l;let r="";s||(r+=`Select ${i-a} more cantrip${i-a>1?"s":""} to remove. `),o||(r+=`Select ${l-n} more spell${l-n>1?"s":""} to remove.`),s&&o&&(r="Ready to remove selected spells."),e.textContent=r,t.disabled=!(s&&o)}async function confirmSpellRemoval(){const e=await CharacterStorage.getById(spellRemovalState.characterId);if(!e)return;const t={cantrips:(e.cantrips||[]).filter(e=>!spellRemovalState.selectedCantrips.has(e)),spellsKnown:(e.spellsKnown||[]).filter(e=>!spellRemovalState.selectedSpells.has(e))};await CharacterStorage.update(spellRemovalState.characterId,t),closeSpellRemovalPrompt(),showNotification(`Removed ${spellRemovalState.selectedCantrips.size+spellRemovalState.selectedSpells.size} spell${spellRemovalState.selectedCantrips.size+spellRemovalState.selectedSpells.size>1?"s":""}`,"success"),await CharacterManager.refreshCharacterList(),await CharacterManager.selectCharacter(spellRemovalState.characterId)}function closeSpellRemovalPrompt(){const e=document.getElementById("spellRemovalModal");e&&animateModalClose(e,{removeOnClose:!0})}async function openSpellLevelUpPicker(e,t,a){const n=await CharacterStorage.getById(e);if(!n)return;const i=(n.class||"").toLowerCase(),l=n.level||1,s=calculateStatsForLevel(n,l).spellProgression||{cantrips:0,spellsKnown:null,maxSpellLevel:0};let o,r=null;"cantrips"===t?(o=n.cantrips||[],s.cantrips>0&&(r=Math.max(0,s.cantrips-o.length))):(o=n.spellsKnown||[],null!==s.spellsKnown&&(r=Math.max(0,s.spellsKnown-o.length))),openSpellPicker({characterClass:i,level:t,maxSpellLevel:9,existingSpells:o,maxSelections:r,onConfirm:async a=>{const i={};if("cantrips"===t){const e=n.cantrips||[];i.cantrips=[...e,...a.map(e=>e.name)]}else{const e=n.spellsKnown||[];i.spellsKnown=[...e,...a.map(e=>e.name)]}try{await CharacterStorage.update(e,i),await AppState.loadCharacters(),UI.render(),viewCharacter(e),showNotification(`Added ${a.length} spell${a.length>1?"s":""}!`)}catch(e){console.error("Failed to add spells:",e),showNotification("Failed to add spells","error")}}})}window.initializeSpellEditSection=initializeSpellEditSection,window.removeSpellFromEdit=removeSpellFromEdit,window.openSpellPickerForEdit=openSpellPickerForEdit,window.getEditSpells=getEditSpells,window.checkAndPromptForNewSpells=checkAndPromptForNewSpells,window.closeSpellLevelUpPrompt=closeSpellLevelUpPrompt,window.openSpellLevelUpPicker=openSpellLevelUpPicker,window.closeSpellRemovalPrompt=closeSpellRemovalPrompt,window.toggleSpellRemoval=toggleSpellRemoval,window.confirmSpellRemoval=confirmSpellRemoval,window.filterInlineSpellPicker=filterInlineSpellPicker,window.toggleInlineSpellSelection=toggleInlineSpellSelection,window.closeInlineSpellPicker=closeInlineSpellPicker,window.confirmInlineSpellSelection=confirmInlineSpellSelection;
+
+
+// ===== BUNDLE PART: app-manager.js =====
+
+// KEYBOARD NAVIGATION
+// ========================================
+// HTML escaping is provided by Utils.escapeHtml from character-builder-utils.js
+const KeyboardNav = {
+    currentFocusIndex: 0,
+    isActive: true,
+    mode: 'cards', // 'cards' or 'form'
+
+    /**
+     * Dynamically calculate the number of columns in the grid
+     * by measuring actual card positions.
+     */
+    getGridColumns() {
+        const cards = this.getCharacterCards();
+        if (cards.length < 2) return 1;
+        
+        // Compare the top position of the first two cards
+        // If they're the same, they're in the same row
+        const firstTop = cards[0].getBoundingClientRect().top;
+        let columnsInFirstRow = 1;
+        
+        for (let i = 1; i < cards.length; i++) {
+            const cardTop = cards[i].getBoundingClientRect().top;
+            // Allow small tolerance for rounding errors
+            if (Math.abs(cardTop - firstTop) < 5) {
+                columnsInFirstRow++;
+            } else {
+                break;
+            }
+        }
+        
+        return columnsInFirstRow;
+    },
+
+    getCharacterCards() {
+        return Array.from(document.querySelectorAll('.character-card'));
+    },
+
+    getFocusableElements() {
+        // Return all focusable elements in the left panel
+        return Array.from(document.querySelectorAll(
+            '#searchInput, #sortBy, .character-card, #importBtn, #newCharacterBtn'
+        ));
+    },
+
+    getCurrentlyFocusedElement() {
+        return document.activeElement;
+    },
+
+    isInFormElement() {
+        const activeEl = this.getCurrentlyFocusedElement();
+        return activeEl && (
+            activeEl.tagName === 'INPUT' ||
+            activeEl.tagName === 'TEXTAREA' ||
+            activeEl.tagName === 'SELECT' ||
+            activeEl.tagName === 'BUTTON'
+        );
+    },
+
+    /**
+     * Update visual keyboard focus on the grid.
+     * @param {boolean} skipSheetUpdate - when true, do NOT update the character sheet.
+     *                                    Used when focus is being synced from a sheet change
+     *                                    (e.g. mouse click) to avoid recursion.
+     */
+    updateFocus(skipSheetUpdate = false) {
+        const cards = this.getCharacterCards();
+        if (cards.length === 0) return;
+
+        // Remove focus from all cards (immediate change)
+        cards.forEach((card) => {
+            card.classList.remove('is-keyboard-focused');
+        });
+
+        // Add focus to current index
+        if (cards[this.currentFocusIndex]) {
+            const focusedCard = cards[this.currentFocusIndex];
+            focusedCard.classList.add('is-keyboard-focused');
+
+            // When keyboard focus moves, treat that as "viewing" the character.
+            // This keeps the right-hand character sheet in sync with the focused card.
+            if (!skipSheetUpdate) {
+                const id = focusedCard.getAttribute('data-id');
+                if (id) {
+                    // Avoid re-triggering keyboard focus sync inside viewCharacter
+                    viewCharacter(id, { fromKeyboard: true, skipKeyboardSync: true });
+                }
+            }
+
+            // Scroll into view
+            focusedCard.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'nearest',
+            });
+        }
+    },
+
+    moveUp() {
+        if (!this.isActive) return;
+        const cards = this.getCharacterCards();
+        if (cards.length === 0) return;
+
+        // Move up by the actual number of grid columns
+        const columns = this.getGridColumns();
+        this.currentFocusIndex = Math.max(0, this.currentFocusIndex - columns);
+        this.updateFocus();
+    },
+
+    moveDown() {
+        if (!this.isActive) return;
+        const cards = this.getCharacterCards();
+        if (cards.length === 0) return;
+
+        // Move down by the actual number of grid columns
+        const columns = this.getGridColumns();
+        this.currentFocusIndex = Math.min(cards.length - 1, this.currentFocusIndex + columns);
+        this.updateFocus();
+    },
+
+    moveLeft() {
+        if (!this.isActive) return;
+        const cards = this.getCharacterCards();
+        if (cards.length === 0) return;
+
+        // Move left, don't wrap
+        this.currentFocusIndex = Math.max(0, this.currentFocusIndex - 1);
+        this.updateFocus();
+    },
+
+    moveRight() {
+        if (!this.isActive) return;
+        const cards = this.getCharacterCards();
+        if (cards.length === 0) return;
+
+        // Move right, don't wrap
+        this.currentFocusIndex = Math.min(cards.length - 1, this.currentFocusIndex + 1);
+        this.updateFocus();
+    },
+
+    select() {
+        if (!this.isActive) return;
+        const cards = this.getCharacterCards();
+        if (cards.length === 0) return;
+
+        const card = cards[this.currentFocusIndex];
+        if (card) {
+            card.click();
+        }
+    },
+
+    focusSearch() {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
+    },
+
+    focusFirstCard() {
+        const cards = this.getCharacterCards();
+        if (cards.length === 0) return;
+        
+        this.currentFocusIndex = 0;
+        this.updateFocus();
+        
+        // Remove browser focus from form elements
+        const activeEl = document.activeElement;
+        if (activeEl && (
+            activeEl.tagName === 'INPUT' ||
+            activeEl.tagName === 'TEXTAREA' ||
+            activeEl.tagName === 'SELECT'
+        )) {
+            activeEl.blur();
+        }
+    },
+
+    reset() {
+        // Reset keyboard focus index without forcing an immediate sheet
+        // update. This avoids surprising jumps in the right-hand character
+        // sheet when the grid is re-rendered (e.g. after sorting or search).
+        this.currentFocusIndex = 0;
+        this.updateFocus(true);
+    },
+
+    clearAll() {
+        // Clear keyboard focus from all cards (used when mouse takes over)
+        const cards = this.getCharacterCards();
+        cards.forEach(card => card.classList.remove('is-keyboard-focused'));
+    }
+};
+
+// ========================================
+// MODAL MANAGER (Universal modal behaviors)
+// ========================================
+const ModalManager = {
+    // Track original form values for dirty checking
+    _formSnapshots: new Map(),
+    
+    // Modals that have forms which can be dirty
+    FORM_MODALS: ['editDetailsModal', 'spellEditModal', 'portraitPromptModal'],
+    
+    /**
+     * Initialize modal behaviors (call once on page load)
+     */
+    init() {
+        // Backdrop click to close
+        document.addEventListener('click', (e) => {
+            if (!e.target || typeof e.target.closest !== 'function') return;
+            const modal = e.target.closest('.modal.show');
+            if (!modal) return;
+            
+            // Only close if clicking the backdrop (the .modal itself, not .modal-content)
+            if (e.target === modal) {
+                this.requestClose(modal.id);
+            }
+        });
+    },
+    
+    /**
+     * Snapshot form values when a modal opens (for dirty checking)
+     */
+    snapshotForm(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        
+        const inputs = modal.querySelectorAll('input, textarea, select');
+        const snapshot = {};
+        inputs.forEach(input => {
+            if (input.id) {
+                snapshot[input.id] = input.value;
+            }
+        });
+        this._formSnapshots.set(modalId, snapshot);
+    },
+    
+    /**
+     * Check if a modal's form has unsaved changes
+     */
+    isDirty(modalId) {
+        // Check if manually marked dirty (e.g., spell changes)
+        if (this._manuallyDirty.has(modalId)) {
+            return true;
+        }
+        
+        const modal = document.getElementById(modalId);
+        if (!modal) return false;
+        
+        const snapshot = this._formSnapshots.get(modalId);
+        if (!snapshot) return false;
+        
+        const inputs = modal.querySelectorAll('input, textarea, select');
+        for (const input of inputs) {
+            if (input.id && snapshot[input.id] !== undefined) {
+                if (input.value !== snapshot[input.id]) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    },
+    
+    /**
+     * Clear form snapshot
+     */
+    clearSnapshot(modalId) {
+        this._formSnapshots.delete(modalId);
+        this._manuallyDirty.delete(modalId);
+    },
+    
+    // Track modals that have been manually marked dirty (e.g., spell changes)
+    _manuallyDirty: new Set(),
+    
+    /**
+     * Manually mark a modal as dirty (for changes that don't update form inputs)
+     */
+    markDirty(modalId) {
+        this._manuallyDirty.add(modalId);
+    },
+    
+    /**
+     * Request to close a modal - shows confirmation if dirty
+     */
+    requestClose(modalId) {
+        // Check if this is a form modal that might have unsaved changes
+        if (this.FORM_MODALS.includes(modalId) && this.isDirty(modalId)) {
+            this.showDiscardConfirmation(modalId);
+            return;
+        }
+        
+        // Not dirty or not a form modal - close immediately
+        this.closeModal(modalId);
+    },
+    
+    /**
+     * Show discard confirmation dialog
+     */
+    showDiscardConfirmation(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        
+        // Create confirmation overlay inside the modal
+        let overlay = modal.querySelector('.modal-discard-confirm');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'modal-discard-confirm';
+            overlay.innerHTML = `
+                <div class="modal-discard-content">
+                    <p class="terminal-text">You have unsaved changes.</p>
+                    <p class="terminal-text-small terminal-text-dim">Discard changes and close?</p>
+                    <div class="modal-discard-actions">
+                        <button class="terminal-btn modal-discard-cancel">Keep editing</button>
+                        <button class="terminal-btn modal-discard-confirm-btn">Discard</button>
+                    </div>
+                </div>
+            `;
+            modal.querySelector('.modal-content').appendChild(overlay);
+        }
+        
+        overlay.classList.add('show');
+        
+        // Focus the cancel button
+        const cancelBtn = overlay.querySelector('.modal-discard-cancel');
+        if (cancelBtn) cancelBtn.focus();
+        
+        // Handle button clicks
+        const handleCancel = () => {
+            overlay.classList.remove('show');
+            cleanup();
+        };
+        
+        const handleDiscard = () => {
+            overlay.classList.remove('show');
+            cleanup();
+            this.closeModal(modalId, true); // force close
+        };
+        
+        const cleanup = () => {
+            cancelBtn?.removeEventListener('click', handleCancel);
+            overlay.querySelector('.modal-discard-confirm-btn')?.removeEventListener('click', handleDiscard);
+        };
+        
+        cancelBtn?.addEventListener('click', handleCancel);
+        overlay.querySelector('.modal-discard-confirm-btn')?.addEventListener('click', handleDiscard);
+    },
+    
+    /**
+     * Actually close the modal (bypasses dirty check)
+     */
+    closeModal(modalId, force = false) {
+        this.clearSnapshot(modalId);
+        
+        // Call the appropriate close function
+        switch (modalId) {
+            case 'importModal':
+                closeImportModal();
+                break;
+            case 'duplicateModal':
+                closeDuplicateModal();
+                break;
+            case 'editDetailsModal':
+                closeEditDetailsModal();
+                break;
+            case 'spellEditModal':
+                closeSpellEditModal();
+                break;
+            case 'authModal':
+                cancelAuthFlow();
+                break;
+            case 'migrationModal':
+                closeMigrationModal();
+                break;
+            case 'passwordResetModal':
+                closePasswordResetModal();
+                break;
+            case 'portraitPromptModal':
+                closePortraitPromptModal();
+                break;
+            case 'managerSettingsModal':
+                closeManagerSettings();
+                break;
+            default:
+                // Generic close for unknown modals
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    animateModalClose(modal, { removeOnClose: false });
+                }
+        }
+    }
+};
+
+// ========================================
+// HYBRID STORAGE SERVICE (Cloud + Local)
+// ========================================
+// Shared implementation now lives in character-storage.js and exposes
+// `window.CharacterStorage`. This file aliases it for local use.
+const DEBUG_MANAGER = !!(window.DanddyConfig && window.DanddyConfig.DEBUG);
+const CharacterStorage = window.CharacterStorage;
+
+// Utility: normalize card subtitle text (race + class) to sentence case
+function toSentenceCase(text) {
+    if (!text) return '';
+    const lower = String(text).toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+// ========================================
+// PINNED CHARACTERS
+// ========================================
+const PINNED_STORAGE_KEY = 'danddy_pinned_characters';
+
+// In-memory cache of pinned IDs (synced from cloud or localStorage)
+let _pinnedCharacterIdsCache = [];
+let _pinnedCacheLoaded = false;
+
+/**
+ * Get array of pinned character IDs (in pinned order) - synchronous.
+ * Returns cached value. Call loadPinnedCharacterIds() first to populate cache.
+ * @returns {string[]}
+ */
+function getPinnedCharacterIds() {
+    return _pinnedCharacterIdsCache;
+}
+
+/**
+ * Load pinned character IDs from cloud (if authenticated) or localStorage.
+ * Populates the cache for synchronous access.
+ * @returns {Promise<string[]>}
+ */
+async function loadPinnedCharacterIds() {
+    // If authenticated, fetch from cloud API
+    if (window.AuthService && AuthService.isAuthenticated()) {
+        try {
+            const token = AuthService.getToken();
+            const { API_BASE_URL } = window.DanddyConfig || {};
+            const response = await fetch(`${API_BASE_URL}/auth/pinned`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                _pinnedCharacterIdsCache = data.pinned_character_ids || [];
+                _pinnedCacheLoaded = true;
+                if (DEBUG_MANAGER) {
+                    console.log('📌 Loaded pinned characters from cloud:', _pinnedCharacterIdsCache);
+                }
+                return _pinnedCharacterIdsCache;
+            } else if (response.status === 401) {
+                // Session expired - notify user and fall through to localStorage
+                console.warn('📌 Session expired, using localStorage for pinned characters');
+                window.AuthService?.handleUnexpectedLogout?.('pinned_load_401');
+            }
+        } catch (error) {
+            console.warn('📌 Failed to load pinned from cloud, falling back to localStorage:', error);
+        }
+    }
+    
+    // Fallback to localStorage
+    try {
+        const raw = localStorage.getItem(PINNED_STORAGE_KEY);
+        _pinnedCharacterIdsCache = raw ? JSON.parse(raw) : [];
+    } catch {
+        _pinnedCharacterIdsCache = [];
+    }
+    _pinnedCacheLoaded = true;
+    
+    if (DEBUG_MANAGER) {
+        console.log('📌 Loaded pinned characters from localStorage:', _pinnedCharacterIdsCache);
+    }
+    return _pinnedCharacterIdsCache;
+}
+
+/**
+ * Save pinned character IDs to cloud (if authenticated) or localStorage.
+ * @param {string[]} ids
+ */
+async function savePinnedCharacterIds(ids) {
+    const pinnedIds = ids || [];
+    _pinnedCharacterIdsCache = pinnedIds;
+    
+    // If authenticated, save to cloud API
+    if (window.AuthService && AuthService.isAuthenticated()) {
+        try {
+            const token = AuthService.getToken();
+            const { API_BASE_URL } = window.DanddyConfig || {};
+            const response = await fetch(`${API_BASE_URL}/auth/pinned`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ pinned_character_ids: pinnedIds }),
+            });
+            
+            if (response.ok) {
+                if (DEBUG_MANAGER) {
+                    console.log('📌 Saved pinned characters to cloud:', pinnedIds);
+                }
+                return;
+            } else if (response.status === 401) {
+                // Session expired - notify user and fall through to localStorage
+                console.warn('📌 Session expired, saving pinned to localStorage instead');
+                window.AuthService?.handleUnexpectedLogout?.('pinned_save_401');
+            }
+        } catch (error) {
+            console.warn('📌 Failed to save pinned to cloud, saving to localStorage:', error);
+        }
+    }
+    
+    // Fallback to localStorage
+    try {
+        localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(pinnedIds));
+        if (DEBUG_MANAGER) {
+            console.log('📌 Saved pinned characters to localStorage:', pinnedIds);
+        }
+    } catch (e) {
+        console.warn('Failed to save pinned characters:', e);
+    }
+}
+
+/**
+ * Check if a character is pinned.
+ * @param {string} characterId
+ * @returns {boolean}
+ */
+function isCharacterPinned(characterId) {
+    const pinned = getPinnedCharacterIds();
+    return pinned.includes(String(characterId));
+}
+
+/**
+ * Toggle pin status for a character.
+ * If pinning, adds to the end of the pinned list (appears last among pinned).
+ * If unpinning, removes from the list.
+ * @param {string} characterId
+ * @returns {Promise<boolean>} New pinned state
+ */
+async function togglePinCharacter(characterId) {
+    const idStr = String(characterId);
+    const pinned = [...getPinnedCharacterIds()];
+    const index = pinned.indexOf(idStr);
+    
+    let newState;
+    if (index >= 0) {
+        // Unpin: remove from array
+        pinned.splice(index, 1);
+        newState = false;
+        if (DEBUG_MANAGER) {
+            console.log(`📌 Unpinned character: ${idStr}`);
+        }
+    } else {
+        // Pin: add to end (newest pinned appears last among pinned)
+        pinned.push(idStr);
+        newState = true;
+        if (DEBUG_MANAGER) {
+            console.log(`📌 Pinned character: ${idStr}`);
+        }
+    }
+    
+    // Save (async but we don't wait for UI update)
+    savePinnedCharacterIds(pinned);
+    
+    // Re-apply filters and re-render
+    AppState.applyFilters();
+    UI.render();
+    
+    // Re-select the character to update the sheet (shows updated pin state)
+    if (AppState.selectedCharacterId === idStr) {
+        viewCharacter(idStr, { force: true });
+    }
+    
+    return newState;
+}
+
+// Expose globally for onclick handlers
+window.togglePinCharacter = togglePinCharacter;
+window.isCharacterPinned = isCharacterPinned;
+window.loadPinnedCharacterIds = loadPinnedCharacterIds;
+
+// ========================================
+// APP STATE
+// ========================================
+const AppState = {
+    characters: [],
+    filteredCharacters: [],
+    searchTerm: '',
+    sortMode: 'dateModified', // 'alphabetical' | 'dateModified' | 'inCampaign' | 'pinned'
+    // The character id that should be considered "selected" across the UI.
+    // This is the single source of truth used to keep the left-hand card
+    // highlight, keyboard focus, and right-hand sheet in sync.
+    selectedCharacterId: null,
+    loading: false,
+
+    async init() {
+        // Load saved sort mode preference
+        if (window.StorageService && StorageService.getSortMode) {
+            this.sortMode = StorageService.getSortMode();
+        }
+        // Load pinned characters first (from cloud or localStorage)
+        await loadPinnedCharacterIds();
+        await this.loadCharacters();
+    },
+
+    async loadCharacters() {
+        try {
+            this.loading = true;
+            if (typeof UI !== 'undefined' && UI && typeof UI.setLoadingState === 'function') {
+                UI.setLoadingState(true);
+            }
+            // Use lite list for initial load (much smaller payload in cloud mode).
+            this.characters = await (CharacterStorage.getAllLite ? CharacterStorage.getAllLite() : CharacterStorage.getAll());
+            if (DEBUG_MANAGER) {
+                console.log('📚 LOAD: Loaded', this.characters.length, 'characters from storage');
+                console.log('📚 LOAD: Full character list with IDs:');
+                this.characters.forEach((c, i) => {
+                    console.log(`  ${i+1}. ${c.name} (ID: ${c.id})`);
+                });
+            }
+            
+            // Check for characters with missing/empty names
+            const charsWithMissingNames = this.characters.filter(c => !c.name || !c.name.trim());
+            if (charsWithMissingNames.length > 0) {
+                console.warn('⚠️ CHARACTERS WITH MISSING NAMES:', charsWithMissingNames.length);
+                console.warn('  IDs:', charsWithMissingNames.map(c => c.id));
+                console.warn('  These may be incomplete characters from failed creation attempts.');
+            }
+            
+            // Check for actual duplicate names (excluding empty names)
+            const validNames = this.characters.filter(c => c.name && c.name.trim()).map(c => c.name);
+            const duplicates = validNames.filter((name, index) => validNames.indexOf(name) !== index);
+            if (duplicates.length > 0) {
+                console.warn('⚠️ DUPLICATE NAMES DETECTED:', [...new Set(duplicates)]);
+                [...new Set(duplicates)].forEach(dupName => {
+                    const matches = this.characters.filter(c => c.name === dupName);
+                    console.warn(`  "${dupName}" appears ${matches.length} times with IDs:`, matches.map(m => m.id));
+                });
+            }
+            this.applyFilters();
+            this.loading = false;
+            if (typeof UI !== 'undefined' && UI && typeof UI.setLoadingState === 'function') {
+                UI.setLoadingState(false);
+            }
+            UI.render(); // Re-render after characters load
+        } catch (error) {
+            console.error('Failed to load characters:', error);
+            this.loading = false;
+            showNotification('Failed to load characters');
+            if (typeof UI !== 'undefined' && UI && typeof UI.setLoadingState === 'function') {
+                UI.setLoadingState(false);
+            }
+            UI.render(); // Render empty state on error
+        }
+    },
+
+    applyFilters() {
+        let filtered = [...this.characters];
+
+        // Search filter
+        if (this.searchTerm) {
+            const search = this.searchTerm.toLowerCase();
+            filtered = filtered.filter(char => 
+                char.name?.toLowerCase().includes(search) ||
+                char.class?.toLowerCase().includes(search) ||
+                char.race?.toLowerCase().includes(search)
+            );
+        }
+
+        // Helper: compute effective "date modified" timestamp for sorting.
+        const getSortTime = (char) => {
+            if (!char) return 0;
+            const metadataExportDate =
+                char.metadata && (char.metadata.exportDate || char.metadata.exportedAt);
+            const raw =
+                char.updatedAt ||
+                char.createdAt ||
+                metadataExportDate ||
+                0;
+            const t = new Date(raw).getTime();
+            return Number.isFinite(t) ? t : 0;
+        };
+
+        // Handle "pinned" sort mode: pinned characters at the top, then by name
+        if (this.sortMode === 'pinned') {
+            const pinnedIds = getPinnedCharacterIds();
+            filtered.sort((a, b) => {
+                const aIsPinned = pinnedIds.includes(String(a.id)) ? 1 : 0;
+                const bIsPinned = pinnedIds.includes(String(b.id)) ? 1 : 0;
+                if (aIsPinned !== bIsPinned) {
+                    return bIsPinned - aIsPinned; // Pinned first
+                }
+                // Secondary sort by name
+                const nameA = (a.name || '').toLowerCase();
+                const nameB = (b.name || '').toLowerCase();
+                if (nameA === nameB) {
+                    return (a.id || '').toString().localeCompare((b.id || '').toString());
+                }
+                return nameA.localeCompare(nameB);
+            });
+            this.filteredCharacters = filtered;
+            return;
+        }
+
+        // Sort characters according to current mode
+        if (this.sortMode === 'alphabetical') {
+            filtered.sort((a, b) => {
+                const nameA = (a.name || '').toLowerCase();
+                const nameB = (b.name || '').toLowerCase();
+                if (nameA === nameB) {
+                    return (a.id || '').toString().localeCompare((b.id || '').toString());
+                }
+                return nameA.localeCompare(nameB);
+            });
+        } else if (this.sortMode === 'dateModified') {
+            // Sort by most recently modified using canonical timestamps
+            filtered.sort((a, b) => {
+                const aTime = getSortTime(a);
+                const bTime = getSortTime(b);
+                if (aTime === bTime) {
+                    return (a.name || '').localeCompare(b.name || '');
+                }
+                return bTime - aTime; // newest first
+            });
+        } else if (this.sortMode === 'inCampaign') {
+            // Sort characters in a campaign to the top, then by name
+            filtered.sort((a, b) => {
+                const aInCampaign = a.campaignId ? 1 : 0;
+                const bInCampaign = b.campaignId ? 1 : 0;
+                if (aInCampaign !== bInCampaign) {
+                    return bInCampaign - aInCampaign; // In campaign first
+                }
+                // Secondary sort by name
+                return (a.name || '').localeCompare(b.name || '');
+            });
+        }
+
+        this.filteredCharacters = filtered;
+    }
+};
+
+// Tracks the most recent in-flight viewCharacter call so that slower, stale
+// requests (for previously selected characters) can't overwrite the sheet for
+// the most recently clicked or focused card.
+let latestViewCharacterRequestId = 0;
+
+// ========================================
+// PANEL MANAGER
+// ========================================
+// Manages which 2 of 3 panels are visible at a time
+// Panels: character-grid, character-sheet, campaign
+
+const PanelManager = (window.PanelManager = {
+    views: {
+        'grid-sheet': ['character-grid', 'character-sheet'],
+        'sheet-campaign': ['character-sheet', 'campaign']
+    },
+    
+    /** Get the current view name */
+    getCurrentView() {
+        const splitLayout = document.querySelector('.split-layout');
+        return splitLayout?.dataset.view || 'grid-sheet';
+    },
+    
+    /** Set the current view by name */
+    setView(viewName) {
+        const splitLayout = document.querySelector('.split-layout');
+        if (!splitLayout) return;
+        
+        if (!this.views[viewName]) {
+            console.warn(`Unknown panel view: ${viewName}`);
+            return;
+        }
+        
+        splitLayout.dataset.view = viewName;
+        
+        if (DEBUG_MANAGER) {
+            console.log(`📐 Panel view: ${viewName}`);
+        }
+    },
+    
+    /** Check if a specific panel is currently visible */
+    isPanelVisible(panelName) {
+        const currentView = this.getCurrentView();
+        const visiblePanels = this.views[currentView] || [];
+        return visiblePanels.includes(panelName);
+    }
+});
+
+// ========================================
+// CHARACTER NAV BAR (Desktop Sequential Navigation)
+// ========================================
+// Navigation bar for cycling through characters in expanded view
+
+const CharacterNavBar = (window.CharacterNavBar = {
+    /** Show the nav bar with animation (called after expand transition completes) */
+    show() {
+        const navBar = document.getElementById('characterNavBar');
+        const sheetWrapper = document.querySelector('.sheet__content');
+        if (!navBar || !sheetWrapper) return;
+
+        // Update content before showing
+        this.update(AppState.selectedCharacterId);
+
+        // Trigger animation by adding is-visible class
+        // Also add padding to sheet to create space for nav
+        requestAnimationFrame(() => {
+            navBar.classList.add('is-visible');
+            // Measure actual nav bar height to set precise padding + 8px gap
+            // (sheet-title-header has 16px top padding for total 24px visual gap)
+            const navHeight = navBar.offsetHeight;
+            sheetWrapper.style.paddingTop = `${navHeight + 8}px`;
+        });
+    },
+
+    /** Hide the nav bar with animation (called before collapse starts) 
+     *  Returns a promise that resolves after the animation completes */
+    hide() {
+        return new Promise((resolve) => {
+            const navBar = document.getElementById('characterNavBar');
+            const sheetWrapper = document.querySelector('.sheet__content');
+            if (!navBar || !sheetWrapper) {
+                resolve();
+                return;
+            }
+
+            // First: animate out the nav bar
+            navBar.classList.remove('is-visible');
+            
+            // After nav bar animation completes (0.25s), expand the sheet
+            setTimeout(() => {
+                sheetWrapper.style.paddingTop = '0';
+                // Wait for sheet padding transition (0.25s) then resolve
+                setTimeout(resolve, 250);
+            }, 250);
+        });
+    },
+    
+    /** Update the nav bar content for the current character */
+    update(characterId) {
+        const prevNameEl = document.getElementById('navPrevName');
+        const nextNameEl = document.getElementById('navNextName');
+        const countEl = document.getElementById('navCount');
+        const countValueEl = countEl?.querySelector('.nav-count-value');
+        
+        if (!prevNameEl || !nextNameEl || !countValueEl) return;
+        
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) {
+            prevNameEl.textContent = '';
+            nextNameEl.textContent = '';
+            countValueEl.textContent = '';
+            return;
+        }
+        
+        const currentIndex = characters.findIndex(c => c.id === characterId);
+        const currentNum = currentIndex >= 0 ? currentIndex + 1 : 1;
+        const total = characters.length;
+        
+        // Get previous character (carousel wrap)
+        const prevIndex = currentIndex <= 0 ? characters.length - 1 : currentIndex - 1;
+        const prevChar = characters[prevIndex];
+        
+        // Get next character (carousel wrap)
+        const nextIndex = currentIndex >= characters.length - 1 ? 0 : currentIndex + 1;
+        const nextChar = characters[nextIndex];
+        
+        // Update display
+        prevNameEl.textContent = prevChar ? prevChar.name : '';
+        nextNameEl.textContent = nextChar ? nextChar.name : '';
+        countValueEl.textContent = currentNum + '/' + total;
+    },
+    
+    /** Navigate to the previous character (carousel) */
+    navigatePrev() {
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) return;
+        
+        const currentId = AppState.selectedCharacterId;
+        const currentIndex = characters.findIndex(c => c.id === currentId);
+        
+        // Carousel: wrap to last if at beginning
+        const prevIndex = currentIndex <= 0 ? characters.length - 1 : currentIndex - 1;
+        const prevCharacter = characters[prevIndex];
+        
+        if (prevCharacter) {
+            viewCharacter(prevCharacter.id, { skipKeyboardSync: false, updateUrl: true });
+        }
+    },
+    
+    /** Navigate to the next character (carousel) */
+    navigateNext() {
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) return;
+        
+        const currentId = AppState.selectedCharacterId;
+        const currentIndex = characters.findIndex(c => c.id === currentId);
+        
+        // Carousel: wrap to first if at end
+        const nextIndex = currentIndex >= characters.length - 1 ? 0 : currentIndex + 1;
+        const nextCharacter = characters[nextIndex];
+        
+        if (nextCharacter) {
+            viewCharacter(nextCharacter.id, { skipKeyboardSync: false, updateUrl: true });
+        }
+    },
+    
+    /** Initialize click handlers for nav buttons */
+    init() {
+        const prevBtn = document.getElementById('navPrev');
+        const nextBtn = document.getElementById('navNext');
+        const countLink = document.getElementById('navCount');
+        
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => this.navigatePrev());
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => this.navigateNext());
+        }
+        // Clicking count link collapses back to grid+sheet view
+        if (countLink) {
+            countLink.addEventListener('click', () => ExpandedView.collapse());
+        }
+    }
+});
+
+// ========================================
+// EXPANDED VIEW HANDLING
+// ========================================
+// Handles the expanded character sheet view with campaign panel
+
+const ExpandedView = (window.ExpandedView = {
+    /** Request ID for campaign panel loading (prevents race conditions) */
+    _campaignLoadRequestId: 0,
+    
+    /** Check if expanded view is currently active */
+    isExpanded() {
+        return PanelManager.getCurrentView() === 'sheet-campaign';
+    },
+
+    /** Toggle expanded view on/off */
+    toggle() {
+        if (this.isExpanded()) {
+            this.collapse();
+        } else {
+            if (window.innerWidth <= 1024) return;
+            this.expand();
+        }
+    },
+
+    /** Calculate column width to match minimized view width */
+    _updateColumnWidths() {
+        const splitLayout = document.querySelector('.split-layout');
+        const campaignGrid = document.querySelector('.sheet__layout');
+        
+        if (splitLayout && campaignGrid) {
+            // Match minimized view: (50% of split-layout) - 66px
+            // 66px = 64px panel padding + 2px sheet-scroll-wrapper border
+            const sheetWidth = (splitLayout.offsetWidth / 2) - 66;
+            campaignGrid.style.setProperty('--sheet-column-width', `${sheetWidth}px`);
+        }
+    },
+
+    /** Debounced column width update to avoid repeated reflows on resize */
+    _scheduleColumnWidthUpdate() {
+        if (this._resizeRaf) {
+            cancelAnimationFrame(this._resizeRaf);
+        }
+        this._resizeRaf = requestAnimationFrame(() => {
+            this._resizeRaf = null;
+            this._updateColumnWidths();
+        });
+    },
+    
+    /** Handle viewport resize - recalculate column widths if expanded */
+    _onResize: null, // Will hold the bound resize handler
+    _resizeRaf: null,
+    
+    _setupResizeListener() {
+        if (this._onResize) return; // Already set up
+        
+        this._onResize = () => {
+            if (this.isExpanded()) {
+                this._scheduleColumnWidthUpdate();
+            }
+        };
+        window.addEventListener('resize', this._onResize);
+    },
+    
+    _removeResizeListener() {
+        if (this._onResize) {
+            window.removeEventListener('resize', this._onResize);
+            this._onResize = null;
+        }
+        if (this._resizeRaf) {
+            cancelAnimationFrame(this._resizeRaf);
+            this._resizeRaf = null;
+        }
+    },
+
+    /** Saved scroll positions for restore after expand/collapse */
+    _savedSheetScroll: 0,
+    _savedCampaignScroll: 0,
+
+    /** Expand to show campaign panel (sheet + campaign view) */
+    expand() {
+        const splitLayout = document.querySelector('.split-layout');
+        const sheetContent = document.querySelector('.sheet__content');
+        const characterSheet = document.querySelector('.character-sheet');
+        
+        // Save scroll position from the combined scroll container
+        if (sheetContent) {
+            this._savedSheetScroll = sheetContent.scrollTop;
+        }
+        
+        // Calculate column widths BEFORE adding transition class
+        // so the character sheet has the correct fixed width from the start
+        this._updateColumnWidths();
+        
+        // Show loading overlay to prevent content flash during layout transition
+        splitLayout?.classList.add('is-expanding');
+        
+        // Set up resize listener to keep columns responsive
+        this._setupResizeListener();
+        
+        // Add animation class to trigger CSS transition
+        splitLayout?.classList.add('is-sheet-expanded');
+        
+        PanelManager.setView('sheet-campaign');
+        
+        // Campaign panel is already visible at bottom of sheet - no need to toggle visibility
+        // Just refresh the content
+        this._loadCampaignPanel();
+        
+        // Update URL to track expanded state
+        this._updateUrl(true);
+        
+        // Wait for layout to settle, then reveal content and show nav bar
+        setTimeout(() => {
+            // Remove loading state to reveal content
+            splitLayout?.classList.remove('is-expanding');
+            // Restore scroll position to the character sheet (now has its own scroll)
+            if (characterSheet) {
+                characterSheet.scrollTop = this._savedSheetScroll;
+            }
+            // Show character nav bar
+            CharacterNavBar.show();
+        }, 400); // Match CSS transition duration
+        
+        if (DEBUG_MANAGER) {
+            console.log('📐 Expanded view: ON');
+        }
+    },
+
+    /** Collapse back to grid view (grid + sheet view) */
+    async collapse() {
+        const splitLayout = document.querySelector('.split-layout');
+        const sheetContent = document.querySelector('.sheet__content');
+        const characterSheet = document.querySelector('.character-sheet');
+
+        // Save scroll position from the character sheet (has its own scroll in expanded view)
+        if (characterSheet) {
+            this._savedSheetScroll = characterSheet.scrollTop;
+        }
+
+        // First: hide character nav bar and expand sheet to fill space
+        await CharacterNavBar.hide();
+
+        // Then: start the collapse animation
+        // Add collapsing class to trigger the collapse animation
+        // Keep is-sheet-expanded to maintain fixed column widths during animation
+        splitLayout?.classList.add('is-collapsing');
+        
+        PanelManager.setView('grid-sheet');
+        
+        // After animation completes, clean up classes and listeners
+        setTimeout(() => {
+            splitLayout?.classList.remove('is-sheet-expanded', 'is-collapsing', 'is-expanding');
+            // Campaign panel stays visible at bottom of sheet - no need to hide
+            // Clear the column width variable
+            const campaignGrid = document.querySelector('.sheet__layout');
+            if (campaignGrid) {
+                campaignGrid.style.removeProperty('--sheet-column-width');
+            }
+            // Restore scroll position to the combined scroll container
+            if (sheetContent) {
+                sheetContent.scrollTop = this._savedSheetScroll;
+            }
+            // Remove resize listener
+            this._removeResizeListener();
+        }, 400); // Match CSS transition duration
+        
+        // Update URL to remove expanded state
+        this._updateUrl(false);
+        
+        if (DEBUG_MANAGER) {
+            console.log('📐 Expanded view: OFF');
+        }
+    },
+
+    /** Toggle campaign description expand/collapse */
+    toggleDescription(btn) {
+        const container = btn.closest('.campaign-area-info');
+        if (!container) return;
+        
+        const isExpanded = container.dataset.expanded === 'true';
+        container.dataset.expanded = !isExpanded;
+        btn.textContent = isExpanded ? 'More' : 'Less';
+    },
+
+    /** Initialize description truncation check after content loads */
+    _initDescriptionTruncation() {
+        const descEl = document.querySelector('.campaign-area-info');
+        if (!descEl) return;
+        
+        const textEl = descEl.querySelector('.campaign-desc-text');
+        if (!textEl) return;
+        
+        // Check if text is actually truncated (content overflows 3 lines)
+        // With -webkit-line-clamp, scrollHeight === clientHeight when clamped,
+        // so we need to temporarily remove the clamp to measure true height
+        requestAnimationFrame(() => {
+            // Store original styles
+            const originalDisplay = textEl.style.display;
+            const originalClamp = textEl.style.webkitLineClamp;
+            const originalOverflow = textEl.style.overflow;
+            
+            // Remove line-clamp to measure true height
+            textEl.style.display = 'block';
+            textEl.style.webkitLineClamp = 'unset';
+            textEl.style.overflow = 'visible';
+            
+            const fullHeight = textEl.scrollHeight;
+            
+            // Restore original styles
+            textEl.style.display = originalDisplay;
+            textEl.style.webkitLineClamp = originalClamp;
+            textEl.style.overflow = originalOverflow;
+            
+            // Get the clamped height (3 lines)
+            const clampedHeight = textEl.clientHeight;
+            
+            // If full height exceeds clamped height, it's truncatable
+            if (fullHeight > clampedHeight + 2) { // +2 for rounding tolerance
+                descEl.classList.add('is-truncatable');
+            } else {
+                descEl.classList.remove('is-truncatable');
+            }
+        });
+    },
+
+    /** Load campaign panel content for the current character */
+    async _loadCampaignPanel() {
+        // Increment request ID to track this specific load request
+        // This prevents race conditions when multiple loads are triggered
+        const requestId = ++this._campaignLoadRequestId;
+        
+        // Target the sidebar__content inside sheet__sidebar
+        const panel = document.querySelector('.sidebar__content') || document.querySelector('.sheet__sidebar') || document.getElementById('campaignPanel');
+        if (!panel) {
+            console.warn('Campaign panel element not found');
+            return;
+        }
+        
+        // Theme inherits from parent - no need to set explicitly
+        // To override campaign panel theme, set .theme-* class on .sheet__sidebar in HTML
+        // panel.classList.remove('theme-white', 'theme-pink', 'theme-green', 'theme-yellow', 'theme-teal');
+        // panel.classList.add('theme-white');
+        
+        const characterId = AppState.selectedCharacterId;
+        if (!characterId) {
+            panel.innerHTML = this._renderNoCampaign();
+            return;
+        }
+        
+        // Check if user is authenticated before making API calls
+        const isAuthenticated = window.AuthService && AuthService.isAuthenticated();
+        
+        // Get the character's campaignId from the character object
+        // Check both campaignId (camelCase) and campaign_id (snake_case from API)
+        const character = AppState.characters?.find(c => String(c.id) === String(characterId));
+        let campaignId = character?.campaignId || character?.campaign_id;
+        
+        // If not authenticated, show empty state (can't fetch campaign data)
+        if (!isAuthenticated) {
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, 0, []);
+            return;
+        }
+        
+        // If no campaignId on character, try to find campaign via membership
+        // This handles cases where character.campaign_id wasn't properly set
+        let campaignDataFromMembership = null;
+        if (!campaignId) {
+            try {
+                campaignDataFromMembership = await CampaignUI.getCharacterCampaign(characterId);
+                // Check if a newer request was started - if so, abort this one
+                if (requestId !== this._campaignLoadRequestId) {
+                    console.log('📋 Campaign load aborted (newer request in progress)');
+                    return;
+                }
+                if (campaignDataFromMembership) {
+                    campaignId = campaignDataFromMembership.campaign.id;
+                    console.log('📋 Found campaign via membership lookup:', campaignId);
+                }
+            } catch (e) {
+                console.warn('Could not check campaign membership:', e);
+            }
+        }
+        
+        if (!campaignId) {
+            // No campaign - fetch pending invitations and past campaigns count
+            // Note: Journal entries are NOT fetched here - they belong to past campaigns
+            // and should only be viewed via the "Past Adventures" modal
+            let pendingCount = 0;
+            let pastCampaignsCount = 0;
+            try {
+                const [invitations, pastCount] = await Promise.all([
+                    CampaignAPI.getPendingInvitations().catch(() => []),
+                    CampaignUI.fetchPastCampaignsCount().catch(() => 0)
+                ]);
+                // Check if a newer request was started
+                if (requestId !== this._campaignLoadRequestId) {
+                    console.log('📋 Campaign load aborted (newer request in progress)');
+                    return;
+                }
+                pendingCount = invitations?.length || 0;
+                pastCampaignsCount = pastCount || 0;
+            } catch (e) {
+                console.warn('Could not fetch data:', e);
+            }
+            // Pass empty array for journal entries - past entries are in Past Adventures
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, pendingCount, [], pastCampaignsCount);
+            // Also refresh mobile campaign section
+            if (typeof MobileView !== 'undefined' && MobileView.refreshCampaignSection) {
+                MobileView.refreshCampaignSection();
+            }
+            return;
+        }
+        
+        // Show skeleton loading state
+        panel.innerHTML = this._renderCampaignSkeleton();
+        
+        try {
+            // If we already have campaign data from membership lookup, use it
+            // Otherwise fetch campaign details, members, and journal entries in parallel
+            let campaignData;
+            let journalEntries;
+            let pendingInvites = [];
+            
+            // Check if current user is the campaign creator (to fetch pending invitations)
+            const currentUserId = window.AuthService?.getCurrentUser()?.id;
+            
+            if (campaignDataFromMembership) {
+                // We already have campaign and members from the membership lookup
+                campaignData = {
+                    campaign: campaignDataFromMembership.campaign,
+                    members: campaignDataFromMembership.members
+                };
+                const isCreator = campaignData.campaign.dm_id === currentUserId;
+                // Use campaign-wide journal endpoint with filter + fetch past campaigns count + pending invites
+                const [entries, pastCount, invites] = await Promise.all([
+                    CampaignAPI.getCampaignJournalEntries(
+                        campaignId, 
+                        CampaignUI._journalFilterUserId
+                    ).catch(e => {
+                        console.warn('Could not fetch journal entries:', e);
+                        return [];
+                    }),
+                    CampaignUI.fetchPastCampaignsCount().catch(() => 0),
+                    isCreator ? CampaignAPI.getCampaignPendingInvitations(campaignId).catch(() => []) : Promise.resolve([])
+                ]);
+                // Check if a newer request was started
+                if (requestId !== this._campaignLoadRequestId) {
+                    console.log('📋 Campaign load aborted (newer request in progress)');
+                    return;
+                }
+                journalEntries = entries;
+                pendingInvites = invites;
+            } else {
+                // Fetch campaign details first to check if creator
+                const campaign = await CampaignAPI.getCampaign(campaignId);
+                // Check if a newer request was started
+                if (requestId !== this._campaignLoadRequestId) {
+                    console.log('📋 Campaign load aborted (newer request in progress)');
+                    return;
+                }
+                const isCreator = campaign.dm_id === currentUserId;
+                
+                // Fetch members, journal entries, past campaigns count, and pending invites in parallel
+                const [members, entries, pastCount, invites] = await Promise.all([
+                    CampaignAPI.getCampaignMembers(campaignId),
+                    CampaignAPI.getCampaignJournalEntries(campaignId, CampaignUI._journalFilterUserId).catch(e => {
+                        console.warn('Could not fetch journal entries:', e);
+                        return [];
+                    }),
+                    CampaignUI.fetchPastCampaignsCount().catch(() => 0),
+                    isCreator ? CampaignAPI.getCampaignPendingInvitations(campaignId).catch(() => []) : Promise.resolve([])
+                ]);
+                // Check if a newer request was started
+                if (requestId !== this._campaignLoadRequestId) {
+                    console.log('📋 Campaign load aborted (newer request in progress)');
+                    return;
+                }
+                campaignData = { campaign, members };
+                journalEntries = entries;
+                pendingInvites = invites;
+            }
+            
+            // Add pending invites to campaign data for rendering
+            campaignData.pendingInvites = pendingInvites;
+            
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, campaignData, 0, journalEntries, CampaignUI._pastCampaignsCount);
+            this._initDescriptionTruncation();
+            
+        } catch (error) {
+            console.error('Failed to load campaign:', error);
+            // Only show error state if this is still the current request
+            if (requestId === this._campaignLoadRequestId) {
+                panel.innerHTML = this._renderCampaignPanelContent(characterId, null);
+            }
+        }
+        
+        // Also refresh mobile campaign section if on mobile
+        if (typeof MobileView !== 'undefined' && MobileView.refreshCampaignSection) {
+            MobileView.refreshCampaignSection();
+        }
+    },
+
+    /** Render empty campaign state when no character is selected */
+    _renderNoCampaign() {
+        return `
+            <div class="campaign-panel-placeholder">
+                <div class="campaign-panel-placeholder-text">
+                    No character selected.
+                </div>
+            </div>
+        `;
+    },
+
+    /** Render the full campaign panel with both sections */
+    _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0, journalEntries = [], pastCampaignsCount = null) {
+        // Use cached past campaigns count if not explicitly provided
+        const pastCount = pastCampaignsCount !== null ? pastCampaignsCount : CampaignUI._pastCampaignsCount;
+        // Render journal HTML to pass into campaign area
+        const journalHtml = this._renderJournalSection(characterId, journalEntries, campaignData);
+        return this._renderCampaignArea(characterId, campaignData, pendingInvitationCount, pastCount, journalHtml);
+    },
+
+    /** Render skeleton loading state for campaign panel */
+    _renderCampaignSkeleton() {
+        return `
+            <div class="campaign-area campaign-skeleton">
+                <div class="campaign-area-header">
+                    <h3 class="campaign-area-title">[ Campaign ]</h3>
+                </div>
+                <div class="campaign-area-info">
+                    <div class="skeleton-line skeleton-line--title"></div>
+                    <div class="skeleton-line skeleton-line--text"></div>
+                </div>
+                <div class="campaign-area-party sheet-section">
+                    <div class="sheet-header">
+                        <div class="sheet-header-title">[ PARTY ]</div>
+                    </div>
+                    <div class="sheet-collapsible-content">
+                        <div class="party-list">
+                            <div class="skeleton-party-card character-card">
+                                <div class="skeleton-thumbnail"></div>
+                                <div class="card-details">
+                                    <div class="skeleton-line skeleton-card-name"></div>
+                                    <div class="skeleton-line skeleton-card-info"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-party-card character-card">
+                                <div class="skeleton-thumbnail"></div>
+                                <div class="card-details">
+                                    <div class="skeleton-line skeleton-card-name"></div>
+                                    <div class="skeleton-line skeleton-card-info"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-party-card character-card">
+                                <div class="skeleton-thumbnail"></div>
+                                <div class="card-details">
+                                    <div class="skeleton-line skeleton-card-name"></div>
+                                    <div class="skeleton-line skeleton-card-info"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="journal-section sheet-section sheet-section--collapsible campaign-skeleton">
+                    <button class="sheet-header sheet-header--collapsible" aria-expanded="true">
+                        <div class="sheet-header-title">[ Journal ]</div>
+                        <span class="sheet-header-toggle">^</span>
+                    </button>
+                    <div class="sheet-collapsible-content">
+                        <div class="journal-list">
+                            <div class="skeleton-journal-entry">
+                                <div class="skeleton-line skeleton-journal-date"></div>
+                                <div class="skeleton-line skeleton-journal-title"></div>
+                                <div class="skeleton-line skeleton-journal-content"></div>
+                            </div>
+                            <div class="skeleton-journal-entry">
+                                <div class="skeleton-line skeleton-journal-date"></div>
+                                <div class="skeleton-line skeleton-journal-title"></div>
+                                <div class="skeleton-line skeleton-journal-content"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    /** Render the Campaign Area section (top) */
+    _renderCampaignArea(characterId, campaignData, pendingInvitationCount = 0, pastCampaignsCount = 0, journalHtml = '') {
+        if (!campaignData) {
+            // No campaign - show create/join buttons
+            const hasInvitations = pendingInvitationCount > 0;
+            
+            if (hasInvitations) {
+                // Has invitations - show invitation message on its own line, then 50/50 buttons
+                return `
+                    <div class="campaign-area">
+                        <div class="campaign-area-header">
+                            <h3 class="campaign-area-title">[ Campaign ]</h3>
+                        </div>
+                        <p class="campaign-area-invitation-notice">${pendingInvitationCount} pending invitation${pendingInvitationCount > 1 ? 's' : ''}</p>
+                        <div class="campaign-area-actions campaign-area-actions--split">
+                            <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJoinModal()">JOIN CAMPAIGN</button>
+                            <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openCreateModal()">CREATE NEW</button>
+                        </div>
+                        ${journalHtml}
+                    </div>
+                `;
+            }
+            
+            // No invitations - show full-width CREATE button
+            return `
+                <div class="campaign-area">
+                    <div class="campaign-area-header">
+                        <h3 class="campaign-area-title">[ Campaign ]</h3>
+                    </div>
+                    <p class="campaign-area-invitation-notice">No active campaign.</p>
+                    <div class="campaign-area-actions campaign-area-actions--single">
+                        <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openCreateModal()">CREATE NEW</button>
+                    </div>
+                    ${journalHtml}
+                </div>
+            `;
+        }
+
+        // Has campaign - show campaign info
+        const { campaign, members, pendingInvites } = campaignData;
+        
+        // Check if current user is the campaign creator
+        const currentUserId = window.AuthService?.getCurrentUser()?.id;
+        const isCreator = campaign.dm_id === currentUserId;
+        
+        // Build party grid from members with character info
+        let partyHtml = '';
+        if (members && members.length > 0) {
+            // Sort members to ensure admin (creator) is always at the top
+            const sortedMembers = [...members].sort((a, b) => {
+                if (a.is_creator && !b.is_creator) return -1;
+                if (!a.is_creator && b.is_creator) return 1;
+                return 0;
+            });
+            
+            // Store members for party navigation in the modal
+            CampaignUI._cachedPartyMembers = sortedMembers;
+            
+            // Helper to render a single party member as a card
+            const renderMemberCard = (m) => {
+                const char = m.character;
+                const isOtherUser = m.user_id !== currentUserId;
+                
+                // Build status tags (You, Admin) - positioned top-left over thumbnail
+                const statusTags = [];
+                if (m.user_id === currentUserId) {
+                    statusTags.push('<span class="party-card-tag party-card-tag--you">You</span>');
+                }
+                if (m.is_creator) {
+                    statusTags.push('<span class="party-card-tag party-card-tag--admin">Admin</span>');
+                }
+                const statusTagsHtml = statusTags.length > 0 
+                    ? `<div class="party-card-tags">${statusTags.join('')}</div>`
+                    : '';
+                
+                if (char) {
+                    // Member with character - show character card (clickable for all members including self)
+                    const clickHandler = `onclick="CampaignUI.viewPartyMemberSheet(${char.id})"`;
+                    const clickableClass = 'party-card--clickable';
+                    const charName = Utils.escapeHtml(char.name || 'Unnamed');
+                    const charInfo = `Lvl ${char.level || '?'} ${char.character_class || ''}`.trim();
+                    
+                    // Get portrait URL if available
+                    const portraitUrl = char.original_portrait_url || char.originalPortraitUrl || null;
+                    let thumbnailHtml = '';
+                    if (portraitUrl) {
+                        thumbnailHtml = `<div class="card-thumbnail card-thumbnail--image">
+                            <img src="${Utils.escapeHtml(portraitUrl)}" alt="${charName}" loading="lazy" onload="this.classList.add('is-loaded')" />
+                        </div>`;
+                    } else {
+                        // Placeholder for no portrait
+                        thumbnailHtml = `<div class="card-thumbnail party-card-placeholder">⚔</div>`;
+                    }
+                    
+                    return `
+                        <div class="party-card character-card ${clickableClass}" ${clickHandler}>
+                            ${statusTagsHtml}
+                            ${thumbnailHtml}
+                            <div class="card-details">
+                                <div class="card-name">${charName}</div>
+                                <div class="card-info">${charInfo}</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Member without character assigned
+                    return `
+                        <div class="party-card character-card party-card--no-char">
+                            ${statusTagsHtml}
+                            <div class="card-thumbnail">?</div>
+                            <div class="card-details">
+                                <div class="card-name">No character</div>
+                                <div class="card-info">Not assigned</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            };
+            
+            // Render all members as cards (grid handles overflow naturally)
+            partyHtml = sortedMembers.map(renderMemberCard).join('');
+        } else {
+            partyHtml = '<div class="party-empty">No party members yet</div>';
+        }
+        
+        // Add pending invitations as cards (only visible to creator)
+        // Filter out invites for users who are already members
+        const memberUserIds = new Set((members || []).map(m => m.user_id).filter(Boolean));
+        const filteredInvites = (pendingInvites || []).filter(inv => !inv.user_id || !memberUserIds.has(inv.user_id));
+        if (isCreator && filteredInvites.length > 0) {
+            const invitesHtml = filteredInvites.map(invite => {
+                // Prefer username over email for display
+                const displayName = invite.username 
+                    ? `@${Utils.escapeHtml(invite.username)}` 
+                    : Utils.escapeHtml(invite.email);
+                return `
+                    <div class="party-card character-card party-card--invited">
+                        <div class="card-thumbnail">◇</div>
+                        <div class="card-details">
+                            <div class="card-name">${displayName}</div>
+                            <div class="card-info">Invited</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            partyHtml += invitesHtml;
+        }
+
+        // Simple action link (admin vs member)
+        const actionLinkHtml = isCreator
+            ? `<a href="#" class="campaign-action-link" onclick="CampaignUI.openManageModal(${campaign.id}); return false;"><span class="campaign-action-icon">✎</span> Manage</a>`
+            : `<a href="#" class="campaign-action-link campaign-action-link--danger" onclick="CampaignUI.leaveCampaign(${campaign.id}); return false;"><span class="campaign-action-icon">↩</span> Leave</a>`;
+
+        return `
+            <div class="campaign-area" data-campaign-id="${campaign.id}">
+                <div class="campaign-area-info">
+                    <div class="campaign-info-header">
+                        <div class="campaign-info-header-content">
+                            <span class="campaign-eyebrow">CAMPAIGN</span>
+                            <span class="campaign-name">${Utils.escapeHtml(campaign.name)}</span>
+                        </div>
+                        ${actionLinkHtml}
+                    </div>
+                    ${campaign.description ? `<div class="campaign-desc-text">${Utils.escapeHtml(campaign.description)}</div>` : ''}
+                </div>
+                <div class="campaign-area-party sheet-section sheet-section--collapsible">
+                    <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
+                        <div class="sheet-header-title">[ PARTY (${members?.length || 0}) ]</div>
+                        <span class="sheet-header-toggle">^</span>
+                    </button>
+                    <div class="sheet-collapsible-content">
+                        <div class="party-list">
+                            ${partyHtml}
+                        </div>
+                    </div>
+                </div>
+                ${journalHtml}
+            </div>
+        `;
+    },
+
+    /** Render the Journal section (bottom) */
+    _renderJournalSection(characterId, entries = [], campaignData = null) {
+        const currentUserId = window.AuthService?.getCurrentUser()?.id;
+        
+        // Build entries HTML - show character name before date for all entries
+        const entriesHtml = entries.length > 0
+            ? entries.map(entry => {
+                const isOwnEntry = entry.user_id === currentUserId;
+                const authorInfo = entry.character_name 
+                    ? `<span class="journal-entry-author">${Utils.escapeHtml(entry.character_name)}</span>` 
+                    : '';
+                
+                return `
+                <div class="journal-entry ${!isOwnEntry ? 'journal-entry--other' : ''}" data-entry-id="${entry.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">
+                    <div class="journal-entry-header">
+                        <span class="journal-entry-meta">${authorInfo}<span class="journal-entry-date">${this._formatDate(entry.entry_date)}</span></span>
+                        <span class="journal-entry-title">${entry.title || 'Untitled'}</span>
+                    </div>
+                    <div class="journal-entry-preview">
+                        ${this._truncateText(entry.content, 100)}
+                    </div>
+                    <div class="journal-entry-full">
+                        ${Utils.escapeHtml(entry.content || '').replace(/\n/g, '<br>')}
+                        ${this._formatCharacterUpdate(entry.character_update)}
+                    </div>
+                    ${isOwnEntry ? `
+                    <div class="journal-entry-actions">
+                        <button class="journal-entry-edit terminal-btn-icon" onclick="CampaignUI.editJournalEntry(${entry.id})" title="Edit entry">
+                            ✎
+                        </button>
+                        <button class="journal-entry-delete terminal-btn-icon" onclick="CampaignUI.deleteJournalEntry(${entry.id})" title="Delete entry">
+                            ×
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
+            `}).join('')
+            : `
+                <div class="journal-empty">
+                    <div class="journal-empty-text">No journal entries yet</div>
+                    <div class="journal-empty-hint">Record your adventures!</div>
+                </div>
+            `;
+
+        // Build filter selector and settings if in a campaign
+        let filterHtml = '';
+        let settingsHtml = '';
+        
+        if (campaignData && campaignData.campaign && campaignData.members) {
+            const { campaign, members } = campaignData;
+            const selectedUserId = CampaignUI._journalFilterUserId;
+            
+            // Build member options for filter selector (sorted alphabetically by character name)
+            const memberOptions = members
+                .filter(m => m.character)  // Only members with assigned characters
+                .map(m => ({
+                    userId: m.user_id,
+                    label: m.character?.name || (m.username ? `@${m.username}` : m.user_email) || 'Unknown',
+                    isSelected: selectedUserId === m.user_id,
+                }))
+                .sort((a, b) => a.label.localeCompare(b.label))  // Sort alphabetically
+                .map(({ userId, label, isSelected }) => {
+                    return `
+                    <button class="selector-option ${isSelected ? 'is-selected' : ''}" 
+                            type="button" 
+                            role="option" 
+                            data-value="${userId}" 
+                            aria-selected="${isSelected ? 'true' : 'false'}" 
+                            onclick="CampaignUI.selectJournalFilter('${userId}', '${Utils.escapeHtml(label).replace(/'/g, "\\'")}')">
+                        <span class="selector-option-label">${Utils.escapeHtml(label)}</span>
+                    </button>
+                `;
+                })
+                .join('');
+            
+            const allSelected = selectedUserId === null;
+            const selectedMember = members.find(m => m.user_id === selectedUserId);
+            const currentLabelName = selectedMember?.character?.name || 'All';
+            const currentLabelHtml = allSelected ? 'All' : Utils.escapeHtml(currentLabelName);
+            
+            filterHtml = `
+                <div class="journal-filter selector-shell selector-shell--listbox">
+                    <button class="terminal-btn-small selector-trigger journal-filter-trigger" 
+                            type="button" 
+                            id="journalFilter-trigger"
+                            aria-haspopup="listbox" 
+                            aria-expanded="false" 
+                            onclick="CharacterSheet.toggleSelectorMenu(this)">
+                        <span class="selector-trigger-label" id="journalFilter-label">${currentLabelHtml}</span>
+                        <span class="selector-caret">▼</span>
+                    </button>
+                    <div class="selector-menu" role="listbox" aria-label="Filter journal entries">
+                        <button class="selector-option ${allSelected ? 'is-selected' : ''}" 
+                                type="button" 
+                                role="option" 
+                                data-value="all" 
+                                aria-selected="${allSelected ? 'true' : 'false'}" 
+                                onclick="CampaignUI.selectJournalFilter('all', 'All')">
+                            <span class="selector-option-label">All</span>
+                        </button>
+                        ${memberOptions}
+                    </div>
+                </div>
+            `;
+            
+            settingsHtml = `
+                <button class="journal-settings-btn terminal-btn-icon" onclick="CampaignUI.openJournalSettingsModal()" title="Journal settings">
+                    ⚙︎
+                </button>
+            `;
+        }
+
+        // Only show the "+ Update" link if character is in a campaign
+        const isInCampaign = !!(campaignData?.campaign?.id);
+        const addLinkHtml = isInCampaign 
+            ? `<a href="#" class="journal-add-link" onclick="CampaignUI.openJournalEntryModal(); return false;">+ Update</a>`
+            : '';
+
+        return `
+            <div class="journal-section sheet-section sheet-section--collapsible" data-campaign-id="${campaignData?.campaign?.id || ''}">
+                <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
+                    <div class="sheet-header-title">[ Journal ]</div>
+                    <span class="sheet-header-toggle">^</span>
+                </button>
+                <div class="sheet-collapsible-content">
+                    <div class="journal-controls">
+                        <div class="journal-controls-left">
+                            ${filterHtml}
+                            ${settingsHtml}
+                        </div>
+                        ${addLinkHtml}
+                    </div>
+                    <div class="journal-entries">
+                        ${entriesHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    /** Format a date for display */
+    _formatDate(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    },
+
+    /** Truncate text with ellipsis */
+    _truncateText(text, maxLength) {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength).trim() + '...';
+    },
+
+    /** Format character update for display (order matches modal: XP, HP, Gold, Items, Conditions) */
+    _formatCharacterUpdate(update) {
+        if (!update) return '';
+        
+        const changes = [];
+        
+        // XP first
+        if (update.xp_gained && update.xp_gained !== 0) {
+            const sign = update.xp_gained > 0 ? '+' : '';
+            changes.push(`${sign}${update.xp_gained} XP`);
+        }
+        // HP second
+        if (update.hp_change && update.hp_change !== 0) {
+            const sign = update.hp_change > 0 ? '+' : '';
+            changes.push(`${sign}${update.hp_change} HP`);
+        }
+        // Gold third
+        if (update.gold_change && update.gold_change !== 0) {
+            const sign = update.gold_change > 0 ? '+' : '';
+            changes.push(`${sign}${update.gold_change} GP`);
+        }
+        // Items acquired fourth
+        if (update.items_acquired && update.items_acquired.length > 0) {
+            changes.push(`+${update.items_acquired.join(', ')}`);
+        }
+        // Items lost fifth
+        if (update.items_lost && update.items_lost.length > 0) {
+            changes.push(`−${update.items_lost.join(', ')}`);
+        }
+        
+        if (changes.length === 0 && (!update.conditions || update.conditions.length === 0)) return '';
+        
+        // Build the main changes text
+        let html = changes.length > 0 ? `<span class="journal-update-stats">${changes.join(' • ')}</span>` : '';
+        
+        // Conditions last - render as tags like in character sheet
+        if (update.conditions && update.conditions.length > 0) {
+            const conditionDefinitions = {
+                poisoned: 'Disadvantage on attack rolls and ability checks.',
+                exhausted: 'Levels of exhaustion cause cumulative penalties.',
+                diseased: 'Various effects depending on the disease.',
+                cursed: 'Supernatural affliction with varying effects.',
+            };
+            
+            const conditionTags = update.conditions.map(c => {
+                const tooltip = conditionDefinitions[c.toLowerCase()] || 'Status condition';
+                return `<span class="condition-tag condition-${c.toLowerCase()} has-tooltip" data-tooltip="${Utils.escapeHtml(tooltip)}">${c.toUpperCase()}</span>`;
+            }).join('');
+            
+            html += `<span class="journal-update-conditions">${conditionTags}</span>`;
+        }
+        
+        return `<div class="journal-entry-updates">${html}</div>`;
+    },
+
+    /** Update URL to reflect expanded state */
+    _updateUrl(expanded) {
+        const url = new URL(window.location.href);
+        if (expanded) {
+            url.searchParams.set('view', 'expanded');
+        } else {
+            url.searchParams.delete('view');
+        }
+        // Use replaceState to avoid cluttering browser history
+        window.history.replaceState({}, '', url.toString());
+    },
+
+    /** Restore expanded state from URL parameter */
+    restore() {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('view') === 'expanded') {
+            // Check if we're already in the early-restored state
+            const splitLayout = document.querySelector('.split-layout');
+            const isAlreadyExpanded = splitLayout?.classList.contains('is-restoring-expanded');
+            
+            if (isAlreadyExpanded) {
+                // Already at correct size from early detection - just finish setup without animation
+                this._finishRestore();
+            } else {
+                // Normal expand with animation
+                this.expand();
+            }
+        }
+    },
+    
+    /** Finish restore without animation (called when already at correct size) */
+    async _finishRestore() {
+        const splitLayout = document.querySelector('.split-layout');
+        
+        // Calculate column widths for the expanded layout
+        this._updateColumnWidths();
+        
+        // Set up resize listener to keep columns responsive
+        this._setupResizeListener();
+        
+        // Load campaign panel data
+        await this._loadCampaignPanel();
+        
+        // Remove restoring class and show content
+        splitLayout?.classList.remove('is-restoring-expanded');
+        
+        // Show character nav bar (without animation delay since we're already loaded)
+        setTimeout(() => {
+            CharacterNavBar.show();
+        }, 100);
+        
+        if (DEBUG_MANAGER) {
+            console.log('📐 Expanded view restored (no animation)');
+        }
+    }
+});
+
+// ========================================
+// CAMPAIGN UI
+// ========================================
+// Handles campaign modals and campaign panel interactions
+
+const CampaignUI = (window.CampaignUI = {
+    // Currently selected character's campaign data (cached)
+    _currentCampaign: null,
+    
+    // Cached count of past campaigns (for conditional display of Past Adventures)
+    _pastCampaignsCount: 0,
+    
+    /**
+     * Fetch and cache the count of past campaigns for a specific character
+     * @param {number|null} [characterId] - Character ID to filter by (defaults to current selected character)
+     * @returns {Promise<number>} Number of past campaigns for this character
+     */
+    async fetchPastCampaignsCount(characterId = null) {
+        try {
+            // Use provided characterId or fall back to selected character
+            const charId = characterId || AppState.selectedCharacterId;
+            const pastCampaigns = await CampaignAPI.getPastCampaigns(charId);
+            this._pastCampaignsCount = pastCampaigns?.length || 0;
+            return this._pastCampaignsCount;
+        } catch (error) {
+            console.warn('Could not fetch past campaigns count:', error);
+            this._pastCampaignsCount = 0;
+            return 0;
+        }
+    },
+
+    // ========================================
+    // CREATE CAMPAIGN MODAL
+    // ========================================
+    
+    // Pending invites to send after campaign creation
+    _createCampaignPendingInvites: [],
+    
+    openCreateModal() {
+        const modal = document.getElementById('createCampaignModal');
+        if (!modal) return;
+        
+        // Clear form
+        document.getElementById('createCampaignName').value = '';
+        document.getElementById('createCampaignDesc').value = '';
+        
+        // Clear invite fields
+        const usernameInput = document.getElementById('createCampaignInviteUsername');
+        if (usernameInput) usernameInput.value = '';
+        
+        const errorEl = document.getElementById('createCampaignInviteError');
+        if (errorEl) {
+            errorEl.textContent = '';
+            errorEl.style.display = 'none';
+        }
+        
+        // Clear pending invites
+        this._createCampaignPendingInvites = [];
+        this._renderCreateCampaignInvites();
+        
+        modal.classList.add('show');
+        
+        // Focus name input
+        setTimeout(() => {
+            document.getElementById('createCampaignName')?.focus();
+        }, 100);
+    },
+
+    closeCreateModal() {
+        const modal = document.getElementById('createCampaignModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        // Clear pending invites
+        this._createCampaignPendingInvites = [];
+    },
+    
+    addPendingInviteFromCreate() {
+        const input = document.getElementById('createCampaignInviteUsername');
+        let rawValue = input?.value?.trim();
+        const errorEl = document.getElementById('createCampaignInviteError');
+        
+        if (!rawValue) return;
+        
+        // Auto-add @ prefix if not present
+        if (!rawValue.startsWith('@')) {
+            rawValue = '@' + rawValue;
+        }
+        
+        const username = rawValue.toLowerCase();
+        
+        // Username validation: @username (3-30 chars, alphanumeric + underscore)
+        const usernamePattern = /^@[a-zA-Z0-9_]{3,30}$/;
+        if (!usernamePattern.test(rawValue)) {
+            if (errorEl) {
+                errorEl.textContent = 'Username must be 3-30 characters (letters, numbers, underscores)';
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
+        
+        // Check for duplicates
+        if (this._createCampaignPendingInvites.includes(username)) {
+            if (errorEl) {
+                errorEl.textContent = 'This username is already in the list';
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
+        
+        // Clear error
+        if (errorEl) {
+            errorEl.style.display = 'none';
+        }
+        
+        // Add to pending list
+        this._createCampaignPendingInvites.push(username);
+        this._renderCreateCampaignInvites();
+        
+        // Clear input and refocus
+        input.value = '';
+        input.focus();
+    },
+    
+    removePendingInviteFromCreate(username) {
+        this._createCampaignPendingInvites = this._createCampaignPendingInvites.filter(u => u !== username);
+        this._renderCreateCampaignInvites();
+    },
+    
+    _renderCreateCampaignInvites() {
+        const container = document.getElementById('createCampaignInvitesList');
+        if (!container) return;
+        
+        if (this._createCampaignPendingInvites.length === 0) {
+            container.style.display = 'none';
+            container.innerHTML = '';
+            return;
+        }
+        
+        container.style.display = 'block';
+        container.innerHTML = this._createCampaignPendingInvites.map(username => `
+            <div class="share-collaborator-item share-collaborator-pending">
+                <span class="share-collaborator-email">${Utils.escapeHtml(username)}</span>
+                <span class="share-collaborator-status">PENDING</span>
+                <button type="button" class="share-collaborator-remove" onclick="CampaignUI.removePendingInviteFromCreate('${Utils.escapeHtml(username)}')" title="Remove">×</button>
+            </div>
+        `).join('');
+    },
+
+    async submitCreateCampaign() {
+        const nameInput = document.getElementById('createCampaignName');
+        const descInput = document.getElementById('createCampaignDesc');
+        const submitBtn = document.getElementById('createCampaignSubmitBtn');
+        
+        const name = nameInput?.value?.trim();
+        const description = descInput?.value?.trim() || null;
+        
+        if (!name) {
+            nameInput?.focus();
+            return;
+        }
+        
+        // Show loading state
+        const originalBtnText = submitBtn?.textContent;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating...';
+        }
+        
+        try {
+            const campaign = await CampaignAPI.createCampaign({ name, description });
+            
+            // Auto-assign current character to the new campaign
+            const characterId = AppState.selectedCharacterId;
+            let assignmentWarning = null;
+            console.log('🏰 Auto-assign: characterId =', characterId, 'campaignId =', campaign.id);
+            if (characterId && !String(characterId).startsWith('demo_')) {
+                try {
+                    const numericCharId = parseInt(characterId, 10);
+                    console.log('🏰 Assigning character', numericCharId, 'to campaign', campaign.id);
+                    await CampaignAPI.assignCharacter(campaign.id, numericCharId);
+                    console.log('🏰 Character assigned successfully');
+                } catch (assignError) {
+                    console.warn('🏰 Could not auto-assign character:', assignError);
+                    // Check if character is already in another campaign
+                    if (assignError.message?.includes('already in another campaign')) {
+                        assignmentWarning = 'Your character is already in another campaign. Leave that campaign first to join this one.';
+                    }
+                }
+            } else {
+                console.log('🏰 Skipping auto-assign: no character or demo character');
+            }
+            
+            // Send pending invites
+            const inviteFailures = [];
+            if (this._createCampaignPendingInvites.length > 0) {
+                console.log('🏰 Sending', this._createCampaignPendingInvites.length, 'invites...');
+                for (const identifier of this._createCampaignPendingInvites) {
+                    try {
+                        await CampaignAPI.inviteByUsernameOrEmail(campaign.id, identifier);
+                        console.log('🏰 Invited:', identifier);
+                    } catch (inviteError) {
+                        console.warn('🏰 Failed to invite', identifier, ':', inviteError);
+                        inviteFailures.push({ identifier, error: inviteError.message || 'Unknown error' });
+                    }
+                }
+            }
+            
+            // Close create modal
+            this.closeCreateModal();
+            
+            // Show success toast
+            showNotification('✓ Campaign created');
+            
+            // Show warnings as alert dialog if any
+            let warning = assignmentWarning;
+            if (inviteFailures.length > 0) {
+                const failedIdentifiers = inviteFailures.map(f => f.identifier).join(', ');
+                const inviteWarning = `Could not invite: ${failedIdentifiers}`;
+                warning = warning ? `${warning}\n\n${inviteWarning}` : inviteWarning;
+            }
+            if (warning) {
+                showAlertDialog(warning);
+            }
+            
+            // Refresh character data to get updated campaignId
+            await AppState.loadCharacters();
+            
+            // Refresh campaign panel (must await to ensure it completes)
+            await ExpandedView._loadCampaignPanel();
+            
+        } catch (error) {
+            console.error('Failed to create campaign:', error);
+            showAlertDialog(error.message || 'Failed to create campaign. Please try again.');
+        } finally {
+            // Restore button state
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalBtnText || 'Create';
+            }
+        }
+    },
+
+    // ========================================
+    // JOIN CAMPAIGN MODAL
+    // ========================================
+    
+    // Store selected invitation
+    _selectedInvitationId: null,
+
+    async openJoinModal() {
+        const modal = document.getElementById('joinCampaignModal');
+        if (!modal) return;
+        
+        // Reset selection
+        this._selectedInvitationId = null;
+        
+        // Clear error
+        const errorEl = document.getElementById('joinCampaignError');
+        if (errorEl) {
+            errorEl.textContent = '';
+            errorEl.classList.add('is-hidden');
+        }
+        
+        // Disable join button
+        const joinBtn = document.getElementById('joinCampaignBtn');
+        if (joinBtn) joinBtn.disabled = true;
+        
+        // Show loading state
+        const listEl = document.getElementById('joinCampaignInvitations');
+        if (listEl) {
+            listEl.innerHTML = '<div class="invitations-loading">Loading invitations...</div>';
+        }
+        
+        modal.classList.add('show');
+        
+        // Fetch pending invitations
+        try {
+            const invitations = await CampaignAPI.getPendingInvitations();
+            this._renderInvitationsList(invitations);
+        } catch (error) {
+            console.error('Failed to load invitations:', error);
+            // Show empty state on error (endpoint may not be deployed yet)
+            if (listEl) {
+                listEl.innerHTML = '<div class="invitations-empty">No pending invitations</div>';
+            }
+        }
+    },
+    
+    _renderInvitationsList(invitations) {
+        const listEl = document.getElementById('joinCampaignInvitations');
+        if (!listEl) return;
+        
+        if (!invitations || invitations.length === 0) {
+            listEl.innerHTML = '<div class="invitations-empty">No pending invitations</div>';
+            return;
+        }
+        
+        listEl.innerHTML = invitations.map(inv => {
+            // Prefer username over email for inviter display
+            const inviterDisplay = inv.invited_by_username 
+                ? `@${Utils.escapeHtml(inv.invited_by_username)}`
+                : (inv.invited_by_email ? Utils.escapeHtml(inv.invited_by_email) : null);
+            return `
+            <div class="invitation-item" data-campaign-id="${inv.campaign_id}" onclick="CampaignUI.selectInvitation(${inv.campaign_id})">
+                <div class="invitation-radio"></div>
+                <div class="invitation-info">
+                    <div class="invitation-name">${Utils.escapeHtml(inv.campaign_name)}</div>
+                    ${inviterDisplay ? `<div class="invitation-inviter">Invited by ${inviterDisplay}</div>` : ''}
+                    ${inv.campaign_description ? `<div class="invitation-desc">${Utils.escapeHtml(inv.campaign_description)}</div>` : ''}
+                </div>
+            </div>
+        `;
+        }).join('');
+    },
+    
+    selectInvitation(campaignId) {
+        this._selectedInvitationId = campaignId;
+        
+        // Update visual selection
+        const items = document.querySelectorAll('#joinCampaignInvitations .invitation-item');
+        items.forEach(item => {
+            if (parseInt(item.dataset.campaignId, 10) === campaignId) {
+                item.classList.add('is-selected');
+            } else {
+                item.classList.remove('is-selected');
+            }
+        });
+        
+        // Enable join button
+        const joinBtn = document.getElementById('joinCampaignBtn');
+        if (joinBtn) joinBtn.disabled = false;
+    },
+
+    closeJoinModal() {
+        const modal = document.getElementById('joinCampaignModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        this._selectedInvitationId = null;
+    },
+
+    async submitJoinCampaign() {
+        const errorEl = document.getElementById('joinCampaignError');
+        
+        if (!this._selectedInvitationId) {
+            return;
+        }
+        
+        // Hide previous error
+        if (errorEl) {
+            errorEl.classList.add('is-hidden');
+        }
+        
+        try {
+            // Get the currently selected character ID to assign to the campaign
+            const characterId = AppState.selectedCharacterId;
+            
+            const result = await CampaignAPI.acceptInvitation(this._selectedInvitationId, characterId);
+            
+            // Close modal
+            this.closeJoinModal();
+            
+            // Show success toast
+            showNotification(`✓ Joined "${result.campaign.name}"`);
+            
+            // Refresh character data to get updated campaign_id
+            await AppState.loadCharacters();
+            
+            // Refresh campaign panel (must await to ensure it completes)
+            await ExpandedView._loadCampaignPanel();
+            
+        } catch (error) {
+            console.error('Failed to join campaign:', error);
+            
+            // Show error in modal
+            if (errorEl) {
+                errorEl.textContent = error.message || 'Failed to join campaign. Please try again.';
+                errorEl.classList.remove('is-hidden');
+            }
+        }
+    },
+
+    // ========================================
+    // CAMPAIGN CREATED SUCCESS MODAL
+    // ========================================
+    
+    showCampaignCreatedModal(inviteCode, warning = null) {
+        const modal = document.getElementById('campaignCreatedModal');
+        const codeEl = document.getElementById('campaignInviteCode');
+        
+        if (!modal) return;
+        
+        if (codeEl) {
+            codeEl.textContent = inviteCode;
+        }
+        
+        // Show/hide warning message
+        let warningEl = modal.querySelector('.campaign-created-warning');
+        if (warning) {
+            if (!warningEl) {
+                // Create warning element if it doesn't exist
+                warningEl = document.createElement('div');
+                warningEl.className = 'campaign-created-warning terminal-text-small mt-md';
+                warningEl.style.cssText = 'color: var(--warning-color, #f0ad4e); padding: var(--spacing-sm); border: 1px solid currentColor; border-radius: 4px;';
+                const modalBody = modal.querySelector('.modal-body');
+                if (modalBody) {
+                    modalBody.appendChild(warningEl);
+                }
+            }
+            warningEl.textContent = warning;
+            warningEl.classList.remove('is-hidden');
+        } else if (warningEl) {
+            warningEl.classList.add('is-hidden');
+        }
+        
+        modal.classList.add('show');
+    },
+
+    closeCampaignCreatedModal() {
+        const modal = document.getElementById('campaignCreatedModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+    },
+
+    copyInviteCode() {
+        const codeEl = document.getElementById('campaignInviteCode');
+        const code = codeEl?.textContent;
+        
+        if (code && navigator.clipboard) {
+            navigator.clipboard.writeText(code).then(() => {
+                // Brief visual feedback
+                const btn = event.target.closest('button');
+                if (btn) {
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<span class="copy-icon">✓</span> Copied!';
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                    }, 1500);
+                }
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+    },
+
+    // ========================================
+    // MANAGE CAMPAIGN MODAL
+    // ========================================
+    
+    // Cache current campaign data for the manage modal
+    _managingCampaign: null,
+    _managingCampaignMembers: [], // Members and pending invitations
+    
+    // Helper to dedupe members list (members take precedence over pending invites)
+    _dedupeMembers(members, pendingInvites) {
+        const seenUserIds = new Set();
+        const result = [];
+        // Add members first (they take precedence)
+        for (const m of members) {
+            if (m.user_id && !seenUserIds.has(m.user_id)) {
+                seenUserIds.add(m.user_id);
+                result.push(m);
+            } else if (!m.user_id) {
+                result.push(m); // Keep entries without user_id (shouldn't happen but safe)
+            }
+        }
+        // Add pending invites that aren't already in the list
+        for (const p of pendingInvites) {
+            if (p.user_id && !seenUserIds.has(p.user_id)) {
+                seenUserIds.add(p.user_id);
+                result.push(p);
+            } else if (!p.user_id) {
+                result.push(p); // Keep invites without user_id (email-only invites)
+            }
+        }
+        return result;
+    },
+    
+    async openManageModal(campaignId) {
+        const currentUserId = window.AuthService?.getCurrentUser()?.id;
+        try {
+            // Fetch campaign details and members in parallel
+            const [campaign, members, pendingInvites] = await Promise.all([
+                CampaignAPI.getCampaign(campaignId),
+                CampaignAPI.getCampaignMembers(campaignId),
+                CampaignAPI.getCampaignPendingInvitations(campaignId).catch(() => [])
+            ]);
+            this._managingCampaign = campaign;
+            this._managingCampaignMembers = this._dedupeMembers(members, pendingInvites);
+            
+            // Permission check: only the campaign creator can manage the campaign
+            const isCreator = campaign.dm_id === currentUserId;
+            if (!isCreator) {
+                console.warn('Only the campaign creator can manage this campaign.');
+                return;
+            }
+            
+            const modal = document.getElementById('manageCampaignModal');
+            if (!modal) return;
+            
+            // Populate form fields
+            document.getElementById('manageCampaignName').value = campaign.name || '';
+            document.getElementById('manageCampaignDesc').value = campaign.description || '';
+            
+            // Clear invite input and error
+            const inviteInput = document.getElementById('manageCampaignInviteInput');
+            if (inviteInput) inviteInput.value = '';
+            const inviteError = document.getElementById('manageCampaignInviteError');
+            if (inviteError) {
+                inviteError.textContent = '';
+                inviteError.style.display = 'none';
+            }
+            
+            // Clear any error messages
+            const errorEl = document.getElementById('manageCampaignError');
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.classList.add('is-hidden');
+            }
+            
+            // Render members list
+            this._renderManageCampaignMembers();
+            
+            modal.classList.add('show');
+            
+            // Focus name input
+            setTimeout(() => {
+                document.getElementById('manageCampaignName')?.focus();
+            }, 100);
+            
+        } catch (error) {
+            console.error('Failed to load campaign for management:', error);
+            showAlertDialog('Failed to load campaign details. Please try again.');
+        }
+    },
+    
+    _renderManageCampaignMembers() {
+        const container = document.getElementById('manageCampaignMembersList');
+        const section = document.getElementById('manageCampaignMembersSection');
+        if (!container) return;
+        
+        if (this._managingCampaignMembers.length === 0) {
+            container.innerHTML = '<p class="terminal-text-dim">No members yet.</p>';
+            return;
+        }
+        
+        const currentUserId = window.AuthService?.getCurrentUser()?.id;
+        
+        container.innerHTML = this._managingCampaignMembers.map(member => {
+            const isPending = member.status === 'invited';
+            const isCreator = member.user_id === this._managingCampaign?.dm_id;
+            const statusLabel = isCreator ? 'CREATOR' : (isPending ? 'PENDING' : 'MEMBER');
+            const statusClass = isPending ? 'share-collaborator-pending' : '';
+            // Prefer username over email for display
+            const displayName = member.username 
+                ? `@${Utils.escapeHtml(member.username)}` 
+                : Utils.escapeHtml(member.email || 'Unknown');
+            // Don't show remove button for the creator
+            const showRemove = !isCreator;
+            return `
+            <div class="share-collaborator-item ${statusClass}" data-member-id="${member.id}">
+                <span class="share-collaborator-email">${displayName}</span>
+                <span class="share-collaborator-status">${statusLabel}</span>
+                ${showRemove ? `<button type="button" class="share-collaborator-remove" onclick="CampaignUI.removeMemberFromManageModal(${member.id}, ${isPending})" title="${isPending ? 'Cancel invite' : 'Remove from campaign'}">×</button>` : ''}
+            </div>
+        `;
+        }).join('');
+    },
+    
+    async addInviteFromManageModal() {
+        if (!this._managingCampaign) return;
+        
+        const input = document.getElementById('manageCampaignInviteInput');
+        const errorEl = document.getElementById('manageCampaignInviteError');
+        const username = input?.value?.trim();
+        
+        if (!username) {
+            if (errorEl) {
+                errorEl.textContent = 'Please enter a username or email';
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
+        
+        // Pass as-is to inviteByUsernameOrEmail which handles @username vs email detection
+        // If user enters plain username without @, add @ prefix to treat as username
+        const identifier = username.includes('@') ? username : `@${username}`;
+        
+        try {
+            await CampaignAPI.inviteByUsernameOrEmail(this._managingCampaign.id, identifier);
+            
+            // Clear input and error
+            if (input) input.value = '';
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.style.display = 'none';
+            }
+            
+            // Reload members list
+            const pendingInvites = await CampaignAPI.getCampaignPendingInvitations(this._managingCampaign.id).catch(() => []);
+            const members = await CampaignAPI.getCampaignMembers(this._managingCampaign.id);
+            this._managingCampaignMembers = this._dedupeMembers(members, pendingInvites);
+            this._renderManageCampaignMembers();
+            
+            // Refocus input
+            input?.focus();
+            
+        } catch (error) {
+            console.error('Failed to send invitation:', error);
+            if (errorEl) {
+                errorEl.textContent = error.message || 'Failed to send invitation';
+                errorEl.style.display = 'block';
+            }
+        }
+    },
+    
+    async removeMemberFromManageModal(memberId, isPending) {
+        if (!this._managingCampaign) return;
+        
+        try {
+            if (isPending) {
+                await CampaignAPI.revokeInvitation(this._managingCampaign.id, memberId);
+            } else {
+                await CampaignAPI.removeCampaignMember(this._managingCampaign.id, memberId);
+            }
+            
+            // Reload members list
+            const pendingInvites = await CampaignAPI.getCampaignPendingInvitations(this._managingCampaign.id).catch(() => []);
+            const members = await CampaignAPI.getCampaignMembers(this._managingCampaign.id);
+            this._managingCampaignMembers = this._dedupeMembers(members, pendingInvites);
+            this._renderManageCampaignMembers();
+            
+        } catch (error) {
+            console.error('Failed to remove member:', error);
+            showAlertDialog(error.message || 'Failed to remove member. Please try again.');
+        }
+    },
+    
+    confirmEndCampaignFromModal() {
+        if (!this._managingCampaign) return;
+        this.confirmEndCampaignById(this._managingCampaign.id);
+    },
+    
+    closeManageModal() {
+        const modal = document.getElementById('manageCampaignModal');
+        if (modal) {
+            // Reset the fixed height in case it was cleared for confirmation view
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent) modalContent.style.height = '';
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        this._managingCampaign = null;
+        this._managingCampaignMembers = [];
+        this._originalManageModalContent = null;
+    },
+    
+    async submitManageCampaign() {
+        if (!this._managingCampaign) return;
+        
+        const nameInput = document.getElementById('manageCampaignName');
+        const descInput = document.getElementById('manageCampaignDesc');
+        const errorEl = document.getElementById('manageCampaignError');
+        
+        const name = nameInput?.value?.trim();
+        const description = descInput?.value?.trim() || null;
+        
+        if (!name) {
+            if (errorEl) {
+                errorEl.textContent = 'Campaign name is required';
+                errorEl.classList.remove('is-hidden');
+            }
+            nameInput?.focus();
+            return;
+        }
+        
+        try {
+            // Update campaign details
+            await CampaignAPI.updateCampaign(this._managingCampaign.id, { name, description });
+            
+            // Close modal
+            this.closeManageModal();
+            
+            // Refresh campaign panel (must await to ensure it completes)
+            await ExpandedView._loadCampaignPanel();
+            
+        } catch (error) {
+            console.error('Failed to update campaign:', error);
+            if (errorEl) {
+                errorEl.textContent = error.message || 'Failed to update campaign';
+                errorEl.classList.remove('is-hidden');
+            }
+        }
+    },
+    
+    // ========================================
+    // LEAVE / DELETE CAMPAIGN
+    // ========================================
+    
+    async leaveCampaign(campaignId) {
+        // Use custom confirm dialog with Promise wrapper
+        const confirmed = await new Promise(resolve => {
+            showConfirmDialog(
+                'Are you sure you want to leave this campaign?\n\nYour character will be removed from the party, but your journal entries will be preserved.',
+                () => resolve(true),  // onConfirm
+                () => resolve(false)  // onCancel
+            );
+        });
+        
+        if (!confirmed) return;
+        
+        try {
+            await CampaignAPI.leaveCampaign(campaignId);
+            
+            // Refresh character data
+            await AppState.loadCharacters();
+            UI.render();
+            
+            // Refresh campaign panel (will show empty state)
+            await ExpandedView._loadCampaignPanel();
+            
+            showAlertDialog('You have left the campaign.');
+        } catch (error) {
+            console.error('Failed to leave campaign:', error);
+            showAlertDialog(error.message || 'Failed to leave campaign. Please try again.');
+        }
+    },
+    
+    // Delete campaign by ID (called from overflow menu)
+    confirmDeleteCampaign(campaignId) {
+        showConfirmDialog(
+            'Are you sure you want to DELETE this campaign?\n\nThis action cannot be undone and will remove all members.',
+            async () => {
+                try {
+                    await CampaignAPI.deleteCampaign(campaignId);
+                    
+                    // Close the modal if it's open
+                    CampaignUI.closeManageModal();
+                    
+                    // Refresh character data
+                    await AppState.loadCharacters();
+                    UI.render();
+                    
+                    // Refresh campaign panel (will show empty state)
+                    await ExpandedView._loadCampaignPanel();
+                    
+                    showAlertDialog('Campaign deleted successfully.');
+                } catch (error) {
+                    console.error('Failed to delete campaign:', error);
+                    showAlertDialog(error.message || 'Failed to delete campaign. Please try again.');
+                }
+            }
+        );
+    },
+    
+    // End campaign by ID (called from overflow menu)
+    async confirmEndCampaignById(campaignId) {
+        // Fetch campaign name for the confirmation message
+        let campaignName = 'this campaign';
+        try {
+            const campaign = await CampaignAPI.getCampaign(campaignId);
+            campaignName = campaign.name || campaignName;
+        } catch (e) {
+            // Use default name if fetch fails
+        }
+        
+        showConfirmDialog(
+            `End "${campaignName}"?\n\nThe campaign will be marked as completed and moved to Past Adventures for all members. This cannot be undone.`,
+            async () => {
+                try {
+                    // Update campaign status to completed
+                    await CampaignAPI.updateCampaign(campaignId, { status: 'completed' });
+                    
+                    // Clear all campaign-related caches
+                    CampaignUI._currentCampaign = null;
+                    CampaignUI._managingCampaign = null;
+                    CampaignUI._pastCampaignsCount = 0;
+                    CampaignUI._originalManageModalContent = null;
+                    
+                    // Close the modal if it's open
+                    CampaignUI.closeManageModal();
+                    
+                    // Refresh character data
+                    await AppState.loadCharacters();
+                    UI.render();
+                    
+                    // Refresh campaign panel (will show empty state)
+                    await ExpandedView._loadCampaignPanel();
+                    
+                    showAlertDialog('Campaign ended successfully. It can now be found in Past Adventures.');
+                } catch (error) {
+                    console.error('Failed to end campaign:', error);
+                    showAlertDialog(error.message || 'Failed to end campaign. Please try again.');
+                }
+            }
+        );
+    },
+    
+    // Store original manage modal content for restoration
+    _originalManageModalContent: null,
+    
+    confirmEndCampaign() {
+        if (!this._managingCampaign) return;
+        
+        const modal = document.getElementById('manageCampaignModal');
+        if (!modal) return;
+        
+        const modalContent = modal.querySelector('.modal-content');
+        if (!modalContent) return;
+        
+        // Store original content for back button
+        this._originalManageModalContent = modalContent.innerHTML;
+        
+        const campaignId = this._managingCampaign.id;
+        const campaignName = Utils.escapeHtml(this._managingCampaign.name || 'this campaign');
+        
+        // Build confirmation UI
+        const confirmHtml = `
+            <div class="modal-header">
+                <h2 class="modal-title">End Campaign</h2>
+                <button class="modal-close" onclick="CampaignUI._restoreManageModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="terminal-text">End <strong>${campaignName}</strong>?</p>
+                <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">
+                    The campaign will be marked as completed and moved to Past Adventures for all members. This cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="CampaignUI._restoreManageModal()">Back</button>
+                <button class="terminal-btn terminal-btn-primary" id="confirmEndCampaignBtn">End Campaign</button>
+            </div>
+        `;
+        
+        // Animate transition to confirmation
+        animateModalContentSwap(modalContent, confirmHtml, () => {
+            // Override the CSS fixed height after animation completes
+            modalContent.style.height = 'auto';
+            
+            const confirmBtn = document.getElementById('confirmEndCampaignBtn');
+            confirmBtn?.addEventListener('click', async () => {
+                try {
+                    // Update campaign status to completed
+                    await CampaignAPI.updateCampaign(campaignId, { status: 'completed' });
+                    
+                    // Clear all campaign-related caches before refreshing
+                    CampaignUI._currentCampaign = null;
+                    CampaignUI._managingCampaign = null;
+                    CampaignUI._pastCampaignsCount = 0;
+                    CampaignUI._originalManageModalContent = null;
+                    
+                    // Close the modal
+                    CampaignUI.closeManageModal();
+                    
+                    // Refresh character data first (this clears the campaignId from characters)
+                    await AppState.loadCharacters();
+                    UI.render();
+                    
+                    // Refresh campaign panel (will show empty state since campaign is no longer active)
+                    await ExpandedView._loadCampaignPanel();
+                    
+                    showAlertDialog('Campaign ended successfully. It can now be found in Past Adventures.');
+                } catch (error) {
+                    console.error('Failed to end campaign:', error);
+                    showAlertDialog(error.message || 'Failed to end campaign. Please try again.');
+                }
+            });
+            confirmBtn?.focus();
+        });
+    },
+    
+    _restoreManageModal() {
+        if (!this._originalManageModalContent) {
+            this.closeManageModal();
+            return;
+        }
+        
+        const modal = document.getElementById('manageCampaignModal');
+        if (!modal) return;
+        
+        const modalContent = modal.querySelector('.modal-content');
+        if (!modalContent) return;
+        
+        // Cache campaign data before clearing (innerHTML doesn't preserve input values)
+        const campaignData = this._managingCampaign;
+        
+        // Animate back to original content
+        animateModalContentSwap(modalContent, this._originalManageModalContent, () => {
+            // Restore the fixed height for manage modal
+            modalContent.style.height = '';
+            this._originalManageModalContent = null;
+            
+            // Repopulate form fields from cached campaign data (innerHTML doesn't preserve input values)
+            if (campaignData) {
+                const nameInput = document.getElementById('manageCampaignName');
+                const descInput = document.getElementById('manageCampaignDesc');
+                if (nameInput) nameInput.value = campaignData.name || '';
+                if (descInput) descInput.value = campaignData.description || '';
+            }
+            
+            // Refocus name input
+            document.getElementById('manageCampaignName')?.focus();
+        });
+    },
+
+    // ========================================
+    // CAMPAIGN DATA LOADING
+    // ========================================
+    
+    /**
+     * Get campaign for a character (if any)
+     * Checks campaign memberships to find which campaign this character is assigned to.
+     * @param {number|string} characterId
+     * @returns {Promise<Object|null>} Campaign data or null
+     */
+    async getCharacterCampaign(characterId) {
+        try {
+            // Normalize to string for consistent comparison (API returns numbers, frontend uses strings)
+            const charIdStr = String(characterId);
+            
+            // Get all campaigns user is a member of
+            const campaigns = await CampaignAPI.getCampaigns();
+            
+            // Find campaign where this character is assigned
+            for (const campaign of campaigns) {
+                const members = await CampaignAPI.getCampaignMembers(campaign.id);
+                // Use String() comparison to handle type mismatches (API returns numbers)
+                const myMembership = members.find(m => String(m.character_id) === charIdStr);
+                if (myMembership) {
+                    return { campaign, membership: myMembership, members };
+                }
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('Failed to get character campaign:', error);
+            return null;
+        }
+    },
+
+    // ========================================
+    // JOURNAL ENTRY MODAL (Combined with Character Update)
+    // ========================================
+    
+    // Track the entry being edited (null for new entry)
+    _editingEntryId: null,
+    // Track existing character update when editing (for accurate level-up detection)
+    _existingCharacterUpdate: null,
+
+    async openJournalEntryModal(entryId = null) {
+        const modal = document.getElementById('journalEntryModal');
+        if (!modal) return;
+
+        this._editingEntryId = entryId;
+        
+        // Update title
+        const titleEl = document.getElementById('journalEntryModalTitle');
+        if (titleEl) {
+            titleEl.textContent = entryId ? 'Edit Journal Entry' : 'Add Journal Entry';
+        }
+
+        // Clear or populate form
+        const titleInput = document.getElementById('journalEntryTitle');
+        const dateInput = document.getElementById('journalEntryDate');
+        const contentInput = document.getElementById('journalEntryContent');
+        const idInput = document.getElementById('journalEntryId');
+
+        this._existingCharacterUpdate = null;
+        
+        if (entryId) {
+            // Load existing entry data
+            try {
+                const entry = await CampaignAPI.getJournalEntry(entryId);
+                if (titleInput) titleInput.value = entry.title || '';
+                if (contentInput) contentInput.value = entry.content || '';
+                if (dateInput) dateInput.value = entry.entry_date || new Date().toISOString().split('T')[0];
+                this._existingCharacterUpdate = entry.character_update || null;
+            } catch (error) {
+                console.error('Failed to load journal entry:', error);
+                showAlertDialog('Failed to load journal entry.');
+                return;
+            }
+        } else {
+            // New entry - set defaults
+            if (titleInput) titleInput.value = '';
+            if (contentInput) contentInput.value = '';
+            if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+        }
+
+        if (idInput) {
+            idInput.value = entryId || '';
+        }
+
+        // Prepare character update fields (will set defaults)
+        this._prepareCharacterUpdateFields();
+        
+        // If editing and there's existing character update data, populate those fields
+        if (this._existingCharacterUpdate) {
+            this._populateCharacterUpdateFields(this._existingCharacterUpdate);
+        }
+
+        modal.classList.add('show');
+
+        // Focus title input
+        setTimeout(() => titleInput?.focus(), 100);
+    },
+
+    closeJournalEntryModal() {
+        const modal = document.getElementById('journalEntryModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        this._editingEntryId = null;
+        this._existingCharacterUpdate = null;
+        // Reset notice state when closing
+        this.dismissJournalNotice();
+    },
+
+    /** Show inline notice within journal entry modal */
+    _showJournalNotice(message) {
+        const notice = document.getElementById('journalEntryNotice');
+        const noticeText = document.getElementById('journalEntryNoticeText');
+        const form = document.getElementById('journalEntryForm');
+        const footer = document.getElementById('journalEntryFooter');
+        
+        if (notice && noticeText && form && footer) {
+            noticeText.textContent = message;
+            form.style.display = 'none';
+            footer.style.display = 'none';
+            notice.style.display = 'flex';
+        }
+    },
+
+    /** Dismiss inline notice and restore form */
+    dismissJournalNotice() {
+        const notice = document.getElementById('journalEntryNotice');
+        const form = document.getElementById('journalEntryForm');
+        const footer = document.getElementById('journalEntryFooter');
+        
+        if (notice && form && footer) {
+            notice.style.display = 'none';
+            form.style.display = '';
+            footer.style.display = '';
+        }
+    },
+
+    async saveJournalEntry() {
+        const titleInput = document.getElementById('journalEntryTitle');
+        const dateInput = document.getElementById('journalEntryDate');
+        const contentInput = document.getElementById('journalEntryContent');
+
+        const title = titleInput?.value?.trim() || '';
+        const entryDate = dateInput?.value || new Date().toISOString().split('T')[0];
+        const content = contentInput?.value?.trim() || '';
+
+        const characterId = AppState.selectedCharacterId;
+        if (!characterId) {
+            this._showJournalNotice('No character selected.');
+            return;
+        }
+
+        // Gather character update data first so we can validate
+        const xpGained = parseInt(document.getElementById('charUpdateXp')?.value) || 0;
+        const goldSign = document.getElementById('charUpdateGoldSign')?.value || '+';
+        const goldAmount = parseInt(document.getElementById('charUpdateGold')?.value) || 0;
+        const goldChange = goldSign === '-' ? -goldAmount : goldAmount;
+        const itemsText = document.getElementById('charUpdateItems')?.value?.trim() || '';
+        const itemsAcquired = itemsText ? itemsText.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+        // Calculate HP change
+        const character = AppState.characters?.find(c => 
+            c.id === characterId || c.cloudId === characterId
+        );
+        const currentHp = character?.hp_current || character?.hit_points_current || 
+            (typeof character?.hitPoints === 'number' ? character.hitPoints : character?.hitPoints?.current) || 0;
+        const parsedHp = parseInt(document.getElementById('charUpdateHp')?.value);
+        const newHp = Number.isNaN(parsedHp) ? currentHp : parsedHp;
+        const hpChange = newHp - currentHp;
+
+        // Get conditions
+        const conditions = [];
+        if (document.getElementById('charUpdatePoisoned')?.checked) conditions.push('poisoned');
+        if (document.getElementById('charUpdateExhausted')?.checked) conditions.push('exhausted');
+        if (document.getElementById('charUpdateDiseased')?.checked) conditions.push('diseased');
+        if (document.getElementById('charUpdateCursed')?.checked) conditions.push('cursed');
+
+        // Check if any character updates were made
+        const hasCharacterUpdate = xpGained !== 0 || goldChange !== 0 || hpChange !== 0 || 
+            itemsAcquired.length > 0 || conditions.length > 0;
+
+        // Require at least content OR character updates (title alone is not enough)
+        if (!content && !hasCharacterUpdate) {
+            this._showJournalNotice('Please add journal content or character updates.');
+            return;
+        }
+
+        try {
+
+            if (this._editingEntryId) {
+                // Update existing entry
+                await CampaignAPI.updateJournalEntry(this._editingEntryId, {
+                    title: title || 'Untitled',
+                    content: content,
+                    entry_date: entryDate,
+                });
+                // Add/update character update if any changes made
+                if (hasCharacterUpdate) {
+                    await CampaignAPI.createCharacterUpdate(this._editingEntryId, {
+                        xp_gained: xpGained,
+                        gold_change: goldChange,
+                        hp_change: hpChange,
+                        items_acquired: itemsAcquired,
+                        items_lost: [],
+                        conditions: conditions,
+                    });
+                }
+            } else {
+                // Create new entry with character update in one call
+                const entryData = {
+                    character_id: characterId,
+                    title: title || 'Untitled',
+                    content: content,
+                    entry_date: entryDate,
+                };
+                
+                if (hasCharacterUpdate) {
+                    entryData.character_update = {
+                        xp_gained: xpGained,
+                        gold_change: goldChange,
+                        hp_change: hpChange,
+                        items_acquired: itemsAcquired,
+                        items_lost: [],
+                        conditions: conditions,
+                    };
+                }
+                
+                await CampaignAPI.createJournalEntry(entryData);
+            }
+
+            // Store existing update before clearing (for level-up calculation)
+            const existingUpdate = this._existingCharacterUpdate;
+            
+            this._editingEntryId = null;
+            this.closeJournalEntryModal();
+            
+            // Check if XP gain triggers a level-up
+            // For edits: backend reverts old XP then applies new, so calculate accordingly
+            let levelUpHandled = false;
+            if (xpGained > 0 && character) {
+                const currentXP = character.experience_points || character.experiencePoints || 0;
+                // If editing, account for the XP that will be reverted first
+                const oldXpGained = existingUpdate?.xp_gained || 0;
+                const newXP = currentXP - oldXpGained + xpGained;
+                const currentLevel = character.level || 1;
+                const levelFromXP = calculateLevelFromXP(newXP);
+                
+                if (levelFromXP > currentLevel) {
+                    // XP warrants a level-up! Show the standalone dialog
+                    const levelChangeChoice = await showStandaloneLevelUpDialog(currentLevel, levelFromXP, character.name);
+                    
+                    if (levelChangeChoice === 'auto') {
+                        // Calculate and apply auto stats
+                        const tempCharacter = { 
+                            ...character, 
+                            level: levelFromXP,
+                            experiencePoints: newXP,
+                            experience_points: newXP
+                        };
+                        const autoCalculatedStats = calculateStatsForLevel(tempCharacter, levelFromXP);
+                        
+                        const levelUpUpdates = {
+                            level: levelFromXP,
+                            hitPoints: {
+                                max: autoCalculatedStats.hpMax,
+                                current: autoCalculatedStats.hpMax,
+                                temp: character.hitPoints?.temp || 0
+                            },
+                            proficiencyBonus: autoCalculatedStats.proficiencyBonus,
+                        };
+                        
+                        if (autoCalculatedStats.spellSlots) {
+                            levelUpUpdates.spellSlots = autoCalculatedStats.spellSlots;
+                            levelUpUpdates.spellSlotsUsed = {};
+                        }
+                        
+                        if (autoCalculatedStats.hitDiceMax) {
+                            levelUpUpdates.hitDiceMax = autoCalculatedStats.hitDiceMax;
+                            levelUpUpdates.hitDiceCurrent = null;
+                        }
+                        
+                        if (autoCalculatedStats.classResources && Object.keys(autoCalculatedStats.classResources).length > 0) {
+                            levelUpUpdates.classResources = autoCalculatedStats.classResources;
+                        }
+                        
+                        // Apply level-up updates
+                        await CharacterStorage.update(characterId, levelUpUpdates);
+                        levelUpHandled = true;
+                        
+                        // Check for new spells after level-up
+                        if (autoCalculatedStats.spellProgression) {
+                            setTimeout(async () => {
+                                const updatedChar = await CharacterStorage.getById(characterId);
+                                if (updatedChar) {
+                                    checkAndPromptForNewSpells(updatedChar, currentLevel, levelFromXP);
+                                }
+                            }, 400);
+                        }
+                    } else if (levelChangeChoice === 'manual') {
+                        // User chose manual - just update the level, they'll handle stats
+                        await CharacterStorage.update(characterId, { level: levelFromXP });
+                        levelUpHandled = true;
+                    }
+                    // If cancelled, just continue without level change
+                }
+            }
+            
+            // Refresh character data if updates were made
+            if (hasCharacterUpdate || levelUpHandled) {
+                await AppState.loadCharacters();
+                if (characterId) {
+                    viewCharacter(characterId);
+                }
+            }
+            
+            // Refresh the campaign panel (must await to ensure it completes)
+            await ExpandedView._loadCampaignPanel();
+            
+            const notification = levelUpHandled 
+                ? '✓ Journal entry saved & LEVEL UP!' 
+                : (hasCharacterUpdate ? '✓ Journal entry saved & character updated' : '✓ Journal entry saved');
+            showNotification(notification);
+
+        } catch (error) {
+            console.error('Failed to save journal entry:', error);
+            showAlertDialog(error.message || 'Failed to save journal entry.');
+        }
+    },
+
+    async editJournalEntry(entryId) {
+        await this.openJournalEntryModal(entryId);
+    },
+
+    /** Toggle journal entry expanded/collapsed state */
+    toggleJournalEntry(entryEl, event) {
+        // Don't toggle if clicking the edit or delete button
+        if (event.target.closest('.journal-entry-edit') || event.target.closest('.journal-entry-delete')) {
+            return;
+        }
+        
+        const isExpanding = !entryEl.classList.contains('is-expanded');
+        
+        // Close all other expanded entries (accordion behavior)
+        if (isExpanding) {
+            const allEntries = entryEl.closest('.journal-entries')?.querySelectorAll('.journal-entry.is-expanded');
+            allEntries?.forEach(entry => entry.classList.remove('is-expanded'));
+        }
+        
+        entryEl.classList.toggle('is-expanded');
+    },
+
+    /** Delete a journal entry with confirmation */
+    async deleteJournalEntry(entryId) {
+        showConfirmDialog(
+            'Delete this journal entry?\n\nThis cannot be undone.',
+            async () => {
+                try {
+                    await CampaignAPI.deleteJournalEntry(entryId);
+                    showNotification('Journal entry deleted');
+                    // Refresh the campaign panel to update the journal list
+                    await ExpandedView._loadCampaignPanel();
+                } catch (error) {
+                    console.error('Failed to delete journal entry:', error);
+                    showAlertDialog(error.message || 'Failed to delete journal entry.');
+                }
+            }
+        );
+    },
+
+    // ========================================
+    // CHARACTER UPDATE FIELDS (in combined Journal Entry modal)
+    // ========================================
+
+    /** Prepare character update fields within the journal entry modal */
+    _prepareCharacterUpdateFields() {
+        // Get character info
+        const characterId = AppState.selectedCharacterId;
+        const character = AppState.characters?.find(c => 
+            c.id === characterId || c.cloudId === characterId
+        );
+
+        // Update character name in section header
+        const nameEl = document.getElementById('characterUpdateName');
+        if (nameEl && character) {
+            nameEl.textContent = character.name || 'Character';
+        }
+
+        // Pre-fill current HP (handle both old number format and new object format)
+        const hpInput = document.getElementById('charUpdateHp');
+        const hpMaxEl = document.getElementById('charUpdateHpMax');
+        if (character) {
+            const hp = character.hitPoints || { current: 0, max: 0 };
+            const hpMax = typeof hp === 'number' ? hp : (hp.max || 0);
+            const hpCurrent = typeof hp === 'number' ? hp : (hp.current || hpMax);
+            if (hpInput) hpInput.value = hpCurrent || '';
+            if (hpMaxEl) hpMaxEl.textContent = hpMax || '--';
+        }
+
+        // Reset other fields
+        const xpInput = document.getElementById('charUpdateXp');
+        const goldInput = document.getElementById('charUpdateGold');
+        const goldSign = document.getElementById('charUpdateGoldSign');
+        const goldSignLabel = document.getElementById('charUpdateGoldSign-label');
+        const itemsInput = document.getElementById('charUpdateItems');
+
+        if (xpInput) xpInput.value = '0';
+        if (goldInput) goldInput.value = '0';
+        if (goldSign) goldSign.value = '+';
+        if (goldSignLabel) goldSignLabel.textContent = '+';
+        // Reset gold sign selector options
+        const goldSignSelector = document.querySelector('.gold-sign-selector');
+        if (goldSignSelector) {
+            goldSignSelector.querySelectorAll('.selector-option').forEach(opt => {
+                const isPlus = opt.dataset.value === '+';
+                opt.classList.toggle('is-selected', isPlus);
+                opt.setAttribute('aria-selected', isPlus ? 'true' : 'false');
+            });
+        }
+        if (itemsInput) itemsInput.value = '';
+
+        // Set checkboxes based on character's current conditions
+        const currentConditions = character?.conditions || [];
+        const conditionCheckboxes = {
+            'charUpdatePoisoned': 'poisoned',
+            'charUpdateExhausted': 'exhausted',
+            'charUpdateDiseased': 'diseased',
+            'charUpdateCursed': 'cursed'
+        };
+
+        Object.entries(conditionCheckboxes).forEach(([checkboxId, condition]) => {
+            const cb = document.getElementById(checkboxId);
+            if (cb) {
+                cb.checked = currentConditions.includes(condition);
+            }
+        });
+    },
+
+    /** Populate character update fields with existing data (when editing a journal entry) */
+    _populateCharacterUpdateFields(charUpdate) {
+        if (!charUpdate) return;
+        
+        // XP gained
+        const xpInput = document.getElementById('charUpdateXp');
+        if (xpInput && charUpdate.xp_gained !== undefined) {
+            xpInput.value = charUpdate.xp_gained || 0;
+        }
+        
+        // Gold change (handle sign)
+        const goldInput = document.getElementById('charUpdateGold');
+        const goldSign = document.getElementById('charUpdateGoldSign');
+        const goldSignLabel = document.getElementById('charUpdateGoldSign-label');
+        if (goldInput && charUpdate.gold_change !== undefined) {
+            const goldValue = charUpdate.gold_change;
+            const isNegative = goldValue < 0;
+            goldInput.value = Math.abs(goldValue);
+            
+            if (goldSign) goldSign.value = isNegative ? '-' : '+';
+            if (goldSignLabel) goldSignLabel.textContent = isNegative ? '−' : '+';
+            
+            // Update gold sign selector visual state
+            const goldSignSelector = document.querySelector('.gold-sign-selector');
+            if (goldSignSelector) {
+                goldSignSelector.querySelectorAll('.selector-option').forEach(opt => {
+                    const optLabel = opt.querySelector('.selector-option-label')?.textContent;
+                    const isSelected = (isNegative && optLabel === '−') || (!isNegative && optLabel === '+');
+                    opt.classList.toggle('is-selected', isSelected);
+                    opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+                });
+            }
+        }
+        
+        // Items acquired (join as comma-separated string)
+        const itemsInput = document.getElementById('charUpdateItems');
+        if (itemsInput && charUpdate.items_acquired?.length > 0) {
+            itemsInput.value = charUpdate.items_acquired.join(', ');
+        }
+        
+        // Conditions (set checkboxes)
+        const conditionCheckboxes = {
+            'charUpdatePoisoned': 'poisoned',
+            'charUpdateExhausted': 'exhausted',
+            'charUpdateDiseased': 'diseased',
+            'charUpdateCursed': 'cursed'
+        };
+        
+        if (charUpdate.conditions?.length > 0) {
+            Object.entries(conditionCheckboxes).forEach(([checkboxId, condition]) => {
+                const cb = document.getElementById(checkboxId);
+                if (cb) {
+                    cb.checked = charUpdate.conditions.includes(condition);
+                }
+            });
+        }
+        
+        // Note: HP change is a delta, not absolute value. The form shows current HP.
+        // When editing, we keep the current HP shown (set by _prepareCharacterUpdateFields).
+        // The hp_change will be recalculated on save based on the difference.
+    },
+
+    /** Handle gold sign selector selection */
+    selectGoldSign(sign) {
+        const hiddenInput = document.getElementById('charUpdateGoldSign');
+        const label = document.getElementById('charUpdateGoldSign-label');
+        const trigger = document.getElementById('charUpdateGoldSign-trigger');
+        
+        // Update hidden input value (normalize minus sign)
+        if (hiddenInput) hiddenInput.value = sign === '−' ? '-' : '+';
+        if (label) label.textContent = sign;
+        
+        // Update selected state on options
+        const selector = document.querySelector('.gold-sign-selector');
+        if (selector) {
+            selector.querySelectorAll('.selector-option').forEach(opt => {
+                const isSelected = opt.querySelector('.selector-option-label')?.textContent === sign;
+                opt.classList.toggle('is-selected', isSelected);
+                opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+        }
+        
+        // Close the menu (toggle will close it since it's open)
+        if (trigger && trigger.classList.contains('is-open')) {
+            CharacterSheet.toggleSelectorMenu(trigger);
+        }
+    },
+
+    // Copy invite code (updated to accept code parameter)
+    copyInviteCodeFromPanel(code) {
+        if (code && navigator.clipboard) {
+            navigator.clipboard.writeText(code).then(() => {
+                showNotification('✓ Invite code copied');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+    },
+
+    // ========================================
+    // JOURNAL VISIBILITY & FILTER
+    // ========================================
+    
+    // Current journal filter: null = "All", or user_id for specific user
+    _journalFilterUserId: null,
+    
+    // Cached campaign ID for current character (used for journal settings)
+    _currentCampaignId: null,
+    
+    // Current user's journal visibility setting
+    _currentJournalVisibility: 'public',
+
+    /** Open journal settings modal */
+    async openJournalSettingsModal() {
+        const modal = document.getElementById('journalSettingsModal');
+        if (!modal) return;
+        
+        // Get current campaign ID from the journal section
+        const journalSection = document.querySelector('.journal-section');
+        const campaignId = journalSection?.dataset?.campaignId;
+        
+        if (!campaignId) {
+            console.warn('No campaign ID found for journal settings');
+            return;
+        }
+        
+        this._currentCampaignId = parseInt(campaignId, 10);
+        
+        // Fetch current visibility setting
+        try {
+            const members = await CampaignAPI.getCampaignMembers(this._currentCampaignId);
+            const currentUserId = window.AuthService?.getCurrentUser()?.id;
+            const myMembership = members.find(m => m.user_id === currentUserId);
+            
+            if (myMembership) {
+                this._currentJournalVisibility = myMembership.journal_visibility || 'private';
+                const toggle = document.getElementById('journalVisibilityToggle');
+                if (toggle) {
+                    toggle.checked = this._currentJournalVisibility === 'public';
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch journal visibility:', error);
+        }
+        
+        modal.classList.add('show');
+    },
+
+    /** Close journal settings modal */
+    closeJournalSettingsModal() {
+        const modal = document.getElementById('journalSettingsModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+    },
+
+    /** Toggle journal visibility (called from checkbox) */
+    async toggleJournalVisibility(isPublic) {
+        if (!this._currentCampaignId) {
+            console.warn('No campaign ID for visibility toggle');
+            return;
+        }
+        
+        const newVisibility = isPublic ? 'public' : 'private';
+        
+        try {
+            await CampaignAPI.updateJournalVisibility(this._currentCampaignId, newVisibility);
+            this._currentJournalVisibility = newVisibility;
+            
+            const message = isPublic 
+                ? '✓ Journal now shared with party' 
+                : '✓ Journal now private';
+            showNotification(message);
+        } catch (error) {
+            console.error('Failed to update journal visibility:', error);
+            showAlertDialog(error.message || 'Failed to update visibility setting.');
+            
+            // Revert toggle on error
+            const toggle = document.getElementById('journalVisibilityToggle');
+            if (toggle) {
+                toggle.checked = !isPublic;
+            }
+        }
+    },
+
+    /** Handle journal filter selection from custom selector */
+    selectJournalFilter(value, label) {
+        // Update the trigger label
+        const labelEl = document.getElementById('journalFilter-label');
+        if (labelEl) {
+            labelEl.innerHTML = Utils.escapeHtml(label);
+        }
+        
+        // Update selected state in menu options
+        const trigger = document.getElementById('journalFilter-trigger');
+        if (trigger) {
+            const shell = trigger.closest('.selector-shell');
+            if (shell) {
+                const options = shell.querySelectorAll('.selector-option');
+                options.forEach(opt => {
+                    const isSelected = opt.getAttribute('data-value') === value;
+                    opt.classList.toggle('is-selected', isSelected);
+                    opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+                });
+            }
+            // Close the menu (toggle will close it since it's open)
+            if (trigger.classList.contains('is-open')) {
+                CharacterSheet.toggleSelectorMenu(trigger);
+            }
+        }
+        
+        // Apply the filter
+        this.setJournalFilter(value);
+    },
+
+    /** Set journal filter and refresh entries */
+    async setJournalFilter(value) {
+        // Parse filter value
+        this._journalFilterUserId = value === 'all' ? null : parseInt(value, 10);
+        
+        // Get campaign ID from the journal section
+        const journalSection = document.querySelector('.journal-section');
+        const campaignId = journalSection?.dataset?.campaignId;
+        
+        if (!campaignId) {
+            console.warn('No campaign ID for journal filter');
+            return;
+        }
+        
+        // Fetch filtered journal entries
+        try {
+            const entries = await CampaignAPI.getCampaignJournalEntries(
+                parseInt(campaignId, 10),
+                this._journalFilterUserId
+            );
+            
+            // Re-render the journal entries
+            this._updateJournalEntries(entries);
+        } catch (error) {
+            console.error('Failed to fetch filtered journal entries:', error);
+        }
+    },
+
+    /** Update journal entries without full panel reload */
+    _updateJournalEntries(entries) {
+        const entriesContainer = document.querySelector('.journal-entries');
+        if (!entriesContainer) return;
+        
+        const currentUserId = window.AuthService?.getCurrentUser()?.id;
+        
+        if (entries.length === 0) {
+            entriesContainer.innerHTML = `
+                <div class="journal-empty">
+                    <div class="journal-empty-text">No journal entries yet</div>
+                    <div class="journal-empty-hint">Record your adventures!</div>
+                </div>
+            `;
+            return;
+        }
+        
+        entriesContainer.innerHTML = entries.map(entry => {
+            const isOwnEntry = entry.user_id === currentUserId;
+            const authorInfo = entry.character_name 
+                ? `<span class="journal-entry-author">${Utils.escapeHtml(entry.character_name)}</span>` 
+                : '';
+            
+            return `
+                <div class="journal-entry ${!isOwnEntry ? 'journal-entry--other' : ''}" data-entry-id="${entry.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">
+                    <div class="journal-entry-header">
+                        <span class="journal-entry-meta">${authorInfo}<span class="journal-entry-date">${ExpandedView._formatDate(entry.entry_date)}</span></span>
+                        <span class="journal-entry-title">${entry.title || 'Untitled'}</span>
+                    </div>
+                    <div class="journal-entry-preview">
+                        ${ExpandedView._truncateText(entry.content, 100)}
+                    </div>
+                    <div class="journal-entry-full">
+                        ${Utils.escapeHtml(entry.content || '').replace(/\n/g, '<br>')}
+                        ${ExpandedView._formatCharacterUpdate(entry.character_update)}
+                    </div>
+                    ${isOwnEntry ? `
+                    <div class="journal-entry-actions">
+                        <button class="journal-entry-edit terminal-btn-icon" onclick="CampaignUI.editJournalEntry(${entry.id})" title="Edit entry">
+                            ✎
+                        </button>
+                        <button class="journal-entry-delete terminal-btn-icon" onclick="CampaignUI.deleteJournalEntry(${entry.id})" title="Delete entry">
+                            ×
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+    },
+
+    // ========================================
+    // PARTY LIST EXPANSION
+    // ========================================
+    
+    /**
+     * Toggle the visibility of hidden party members in the party list
+     * @param {HTMLElement} linkEl - The "See more/less" link element
+     */
+    togglePartyList(linkEl) {
+        if (!linkEl) return;
+        const partyList = linkEl.closest('.party-list');
+        if (!partyList) return;
+        
+        const hiddenContainer = partyList.querySelector('.party-hidden');
+        if (!hiddenContainer) return;
+        
+        const isExpanded = hiddenContainer.style.display !== 'none';
+        if (isExpanded) {
+            hiddenContainer.style.display = 'none';
+            linkEl.textContent = 'See more';
+        } else {
+            hiddenContainer.style.display = 'block';
+            linkEl.textContent = 'See less';
+        }
+    },
+
+    // ========================================
+    // VIEW PARTY MEMBER CHARACTER SHEET
+    // ========================================
+    
+    // Party members list for navigation (set when modal opens)
+    _partyMembersList: [],
+    _currentPartyMemberIndex: 0,
+    _cachedPartyMembers: [], // Set by _renderCampaignArea when party is displayed
+    
+    /**
+     * View a party member's character sheet in a modal (view-only)
+     * @param {number} characterId - The character ID to view
+     * @param {Array} [partyMembers] - Optional list of party members for navigation
+     */
+    async viewPartyMemberSheet(characterId, partyMembers = null) {
+        // Use provided party members, or fall back to cached members from campaign rendering
+        const membersToUse = partyMembers || this._cachedPartyMembers || [];
+        
+        // Store party members for navigation if we have any
+        if (membersToUse.length > 0) {
+            // Filter to only members with characters assigned
+            this._partyMembersList = membersToUse.filter(m => m.character_id);
+            // Find current index
+            this._currentPartyMemberIndex = this._partyMembersList.findIndex(
+                m => String(m.character_id) === String(characterId)
+            );
+            if (this._currentPartyMemberIndex === -1) this._currentPartyMemberIndex = 0;
+        }
+        // Remove any existing modal first to ensure fresh state
+        const existingModal = document.getElementById('partyMemberSheetModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Show loading modal with just a cube spinner (no text)
+        const loadingModalHtml = `
+            <div id="partyMemberSheetModal" class="modal">
+                <div class="modal-content party-member-sheet-modal party-member-sheet-modal--loading">
+                    <div class="modal-body party-member-sheet-loading">
+                        <div class="panel-loading-cube-container">
+                            <div class="panel-loading-cube">
+                                <i></i><i></i><i></i><i></i><i></i><i></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        animateModalOpen(loadingModalHtml, 'partyMemberSheetModal');
+        
+        try {
+            // Fetch the full character data via API
+            const backendCharacter = await CampaignAPI._apiRequest(`/characters/${characterId}`);
+            
+            if (!backendCharacter) {
+                throw new Error('Character not found');
+            }
+            
+            // Convert from backend snake_case to frontend camelCase format
+            // This ensures portrait fields (ascii_portrait -> asciiPortrait, etc.) are mapped correctly
+            const character = window.DanddyCharacterMapper 
+                ? window.DanddyCharacterMapper.fromBackendToBuilder(backendCharacter)
+                : backendCharacter;
+            
+            // Render the character sheet in view-only mode
+            const sheetHtml = CharacterSheet.render(character, {
+                context: 'manager',
+                showPortrait: true,
+                // All actions disabled for view-only mode
+                onRename: false,
+                onEdit: false,
+                onDelete: false,
+                onGeneratePortrait: false,
+                onPrint: false,
+                onShare: false,
+                onLeave: false,
+                isShared: false,
+                hasCollaborators: false,
+                hideOverflowMenu: true,
+                hideHeader: true,  // Modal has its own header with character name
+            });
+            
+            // Update modal with character sheet
+            const modal = document.getElementById('partyMemberSheetModal');
+            if (modal) {
+                const modalContent = modal.querySelector('.modal-content');
+                if (modalContent) {
+                    // Get owner email from backend response (available for party member characters)
+                    const ownerEmail = backendCharacter.owner_email 
+                        ? `<div class="party-member-modal-email">${Utils.escapeHtml(backendCharacter.owner_email)}</div>` 
+                        : '';
+                    
+                    // Build navigation bar if we have multiple party members
+                    let navHtml = '';
+                    if (this._partyMembersList.length > 1) {
+                        const prevMember = this._partyMembersList[
+                            (this._currentPartyMemberIndex - 1 + this._partyMembersList.length) % this._partyMembersList.length
+                        ];
+                        const nextMember = this._partyMembersList[
+                            (this._currentPartyMemberIndex + 1) % this._partyMembersList.length
+                        ];
+                        const prevName = prevMember?.character?.name || 'Previous';
+                        const nextName = nextMember?.character?.name || 'Next';
+                        const current = this._currentPartyMemberIndex + 1;
+                        const total = this._partyMembersList.length;
+                        
+                        navHtml = `
+                            <div class="party-member-nav">
+                                <button class="party-nav-btn party-nav-prev" onclick="CampaignUI.prevPartyMember()" title="${Utils.escapeHtml(prevName)}">
+                                    <span class="party-nav-arrow">←</span>
+                                    <span class="party-nav-name">${Utils.escapeHtml(prevName)}</span>
+                                </button>
+                                <span class="party-nav-count">${current}/${total}</span>
+                                <button class="party-nav-btn party-nav-next" onclick="CampaignUI.nextPartyMember()" title="${Utils.escapeHtml(nextName)}">
+                                    <span class="party-nav-name">${Utils.escapeHtml(nextName)}</span>
+                                    <span class="party-nav-arrow">→</span>
+                                </button>
+                            </div>
+                        `;
+                    }
+                    
+                    modalContent.innerHTML = `
+                        ${navHtml}
+                        <div class="modal-header">
+                            <div class="party-member-modal-title-group">
+                                <h2 class="modal-title">${Utils.escapeHtml(character.name)}</h2>
+                                ${ownerEmail}
+                            </div>
+                            <button class="modal-close" onclick="CampaignUI.closePartyMemberSheetModal()">&times;</button>
+                        </div>
+                        <div class="modal-body party-member-sheet-body">
+                            <div class="character-sheet">
+                                ${sheetHtml}
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Populate ASCII portrait after rendering
+                    CharacterSheet.populatePortrait(character);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load party member character:', error);
+            
+            // Show error state
+            const modal = document.getElementById('partyMemberSheetModal');
+            if (modal) {
+                const modalContent = modal.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.innerHTML = `
+                        <div class="modal-header">
+                            <h2 class="modal-title">Error</h2>
+                            <button class="modal-close" onclick="CampaignUI.closePartyMemberSheetModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="terminal-text-dim">Failed to load character sheet.</p>
+                            <p class="terminal-text-small terminal-text-dim">${Utils.escapeHtml(error.message || 'Unknown error')}</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+    },
+
+    /** Close the party member sheet modal */
+    closePartyMemberSheetModal() {
+        const modal = document.getElementById('partyMemberSheetModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: true });
+        }
+        // Clear navigation state
+        this._partyMembersList = [];
+        this._currentPartyMemberIndex = 0;
+    },
+    
+    /** Navigate to previous party member */
+    prevPartyMember() {
+        if (this._partyMembersList.length <= 1) return;
+        this._currentPartyMemberIndex = 
+            (this._currentPartyMemberIndex - 1 + this._partyMembersList.length) % this._partyMembersList.length;
+        const member = this._partyMembersList[this._currentPartyMemberIndex];
+        if (member?.character_id) {
+            this._updatePartyMemberContent(member.character_id);
+        }
+    },
+    
+    /** Navigate to next party member */
+    nextPartyMember() {
+        if (this._partyMembersList.length <= 1) return;
+        this._currentPartyMemberIndex = 
+            (this._currentPartyMemberIndex + 1) % this._partyMembersList.length;
+        const member = this._partyMembersList[this._currentPartyMemberIndex];
+        if (member?.character_id) {
+            this._updatePartyMemberContent(member.character_id);
+        }
+    },
+    
+    /** Update party member modal content without re-animating the modal */
+    async _updatePartyMemberContent(characterId) {
+        const modal = document.getElementById('partyMemberSheetModal');
+        if (!modal) return;
+        
+        const modalBody = modal.querySelector('.party-member-sheet-body');
+        const modalHeader = modal.querySelector('.modal-header');
+        const navBar = modal.querySelector('.party-member-nav');
+        
+        // Preserve modal body height during loading to prevent jumping
+        let savedHeight = null;
+        if (modalBody) {
+            savedHeight = modalBody.offsetHeight;
+            modalBody.style.minHeight = `${savedHeight}px`;
+        }
+        
+        // Show loading spinner in body
+        if (modalBody) {
+            modalBody.innerHTML = `
+                <div class="party-member-sheet-loading">
+                    <div class="panel-loading-cube-container">
+                        <div class="panel-loading-cube">
+                            <i></i><i></i><i></i><i></i><i></i><i></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        try {
+            // Fetch the full character data via API
+            const backendCharacter = await CampaignAPI._apiRequest(`/characters/${characterId}`);
+            
+            if (!backendCharacter) {
+                throw new Error('Character not found');
+            }
+            
+            // Convert from backend snake_case to frontend camelCase format
+            const character = window.DanddyCharacterMapper 
+                ? window.DanddyCharacterMapper.fromBackendToBuilder(backendCharacter)
+                : backendCharacter;
+            
+            // Render the character sheet in view-only mode
+            const sheetHtml = CharacterSheet.render(character, {
+                context: 'manager',
+                showPortrait: true,
+                onRename: false,
+                onEdit: false,
+                onDelete: false,
+                onGeneratePortrait: false,
+                onPrint: false,
+                onShare: false,
+                onLeave: false,
+                isShared: false,
+                hasCollaborators: false,
+                hideOverflowMenu: true,
+                hideHeader: true,
+            });
+            
+            // Update header with new character name
+            if (modalHeader) {
+                const titleGroup = modalHeader.querySelector('.party-member-modal-title-group');
+                if (titleGroup) {
+                    const ownerEmail = backendCharacter.owner_email 
+                        ? `<div class="party-member-modal-email">${Utils.escapeHtml(backendCharacter.owner_email)}</div>` 
+                        : '';
+                    titleGroup.innerHTML = `
+                        <h2 class="modal-title">${Utils.escapeHtml(character.name)}</h2>
+                        ${ownerEmail}
+                    `;
+                }
+            }
+            
+            // Update nav bar with new prev/next names and count
+            if (navBar && this._partyMembersList.length > 1) {
+                const prevMember = this._partyMembersList[
+                    (this._currentPartyMemberIndex - 1 + this._partyMembersList.length) % this._partyMembersList.length
+                ];
+                const nextMember = this._partyMembersList[
+                    (this._currentPartyMemberIndex + 1) % this._partyMembersList.length
+                ];
+                const prevName = prevMember?.character?.name || 'Previous';
+                const nextName = nextMember?.character?.name || 'Next';
+                const current = this._currentPartyMemberIndex + 1;
+                const total = this._partyMembersList.length;
+                
+                const prevBtn = navBar.querySelector('.party-nav-prev');
+                const nextBtn = navBar.querySelector('.party-nav-next');
+                const countEl = navBar.querySelector('.party-nav-count');
+                
+                if (prevBtn) {
+                    prevBtn.title = prevName;
+                    const nameEl = prevBtn.querySelector('.party-nav-name');
+                    if (nameEl) nameEl.textContent = prevName;
+                }
+                if (nextBtn) {
+                    nextBtn.title = nextName;
+                    const nameEl = nextBtn.querySelector('.party-nav-name');
+                    if (nameEl) nameEl.textContent = nextName;
+                }
+                if (countEl) {
+                    countEl.textContent = `${current}/${total}`;
+                }
+            }
+            
+            // Update body with new character sheet
+            if (modalBody) {
+                modalBody.innerHTML = `
+                    <div class="character-sheet">
+                        ${sheetHtml}
+                    </div>
+                `;
+                // Clear min-height after content is loaded
+                modalBody.style.minHeight = '';
+            }
+            
+            // Populate ASCII portrait after rendering
+            CharacterSheet.populatePortrait(character);
+            
+        } catch (error) {
+            console.error('Failed to load party member character:', error);
+            if (modalBody) {
+                modalBody.innerHTML = `
+                    <p class="terminal-text-dim">Failed to load character sheet.</p>
+                    <p class="terminal-text-small terminal-text-dim">${Utils.escapeHtml(error.message || 'Unknown error')}</p>
+                `;
+                // Clear min-height on error too
+                modalBody.style.minHeight = '';
+            }
+        }
+    },
+
+    // ========================================
+    // PAST ADVENTURES MODAL
+    // ========================================
+    
+    // Cache for past campaigns data
+    _pastCampaigns: [],
+    // Currently viewing past campaign (for detail view)
+    _viewingPastCampaign: null,
+
+    /**
+     * Open the Past Adventures modal and load past campaigns for a specific character
+     * @param {number|null} [characterId] - Character ID to filter by (defaults to current selected character)
+     */
+    async openPastAdventuresModal(characterId = null) {
+        const modal = document.getElementById('pastAdventuresModal');
+        if (!modal) return;
+        
+        // Use provided characterId or fall back to selected character
+        const charId = characterId || AppState.selectedCharacterId;
+        
+        // Reset to list view
+        this._viewingPastCampaign = null;
+        this._showPastAdventuresListView();
+        
+        // Show loading state
+        const listEl = document.getElementById('pastAdventuresList');
+        if (listEl) {
+            listEl.innerHTML = '<div class="past-adventures-loading">Loading past adventures...</div>';
+        }
+        
+        modal.classList.add('show');
+        
+        // Fetch past campaigns for this character
+        try {
+            this._pastCampaigns = await CampaignAPI.getPastCampaigns(charId);
+            this._renderPastCampaignsList();
+        } catch (error) {
+            console.error('Failed to load past campaigns:', error);
+            if (listEl) {
+                listEl.innerHTML = '<div class="past-adventures-empty">Failed to load past adventures.</div>';
+            }
+        }
+    },
+
+    /** Close the Past Adventures modal */
+    closePastAdventuresModal() {
+        const modal = document.getElementById('pastAdventuresModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        this._pastCampaigns = [];
+        this._viewingPastCampaign = null;
+    },
+
+    /** Show the list view (hide detail view) */
+    _showPastAdventuresListView() {
+        const listView = document.getElementById('pastAdventuresListView');
+        const detailView = document.getElementById('pastAdventuresDetailView');
+        const breadcrumb = document.getElementById('pastAdventuresBreadcrumb');
+        const title = document.getElementById('pastAdventuresTitle');
+        
+        if (listView) listView.style.display = '';
+        if (detailView) detailView.style.display = 'none';
+        if (breadcrumb) breadcrumb.style.display = 'none';
+        if (title) {
+            title.textContent = 'Past Adventures';
+            title.style.display = '';
+        }
+    },
+
+    /** Show the detail view (hide list view) */
+    _showPastAdventuresDetailView(campaignName) {
+        const listView = document.getElementById('pastAdventuresListView');
+        const detailView = document.getElementById('pastAdventuresDetailView');
+        const breadcrumb = document.getElementById('pastAdventuresBreadcrumb');
+        const title = document.getElementById('pastAdventuresTitle');
+        
+        if (listView) listView.style.display = 'none';
+        if (detailView) detailView.style.display = '';
+        if (breadcrumb) breadcrumb.style.display = 'flex';
+        if (title) {
+            title.textContent = campaignName;
+            title.style.display = '';
+        }
+    },
+
+    /** Render the list of past campaigns */
+    _renderPastCampaignsList() {
+        const listEl = document.getElementById('pastAdventuresList');
+        if (!listEl) return;
+        
+        if (!this._pastCampaigns || this._pastCampaigns.length === 0) {
+            listEl.innerHTML = '<div class="past-adventures-empty">No past adventures yet. Campaigns you leave or that conclude will appear here.</div>';
+            return;
+        }
+        
+        listEl.innerHTML = this._pastCampaigns.map(campaign => {
+            const startDate = campaign.created_at 
+                ? new Date(campaign.created_at).toLocaleDateString() 
+                : 'Unknown';
+            const endDate = campaign.ended_at 
+                ? new Date(campaign.ended_at).toLocaleDateString()
+                : (campaign.user_left_at 
+                    ? new Date(campaign.user_left_at).toLocaleDateString() 
+                    : 'Unknown');
+            
+            // Determine status label
+            let statusLabel = '';
+            let statusClass = '';
+            if (campaign.user_status === 'left') {
+                statusLabel = 'Left';
+                statusClass = 'past-campaign-status--left';
+            } else if (campaign.status === 'completed') {
+                statusLabel = 'Completed';
+                statusClass = 'past-campaign-status--completed';
+            } else if (campaign.status === 'archived') {
+                statusLabel = 'Archived';
+                statusClass = 'past-campaign-status--archived';
+            }
+            
+            // Build party preview (show count)
+            const partyCount = campaign.party_count || campaign.members.length;
+            
+            return `
+                <div class="past-campaign-card" onclick="CampaignUI.viewPastCampaign(${campaign.id})">
+                    <div class="past-campaign-header">
+                        <div class="past-campaign-name">${Utils.escapeHtml(campaign.name)}</div>
+                        <div class="past-campaign-status ${statusClass}">${statusLabel}</div>
+                    </div>
+                    ${campaign.description ? `<div class="past-campaign-desc">${Utils.escapeHtml(campaign.description)}</div>` : ''}
+                    <div class="past-campaign-meta">
+                        <span class="past-campaign-dates">${startDate} — ${endDate}</span>
+                        <span class="past-campaign-party">${partyCount} member${partyCount !== 1 ? 's' : ''}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    /**
+     * View a past campaign's details (campaign panel + journal)
+     * @param {number} campaignId
+     */
+    async viewPastCampaign(campaignId) {
+        const campaign = this._pastCampaigns.find(c => c.id === campaignId);
+        if (!campaign) return;
+        
+        this._viewingPastCampaign = campaign;
+        this._showPastAdventuresDetailView(campaign.name);
+        
+        const contentEl = document.getElementById('pastAdventuresDetailContent');
+        if (!contentEl) return;
+        
+        // Show loading state
+        contentEl.innerHTML = `
+            <div class="past-adventures-loading">
+                <div class="panel-loading-cube-container">
+                    <div class="panel-loading-cube">
+                        <i></i><i></i><i></i><i></i><i></i><i></i>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        try {
+            // Fetch historical journals
+            const journals = await CampaignAPI.getPastCampaignJournals(campaignId);
+            
+            // Render the detail view
+            this._renderPastCampaignDetail(campaign, journals);
+        } catch (error) {
+            console.error('Failed to load past campaign details:', error);
+            contentEl.innerHTML = `
+                <div class="past-adventures-error">
+                    <p class="terminal-text-dim">Failed to load campaign details.</p>
+                    <p class="terminal-text-small terminal-text-dim">${Utils.escapeHtml(error.message || 'Unknown error')}</p>
+                </div>
+            `;
+        }
+    },
+
+    /** Go back to the past campaigns list from detail view */
+    backToPastCampaignsList() {
+        this._viewingPastCampaign = null;
+        this._showPastAdventuresListView();
+    },
+
+    /**
+     * Render the detail view with campaign info and journals
+     * @param {Object} campaign - Past campaign data
+     * @param {Array} journals - Journal entries
+     */
+    _renderPastCampaignDetail(campaign, journals) {
+        const contentEl = document.getElementById('pastAdventuresDetailContent');
+        if (!contentEl) return;
+        
+        // Format dates
+        const startDate = campaign.created_at 
+            ? new Date(campaign.created_at).toLocaleDateString() 
+            : 'Unknown';
+        const endDate = campaign.ended_at 
+            ? new Date(campaign.ended_at).toLocaleDateString()
+            : (campaign.user_left_at 
+                ? new Date(campaign.user_left_at).toLocaleDateString() 
+                : 'Ongoing');
+        
+        // Build party grid with card layout (matching active campaign style)
+        const partyHtml = campaign.members && campaign.members.length > 0
+            ? campaign.members.map(m => {
+                // Build status tags (Admin, Left)
+                const statusTags = [];
+                if (m.is_creator) {
+                    statusTags.push('<span class="party-card-tag party-card-tag--admin">Admin</span>');
+                }
+                if (m.status === 'left') {
+                    statusTags.push('<span class="party-card-tag party-card-tag--left">Left</span>');
+                }
+                const statusTagsHtml = statusTags.length > 0 
+                    ? `<div class="party-card-tags">${statusTags.join('')}</div>`
+                    : '';
+                
+                if (m.character_name) {
+                    // Member with character - show character card
+                    const charName = Utils.escapeHtml(m.character_name);
+                    const charInfo = `Lvl ${m.character_level || '?'} ${m.character_class || ''}`.trim();
+                    
+                    // Get portrait URL if available
+                    let thumbnailHtml = '';
+                    if (m.original_portrait_url) {
+                        thumbnailHtml = `<div class="card-thumbnail card-thumbnail--image">
+                            <img src="${Utils.escapeHtml(m.original_portrait_url)}" alt="${charName}" loading="lazy" onload="this.classList.add('is-loaded')" />
+                        </div>`;
+                    } else {
+                        // Placeholder for no portrait
+                        thumbnailHtml = `<div class="card-thumbnail party-card-placeholder">⚔</div>`;
+                    }
+                    
+                    return `
+                        <div class="party-card character-card party-card--past">
+                            ${statusTagsHtml}
+                            ${thumbnailHtml}
+                            <div class="card-details">
+                                <div class="card-name">${charName}</div>
+                                <div class="card-info">${charInfo}</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Member without character assigned
+                    return `
+                        <div class="party-card character-card party-card--no-char party-card--past">
+                            ${statusTagsHtml}
+                            <div class="card-thumbnail">?</div>
+                            <div class="card-details">
+                                <div class="card-name">No character</div>
+                                <div class="card-info">Not assigned</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('')
+            : '<div class="party-empty">No party members</div>';
+        
+        // Build journal entries using existing expandable pattern (read-only, no actions)
+        const journalHtml = journals && journals.length > 0
+            ? journals.map(entry => {
+                const authorInfo = entry.character_name 
+                    ? `<span class="journal-entry-author">${Utils.escapeHtml(entry.character_name)}</span>` 
+                    : '';
+                
+                return `
+                <div class="journal-entry" data-entry-id="${entry.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">
+                    <div class="journal-entry-header">
+                        <span class="journal-entry-meta">${authorInfo}<span class="journal-entry-date">${ExpandedView._formatDate(entry.entry_date)}</span></span>
+                        <span class="journal-entry-title">${entry.title || 'Untitled'}</span>
+                    </div>
+                    <div class="journal-entry-preview">
+                        ${ExpandedView._truncateText(entry.content, 100)}
+                    </div>
+                    <div class="journal-entry-full">
+                        ${Utils.escapeHtml(entry.content || '').replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+                `;
+            }).join('')
+            : '<div class="journal-empty">No journal entries for this campaign.</div>';
+        
+        contentEl.innerHTML = `
+            <div class="past-campaign-detail">
+                <!-- Campaign Info Section -->
+                <div class="past-campaign-info-section">
+                    <div class="past-campaign-info-header">
+                        <div class="past-campaign-info-dates">
+                            <span class="terminal-text-dim">Campaign Period:</span> ${startDate} — ${endDate}
+                        </div>
+                    </div>
+                    ${campaign.description ? `<div class="past-campaign-description">${Utils.escapeHtml(campaign.description)}</div>` : ''}
+                </div>
+                
+                <!-- Party Section -->
+                <div class="past-campaign-section">
+                    <div class="sheet-header">
+                        <div class="sheet-header-title">[ PARTY (${campaign.party_count || 0}) ]</div>
+                    </div>
+                    <div class="party-list past-campaign-party-list">
+                        ${partyHtml}
+                    </div>
+                </div>
+                
+                <!-- Journal Section -->
+                <div class="past-campaign-section">
+                    <div class="sheet-header">
+                        <div class="sheet-header-title">[ JOURNAL (${journals.length}) ]</div>
+                    </div>
+                    <div class="journal-entries past-campaign-journal-list">
+                        ${journalHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+});
+
+// ========================================
+// MOBILE VIEW HANDLING
+// ========================================
+const MOBILE_BREAKPOINT = 768;
+
+const MobileView = {
+    /** Check if we're currently at mobile viewport width */
+    isMobile() {
+        return window.innerWidth <= MOBILE_BREAKPOINT;
+    },
+
+    /** Track the previous viewport state to detect transitions */
+    _wasMobile: null,
+    
+    /** Swipe tracking state */
+    _touchStartX: 0,
+    _touchStartY: 0,
+
+    /** Mobile campaign lazy-load state */
+    _mobileCampaignLoaded: false,
+    _mobileCampaignObserver: null,
+    _touchCurrentX: 0,
+    _touchCurrentY: 0,
+    _isSwiping: false,
+    _swipeDirection: null, // 'horizontal', 'vertical', or null (undetermined)
+    _pointerId: null,
+    _minSwipeDistance: 50,      // Min distance to trigger navigation
+    _directionLockThreshold: 10, // Threshold to determine swipe direction intent
+
+    /** Initialize resize listener for viewport transitions */
+    init() {
+        this._wasMobile = this.isMobile();
+        window.addEventListener('resize', () => this.handleResize());
+        this.initSwipeHandlers();
+    },
+    
+    /** Initialize swipe gesture handlers for mobile navigation */
+    initSwipeHandlers() {
+        const gridPanel = document.getElementById('characterGridPanel');
+        if (!gridPanel) return;
+        
+        // Use pointer events for better compatibility with Chrome DevTools simulator
+        // pointerdown - start tracking
+        gridPanel.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'touch' || e.pointerType === 'pen' || this.isMobile()) {
+                this._touchStartX = e.clientX;
+                this._touchStartY = e.clientY;
+                this._touchCurrentX = e.clientX;
+                this._touchCurrentY = e.clientY;
+                this._isSwiping = true;
+                this._swipeDirection = null; // Reset direction lock
+                this._pointerId = e.pointerId;
+            }
+        }, { passive: true });
+        
+        // pointermove - track movement and determine direction intent
+        gridPanel.addEventListener('pointermove', (e) => {
+            if (!this._isSwiping) return;
+            if (!this.isOpen()) return; // Only handle when viewing a sheet
+            
+            this._touchCurrentX = e.clientX;
+            this._touchCurrentY = e.clientY;
+            
+            const deltaX = this._touchCurrentX - this._touchStartX;
+            const deltaY = this._touchCurrentY - this._touchStartY;
+            const absX = Math.abs(deltaX);
+            const absY = Math.abs(deltaY);
+            
+            // Determine direction if not yet locked and movement exceeds threshold
+            if (this._swipeDirection === null && (absX > this._directionLockThreshold || absY > this._directionLockThreshold)) {
+                // Use a ratio to determine intent: horizontal if X movement is at least 1.5x Y movement
+                if (absX > absY * 1.5) {
+                    this._swipeDirection = 'horizontal';
+                    // Add class to indicate horizontal swipe in progress (prevents scroll)
+                    gridPanel.classList.add('is-swiping-horizontal');
+                } else if (absY > absX * 1.5) {
+                    this._swipeDirection = 'vertical';
+                }
+                // If neither is dominant yet, wait for more movement
+            }
+            
+            // If locked to horizontal, prevent default to stop vertical scrolling
+            if (this._swipeDirection === 'horizontal') {
+                e.preventDefault();
+            }
+        }, { passive: false }); // passive: false so we can preventDefault
+        
+        // pointerup - complete the gesture
+        gridPanel.addEventListener('pointerup', (e) => {
+            if (this._isSwiping) {
+                this._touchCurrentX = e.clientX;
+                this._touchCurrentY = e.clientY;
+                this._isSwiping = false;
+                gridPanel.classList.remove('is-swiping-horizontal');
+                this._pointerId = null;
+                this.handleSwipe();
+            }
+        }, { passive: true });
+        
+        // pointercancel - abort the gesture
+        gridPanel.addEventListener('pointercancel', () => {
+            this._isSwiping = false;
+            this._swipeDirection = null;
+            gridPanel.classList.remove('is-swiping-horizontal');
+        }, { passive: true });
+        
+        // Also handle pointerleave to clean up if finger leaves the element
+        gridPanel.addEventListener('pointerleave', (e) => {
+            // Only cancel if we haven't locked direction yet
+            if (this._isSwiping && this._swipeDirection === null) {
+                this._isSwiping = false;
+                gridPanel.classList.remove('is-swiping-horizontal');
+            }
+        }, { passive: true });
+    },
+    
+    /** Handle swipe gesture detection */
+    handleSwipe() {
+        // Only handle swipes when viewing a character sheet on mobile
+        if (!this.isOpen()) return;
+        
+        // Only process if we determined this was a horizontal swipe
+        if (this._swipeDirection !== 'horizontal') {
+            this._swipeDirection = null;
+            return;
+        }
+        
+        const deltaX = this._touchCurrentX - this._touchStartX;
+        
+        // Reset direction for next gesture
+        this._swipeDirection = null;
+        
+        // Check if swipe distance meets minimum threshold
+        if (Math.abs(deltaX) < this._minSwipeDistance) return;
+        
+        if (deltaX > 0) {
+            // Swipe right → go to previous character
+            this.navigateToPreviousCharacter();
+        } else {
+            // Swipe left → go to next character
+            this.navigateToNextCharacter();
+        }
+    },
+    
+    /** Navigate to the next character in the grid (carousel) */
+    navigateToNextCharacter() {
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) return;
+        
+        const currentId = AppState.selectedCharacterId;
+        const currentIndex = characters.findIndex(c => c.id === currentId);
+        
+        // Carousel: wrap to first if at end
+        const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % characters.length;
+        const nextCharacter = characters[nextIndex];
+        
+        if (nextCharacter) {
+            this.showSwipeLoader();
+            viewCharacter(nextCharacter.id, { skipKeyboardSync: false, updateUrl: true });
+        }
+    },
+    
+    /** Navigate to the previous character in the grid (carousel) */
+    navigateToPreviousCharacter() {
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) return;
+        
+        const currentId = AppState.selectedCharacterId;
+        const currentIndex = characters.findIndex(c => c.id === currentId);
+        
+        // Carousel: wrap to last if at beginning
+        const prevIndex = currentIndex <= 0 ? characters.length - 1 : currentIndex - 1;
+        const prevCharacter = characters[prevIndex];
+        
+        if (prevCharacter) {
+            this.showSwipeLoader();
+            viewCharacter(prevCharacter.id, { skipKeyboardSync: false, updateUrl: true });
+        }
+    },
+    
+    /** Flag to track if we're in a swipe loading transition */
+    _isSwipeLoading: false,
+    
+    /** Show the swipe loading overlay */
+    showSwipeLoader() {
+        this._isSwipeLoading = true;
+    },
+    
+    /** Hide the swipe loading overlay */
+    hideSwipeLoader() {
+        this._isSwipeLoading = false;
+        const loader = document.querySelector('.mobile-swipe-loader');
+        if (loader) {
+            loader.remove();
+        }
+    },
+
+    /** Handle viewport resize transitions */
+    handleResize() {
+        const isMobileNow = this.isMobile();
+        
+        // No change in viewport category
+        if (isMobileNow === this._wasMobile) return;
+        
+        const wasDesktop = this._wasMobile === false;
+        const isNowMobile = isMobileNow === true;
+        const wasModalOpen = this.isOpen();
+        
+        this._wasMobile = isMobileNow;
+        
+        if (wasDesktop && isNowMobile) {
+            // Desktop → Mobile: preserve selected character and open mobile sheet
+            const selectedId = AppState?.selectedCharacterId;
+            if (selectedId) {
+                // Use double requestAnimationFrame to ensure DOM/CSS is fully settled after resize
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        // Verify selection is still valid
+                        if (AppState.selectedCharacterId === selectedId) {
+                            // Re-trigger viewCharacter which handles mobile opening properly
+                            viewCharacter(selectedId, { skipKeyboardSync: true, updateUrl: false });
+                        }
+                    });
+                });
+            }
+            // If no character was selected on desktop, do nothing - user can tap to view
+        } else if (!isMobileNow) {
+            // Mobile → Desktop: close modal view but preserve selected character
+            const selectedId = AppState?.selectedCharacterId;
+            
+            if (wasModalOpen) {
+                // Close the modal view without clearing selection (don't use this.close())
+                const gridPanel = document.getElementById('characterGridPanel');
+                if (gridPanel) {
+                    gridPanel.classList.remove('is-viewing-sheet');
+                }
+            }
+            
+            // If nothing is selected, auto-select the first character
+            // Otherwise keep the current selection from mobile
+            if (!selectedId && AppState.filteredCharacters.length > 0) {
+                const firstChar = AppState.filteredCharacters[0];
+                viewCharacter(firstChar.id, { skipKeyboardSync: false, updateUrl: true });
+            }
+        }
+    },
+
+    /** Check if mobile sheet view is open */
+    isOpen() {
+        const gridPanel = document.getElementById('characterGridPanel');
+        return gridPanel && gridPanel.classList.contains('is-viewing-sheet');
+    },
+
+    /** Open the mobile sheet view for a character (swaps grid for sheet) */
+    open(characterId) {
+        const gridPanel = document.getElementById('characterGridPanel');
+        const container = document.getElementById('mobileSheetContainer');
+        
+        if (!gridPanel || !container) return;
+        
+        // Check if we're in a swipe transition (loader was shown)
+        const isSwipeTransition = this._isSwipeLoading;
+        
+        // Clone the character sheet content into the container
+        const sourceSheet = document.getElementById('characterSheet');
+        const sourceTitleHeader = document.querySelector('.sheet__content .sheet-title-header');
+        // Status badges are now in the portrait overlay, not a separate row
+        const sourceStatusOverlay = document.querySelector('.sheet__content .sheet-status-overlay');
+        const campaignSlot = document.querySelector('.sheet__sidebar');
+        
+        // Insert title header (and status row if present) as direct child of gridPanel for proper sticky behavior
+        // Remove any existing mobile title header first
+        const existingHeader = document.getElementById('mobileSheetTitleHeader');
+        const existingMobileStatusRow = document.getElementById('mobileSheetStatusRow');
+        if (existingHeader) existingHeader.remove();
+        if (existingMobileStatusRow) existingMobileStatusRow.remove();
+        if (this._mobileCampaignObserver) {
+            this._mobileCampaignObserver.disconnect();
+            this._mobileCampaignObserver = null;
+        }
+        this._mobileCampaignLoaded = false;
+        
+        if (sourceTitleHeader) {
+            const titleHeader = document.createElement('div');
+            titleHeader.className = 'mobile-sheet-title-header';
+            titleHeader.id = 'mobileSheetTitleHeader';
+            
+            const mobileTitleName =
+                sourceTitleHeader.querySelector('.sheet-title-name')?.textContent?.trim() ||
+                sourceTitleHeader.querySelector('.sheet-title')?.textContent?.trim() ||
+                '[ Campaign ]';
+            const actions = sourceTitleHeader.querySelector('.sheet-title-actions');
+            
+            const titleWrapper = document.createElement('div');
+            titleWrapper.className = 'sheet-title';
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'sheet-title-name';
+            titleSpan.textContent = mobileTitleName;
+            titleWrapper.appendChild(titleSpan);
+            titleHeader.appendChild(titleWrapper);
+            
+            if (actions) {
+                titleHeader.appendChild(actions.cloneNode(true));
+            }
+            
+            container.parentNode.insertBefore(titleHeader, container);
+            
+            // Add click handler to title name to scroll back to top when pinned
+            const titleName = titleHeader.querySelector('.sheet-title-name') || titleHeader.querySelector('.sheet-title');
+            if (titleName) {
+                titleName.style.cursor = 'pointer';
+                titleName.addEventListener('click', () => {
+                    gridPanel.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            }
+            
+            // Copy status badges from portrait overlay to mobile status row
+            if (sourceStatusOverlay) {
+                const statusRow = document.createElement('div');
+                statusRow.className = 'mobile-sheet-status-row sheet-status-row';
+                statusRow.id = 'mobileSheetStatusRow';
+                statusRow.innerHTML = sourceStatusOverlay.innerHTML;
+                container.parentNode.insertBefore(statusRow, container);
+            }
+        }
+        
+        // Build mobile content: sheet content + campaign placeholder
+        let mobileContent = '';
+        if (sourceSheet) {
+            mobileContent += sourceSheet.innerHTML;
+        }
+        // Add placeholder for campaign section - will be loaded async
+        mobileContent += '<div class="mobile-campaign-section" id="mobileCampaignSection"></div>';
+        container.innerHTML = mobileContent;
+        
+        // Lazy-load campaign section when it nears viewport
+        const campaignSection = document.getElementById('mobileCampaignSection');
+        const loadCampaign = () => {
+            if (this._mobileCampaignLoaded) return;
+            this._mobileCampaignLoaded = true;
+            this._loadMobileCampaign(characterId);
+            if (this._mobileCampaignObserver) {
+                this._mobileCampaignObserver.disconnect();
+                this._mobileCampaignObserver = null;
+            }
+        };
+        if ('IntersectionObserver' in window && campaignSection) {
+            this._mobileCampaignObserver = new IntersectionObserver(
+                (entries) => {
+                    if (entries.some((e) => e.isIntersecting)) {
+                        loadCampaign();
+                    }
+                },
+                {
+                    root: gridPanel,
+                    rootMargin: '128px',
+                    threshold: 0.01
+                }
+            );
+            this._mobileCampaignObserver.observe(campaignSection);
+        } else {
+            loadCampaign();
+        }
+        
+        // If this was a swipe transition, re-add the loader overlay
+        if (isSwipeTransition) {
+            this.addSwipeLoaderToContainer(container);
+        }
+        
+        // Swap to sheet view
+        gridPanel.classList.add('is-viewing-sheet');
+        
+        // Update character count display
+        this.updateCharacterCount(characterId);
+
+        // Update the view toggle link text (should show "Campaign" since we start in sheet view)
+        this._updateViewToggle();
+
+        // Scroll to top when showing character sheet
+        gridPanel.scrollTop = 0;
+        
+        // Wait for portrait image to load before hiding the loader
+        if (isSwipeTransition) {
+            this.waitForPortraitLoad(container);
+        }
+        
+        // Show "Edit character" in header overflow menu on mobile
+        const editCharBtn = document.getElementById('overflowEditCharacterBtn');
+        if (editCharBtn) {
+            editCharBtn.classList.remove('is-hidden');
+        }
+    },
+    
+    /** Load campaign content for mobile view */
+    async _loadMobileCampaign(characterId) {
+        const section = document.getElementById('mobileCampaignSection');
+        if (!section) return;
+        
+        // Get scroll container (the grid panel on mobile)
+        const scrollContainer = document.getElementById('characterGridPanel');
+        
+        // Show loading skeleton
+        section.innerHTML = ExpandedView._renderCampaignSkeleton();
+        
+        // Load campaign data
+        try {
+            const isAuthenticated = window.AuthService && AuthService.isAuthenticated();
+            if (!isAuthenticated) {
+                // Save scroll position before content update
+                const savedScroll = scrollContainer?.scrollTop || 0;
+                section.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+                // Restore scroll position to prevent auto-scroll
+                if (scrollContainer) scrollContainer.scrollTop = savedScroll;
+                return;
+            }
+            
+            // Get character's campaign
+            const character = AppState.characters?.find(c => String(c.id) === String(characterId));
+            let campaignId = character?.campaignId;
+            let campaignData = null;
+            
+            if (!campaignId && typeof CampaignUI !== 'undefined') {
+                campaignData = await CampaignUI.getCharacterCampaign(characterId).catch(() => null);
+                if (campaignData) campaignId = campaignData.campaign?.id;
+            }
+            
+            if (!campaignId) {
+                // Save scroll position before content update
+                const savedScroll = scrollContainer?.scrollTop || 0;
+                section.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+                // Restore scroll position to prevent auto-scroll
+                if (scrollContainer) scrollContainer.scrollTop = savedScroll;
+                return;
+            }
+            
+            // Fetch campaign data if not already have it
+            if (!campaignData && typeof CampaignUI !== 'undefined') {
+                campaignData = await CampaignUI.getCharacterCampaign(characterId).catch(() => null);
+            }
+            
+            // Fetch journal entries (use campaign-wide endpoint when in a campaign)
+            let journalEntries = [];
+            if (typeof CampaignAPI !== 'undefined' && campaignId) {
+                journalEntries = await CampaignAPI.getCampaignJournalEntries(
+                    campaignId, 
+                    CampaignUI._journalFilterUserId
+                ).catch(() => []);
+            } else if (typeof CampaignAPI !== 'undefined') {
+                journalEntries = await CampaignAPI.getJournalEntries(characterId).catch(() => []);
+            }
+            
+            // Save scroll position before content update
+            const savedScroll = scrollContainer?.scrollTop || 0;
+            section.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, campaignData, 0, journalEntries || []);
+            ExpandedView._initDescriptionTruncation();
+            // Restore scroll position to prevent auto-scroll
+            if (scrollContainer) scrollContainer.scrollTop = savedScroll;
+        } catch (e) {
+            console.warn('Failed to load mobile campaign:', e);
+            // Save scroll position before content update
+            const savedScroll = scrollContainer?.scrollTop || 0;
+            section.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+            // Restore scroll position to prevent auto-scroll
+            if (scrollContainer) scrollContainer.scrollTop = savedScroll;
+        }
+    },
+    
+    /** Update the character count display in the mobile back bar (centered, x/y format) */
+    updateCharacterCount(characterId) {
+        const countEl = document.getElementById('mobileNavCount');
+        if (!countEl) return;
+        
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) {
+            countEl.textContent = '1/1';
+            return;
+        }
+        
+        const currentIndex = characters.findIndex(c => c.id === characterId);
+        const currentNum = currentIndex >= 0 ? currentIndex + 1 : 1;
+        const total = characters.length;
+        
+        countEl.textContent = currentNum + '/' + total;
+    },
+    
+    /** Update the view toggle link (now just an anchor to campaign section) */
+    _updateViewToggle() {
+        // Link text is always "⚔ Campaign" since it's just a scroll anchor now
+        const toggleEl = document.getElementById('mobileViewToggle');
+        if (toggleEl) {
+            toggleEl.innerHTML = '⚔ Campaign';
+        }
+    },
+    
+    /** 
+     * Refresh the mobile campaign section if we're on mobile and viewing a character.
+     * This should be called whenever campaign data changes (journal entries, invites, etc.)
+     * @param {boolean} scrollAfter - If true, scrolls to the campaign section after refresh.
+     *                                 Defaults to false to prevent unwanted auto-scrolling during load.
+     */
+    async refreshCampaignSection(scrollAfter = false) {
+        if (!this.isMobile()) return;
+        
+        const gridPanel = document.getElementById('characterGridPanel');
+        if (!gridPanel?.classList.contains('is-viewing-sheet')) return;
+        
+        const characterId = AppState.selectedCharacterId;
+        if (!characterId) return;
+        
+        // Refresh the campaign section at the bottom of the sheet
+        await this._loadMobileCampaign(characterId);
+        this._mobileCampaignLoaded = true;
+        
+        // Only scroll to campaign section if explicitly requested
+        if (scrollAfter) {
+            const campaignSection = document.getElementById('mobileCampaignSection');
+            if (campaignSection) {
+                // Use requestAnimationFrame to ensure DOM has updated before scrolling
+                requestAnimationFrame(() => {
+                    campaignSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            }
+        }
+    },
+    
+    /** Scroll to campaign section (legacy method, now just scrolls) */
+    toggleCampaign() {
+        scrollToCampaign();
+    },
+    
+    /** Add the swipe loader overlay to the portrait container */
+    addSwipeLoaderToContainer(container) {
+        // Find the portrait container within the sheet
+        const portraitContainer = container.querySelector('.portrait-container');
+        if (!portraitContainer) return;
+        
+        const loader = document.createElement('div');
+        loader.className = 'mobile-swipe-loader is-visible';
+        loader.innerHTML = `
+            <div class="panel-loading-cube-container">
+                <div class="panel-loading-cube">
+                    <i></i><i></i><i></i><i></i><i></i><i></i>
+                </div>
+            </div>
+        `;
+        portraitContainer.appendChild(loader);
+    },
+    
+    /** Wait for portrait image to load, then hide the swipe loader */
+    waitForPortraitLoad(container) {
+        // Minimum time to show loader for visual feedback (prevents flicker)
+        const MIN_LOADER_DURATION = 150;
+        const loaderStartTime = Date.now();
+        
+        const hideWithMinDuration = () => {
+            const elapsed = Date.now() - loaderStartTime;
+            const remaining = MIN_LOADER_DURATION - elapsed;
+            if (remaining > 0) {
+                setTimeout(() => this.hideSwipeLoader(), remaining);
+            } else {
+                this.hideSwipeLoader();
+            }
+        };
+        
+        // Find all portrait images in the container (original and/or ascii)
+        const images = container.querySelectorAll('img.original-portrait, .ascii-portrait img');
+        
+        if (images.length === 0) {
+            // No images found - hide after minimum duration
+            hideWithMinDuration();
+            return;
+        }
+        
+        // Track how many images need to load
+        let pendingCount = 0;
+        let loadedOrErrored = 0;
+        
+        const checkComplete = () => {
+            loadedOrErrored++;
+            if (loadedOrErrored >= pendingCount) {
+                hideWithMinDuration();
+            }
+        };
+        
+        images.forEach(img => {
+            if (!img.complete) {
+                pendingCount++;
+                img.addEventListener('load', checkComplete, { once: true });
+                img.addEventListener('error', checkComplete, { once: true });
+            }
+        });
+        
+        if (pendingCount === 0) {
+            // All images already loaded (cached) - hide after minimum duration
+            hideWithMinDuration();
+        } else {
+            // Fallback timeout in case something goes wrong (5 seconds)
+            setTimeout(() => {
+                this.hideSwipeLoader();
+            }, 5000);
+        }
+    },
+
+    /** Close the mobile sheet view (returns to grid) */
+    close() {
+        const gridPanel = document.getElementById('characterGridPanel');
+        if (!gridPanel) return;
+        
+        gridPanel.classList.remove('is-viewing-sheet');
+        
+        // Remove the mobile title header and status row (they're direct children of gridPanel)
+        const mobileHeader = document.getElementById('mobileSheetTitleHeader');
+        const mobileStatusRow = document.getElementById('mobileSheetStatusRow');
+        if (mobileHeader) mobileHeader.remove();
+        if (mobileStatusRow) mobileStatusRow.remove();
+        if (this._mobileCampaignObserver) {
+            this._mobileCampaignObserver.disconnect();
+            this._mobileCampaignObserver = null;
+        }
+        this._mobileCampaignLoaded = false;
+        
+        // Hide "Edit character" in header overflow menu when leaving mobile sheet
+        const editCharBtn = document.getElementById('overflowEditCharacterBtn');
+        if (editCharBtn) {
+            editCharBtn.classList.add('is-hidden');
+        }
+        
+        // Clear selection state on mobile when going back
+        if (typeof AppState !== 'undefined' && AppState) {
+            AppState.selectedCharacterId = null;
+        }
+        
+        // Remove is-selected from all cards
+        document.querySelectorAll('.character-card').forEach(card => {
+            card.classList.remove('is-selected');
+        });
+        
+        // Clear URL param
+        clearCharacterFromUrl();
+    }
+};
+
+// ========================================
+// PORTRAIT LIGHTBOX (Mobile)
+// Full-screen image viewer for character portraits
+// ========================================
+const PortraitLightbox = {
+    _lightbox: null,
+    _isTouch: false,
+    
+    /** Create the lightbox element if it doesn't exist */
+    _ensureLightbox() {
+        if (this._lightbox) return this._lightbox;
+        
+        const lightbox = document.createElement('div');
+        lightbox.className = 'portrait-lightbox';
+        lightbox.innerHTML = `
+            <div class="portrait-lightbox-backdrop"></div>
+            <img class="portrait-lightbox-image" src="" alt="Portrait">
+            <div class="portrait-lightbox-name"></div>
+            <div class="portrait-lightbox-hint">Tap to close</div>
+        `;
+        document.body.appendChild(lightbox);
+        this._lightbox = lightbox;
+        
+        // Close on backdrop tap
+        const backdrop = lightbox.querySelector('.portrait-lightbox-backdrop');
+        backdrop.addEventListener('click', () => this.close());
+        
+        // Also close on lightbox tap (anywhere)
+        lightbox.addEventListener('click', (e) => {
+            // Only close if tap is on the lightbox itself or backdrop, not the image
+            if (e.target === lightbox || e.target === backdrop) {
+                this.close();
+            }
+        });
+        
+        // Close on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isOpen()) {
+                this.close();
+            }
+        });
+        
+        return lightbox;
+    },
+    
+    /** Check if lightbox is currently open */
+    isOpen() {
+        return this._lightbox && this._lightbox.classList.contains('is-open');
+    },
+    
+    /** Open the lightbox with the given image URL and optional character name */
+    open(imageUrl, characterName = '') {
+        if (!imageUrl) return;
+        
+        const lightbox = this._ensureLightbox();
+        const img = lightbox.querySelector('.portrait-lightbox-image');
+        const nameEl = lightbox.querySelector('.portrait-lightbox-name');
+        
+        // Set the image source
+        img.src = imageUrl;
+        
+        // Set the character name
+        if (nameEl) {
+            nameEl.textContent = characterName;
+            nameEl.style.display = characterName ? '' : 'none';
+        }
+        
+        // Prevent body scroll while lightbox is open
+        document.body.style.overflow = 'hidden';
+        
+        // Open the lightbox
+        lightbox.classList.add('is-open');
+    },
+    
+    /** Close the lightbox */
+    close() {
+        if (!this._lightbox) return;
+        
+        this._lightbox.classList.remove('is-open');
+        
+        // Restore body scroll
+        document.body.style.overflow = '';
+    },
+    
+    /** Initialize portrait tap handlers for mobile */
+    init() {
+        // Detect touch device
+        this._isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        // Use event delegation for portrait clicks
+        document.addEventListener('click', (e) => {
+            // Guard against non-element targets (text nodes, etc.)
+            if (!e.target || typeof e.target.closest !== 'function') return;
+            
+            // Only handle on mobile/touch
+            if (!MobileView.isMobile() && !this._isTouch) return;
+            
+            // Don't open lightbox if tapping on overlay tags (shared/demo/spell tags, status badges)
+            if (e.target.closest('.sheet-shared-tag, .sheet-status-badge, .sheet-demo-tag, .sheet-spell-tag, .custom-tooltip')) return;
+            
+            // Check if clicked element is a portrait image
+            const portrait = e.target.closest('.portrait-container--original-mode .original-portrait.is-loaded');
+            if (!portrait) return;
+            
+            // Don't open lightbox if it's already open
+            if (this.isOpen()) return;
+            
+            // Get the image URL
+            const imageUrl = portrait.src;
+            if (imageUrl) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Find character name from the sheet
+                // Use .sheet-title-name to avoid including SHARED tag text
+                const sheet = portrait.closest('.character-sheet');
+                const nameEl = sheet?.querySelector('.sheet-title-name') || sheet?.querySelector('.sheet-title');
+                const characterName = nameEl?.textContent?.trim() || '';
+                
+                this.open(imageUrl, characterName);
+            }
+        }, true); // Use capture to get click before other handlers
+    }
+};
+
+/** Global function to close mobile sheet (called from HTML onclick) */
+function closeMobileSheet() {
+    MobileView.close();
+}
+
+/** Global function to switch to campaign view on mobile (called from HTML onclick) */
+function scrollToCampaign() {
+    // Scroll to the campaign section at the bottom of the mobile sheet
+    const campaignSection = document.getElementById('mobileCampaignSection');
+    const scrollContainer = document.getElementById('characterGridPanel');
+    if (!campaignSection || !scrollContainer) return;
+    
+    // Calculate offset for sticky headers (mobileBackBar + mobileSheetTitleHeader)
+    const mobileBackBar = document.getElementById('mobileBackBar');
+    const mobileSheetTitleHeader = document.getElementById('mobileSheetTitleHeader');
+    
+    let stickyOffset = 0;
+    if (mobileBackBar) {
+        stickyOffset += mobileBackBar.offsetHeight;
+    }
+    if (mobileSheetTitleHeader) {
+        stickyOffset += mobileSheetTitleHeader.offsetHeight;
+    }
+    
+    // Calculate target scroll position accounting for sticky headers
+    const campaignTop = campaignSection.offsetTop;
+    const targetScroll = campaignTop - stickyOffset;
+    
+    scrollContainer.scrollTo({
+        top: targetScroll,
+        behavior: 'smooth'
+    });
+}
+
+// ========================================
+// UI RENDERING
+// ========================================
+const UI = {
+    // Default number of skeleton cards to show while loading
+    SKELETON_CARD_COUNT: 9,
+    
+    // Batch size for progressive rendering (cards per frame)
+    RENDER_BATCH_SIZE: 12,
+    
+    /**
+     * Render a single skeleton card for the loading state
+     */
+    _renderSkeletonCard() {
+        return `
+            <div class="character-card character-card--skeleton">
+                <div class="card-thumbnail"></div>
+                <div class="card-details">
+                    <div class="skeleton-name"></div>
+                    <div class="skeleton-info"></div>
+                </div>
+            </div>
+        `;
+    },
+    
+    /**
+     * Render skeleton cards in the grid while data is loading
+     * @param {number} count - Number of skeleton cards to show
+     */
+    renderSkeletonGrid(count = this.SKELETON_CARD_COUNT) {
+        const grid = document.getElementById('characterGrid');
+        if (!grid) {
+            if (DEBUG_MANAGER) console.log('⏳ SKELETON: Grid element not found');
+            return;
+        }
+        
+        grid.innerHTML = Array(count).fill(this._renderSkeletonCard()).join('');
+        if (DEBUG_MANAGER) console.log(`⏳ SKELETON: Rendered ${count} skeleton cards`);
+    },
+    
+    setLoadingState(isLoading) {
+        const gridLoading = document.getElementById('gridPanelLoading');
+        const sheetLoading = document.getElementById('sheetPanelLoading');
+        const campaignLoading = document.getElementById('campaignPanelLoading');
+        const loadingRow = document.querySelector('.panel-loading-row');
+        const grid = document.getElementById('characterGrid');
+        const emptyState = document.getElementById('emptyState');
+        const sheetPlaceholder = document.querySelector('.sheet-placeholder');
+        const characterSheet = document.getElementById('characterSheet');
+        const campaignPlaceholder = document.querySelector('.campaign-panel-placeholder');
+        const sheetNavBar = document.getElementById('sheetNavBar');
+
+        if (isLoading) {
+            // Show skeleton cards in the grid instead of hiding it
+            this.renderSkeletonGrid();
+            if (grid) grid.classList.remove('is-hidden');
+            
+            // Hide ALL loading indicators (skeleton cards provide loading feedback)
+            // This prevents the absolute-positioned loading row from blocking the skeleton view
+            if (loadingRow) loadingRow.classList.add('is-hidden');
+            if (gridLoading) gridLoading.classList.add('is-hidden');
+            if (sheetLoading) sheetLoading.classList.add('is-hidden');
+            if (campaignLoading) campaignLoading.classList.add('is-hidden');
+            
+            if (emptyState) emptyState.classList.add('is-hidden');
+            if (sheetPlaceholder) sheetPlaceholder.classList.add('is-hidden');
+            if (characterSheet) characterSheet.classList.add('is-hidden');
+            if (campaignPlaceholder) campaignPlaceholder.classList.add('is-hidden');
+            if (sheetNavBar) sheetNavBar.classList.add('is-hidden');
+        } else {
+            if (loadingRow) loadingRow.classList.remove('is-hidden');
+            if (gridLoading) gridLoading.classList.add('is-hidden');
+            if (sheetLoading) sheetLoading.classList.add('is-hidden');
+            if (campaignLoading) campaignLoading.classList.add('is-hidden');
+            if (grid) grid.classList.remove('is-hidden');
+            // sheetNavBar visibility is controlled by showCharacterSheet() to sync with characterSheet
+            // empty state, sheet, and campaign visibility will be controlled by UI.render()
+        }
+    },
+
+    // Flag to track if we've handled the initial URL character selection
+    _initialUrlCharacterHandled: false,
+
+    render() {
+        const previousSelectedId =
+            typeof AppState !== 'undefined' && AppState
+                ? AppState.selectedCharacterId
+                : null;
+
+        this.renderCharacterGrid();
+        this.updateCount();
+
+        const characters =
+            typeof AppState !== 'undefined' &&
+            AppState &&
+            Array.isArray(AppState.filteredCharacters)
+                ? AppState.filteredCharacters
+                : [];
+        const placeholder = document.querySelector('.sheet-placeholder');
+        const sheetEl = document.getElementById('characterSheet');
+        const navBarEl = document.getElementById('sheetNavBar');
+
+        const campaignSlot = document.querySelector('.sheet__sidebar');
+        
+        if (!characters.length) {
+            if (placeholder) placeholder.classList.remove('is-hidden');
+            if (sheetEl) sheetEl.classList.add('is-hidden');
+            if (campaignSlot) campaignSlot.classList.add('is-hidden');
+            // Don't hide navBar - keep it visible
+            if (typeof AppState !== 'undefined' && AppState) {
+                AppState.selectedCharacterId = null;
+            }
+            clearCharacterFromUrl();
+            return;
+        }
+
+        // Check URL for character selection (only on first render with characters)
+        let urlCharacterId = null;
+        if (!this._initialUrlCharacterHandled) {
+            urlCharacterId = getCharacterIdFromUrl();
+            this._initialUrlCharacterHandled = true;
+        }
+
+        const isMobile = typeof MobileView !== 'undefined' && MobileView.isMobile();
+
+        // Ensure we have a valid selected id within the current filtered list.
+        // Priority: URL param > previous selection > first character (desktop only)
+        let targetId = urlCharacterId || previousSelectedId || null;
+        const hasValidSelection =
+            targetId &&
+            characters.some((c) => String(c.id) === String(targetId));
+
+        if (!hasValidSelection) {
+            // On mobile, don't auto-select the first character (user must tap)
+            // On desktop, always have something selected
+            targetId = isMobile ? null : (characters[0] && characters[0].id);
+        }
+
+        if (typeof AppState !== 'undefined' && AppState) {
+            AppState.selectedCharacterId = targetId || null;
+        }
+
+        // Sync the card highlight and keyboard focus with the selected id.
+        const grid = document.getElementById('characterGrid');
+        if (grid) {
+            const cards = Array.from(grid.querySelectorAll('.character-card'));
+            cards.forEach((card) => card.classList.remove('is-selected'));
+
+            if (targetId) {
+                const selectedCard = grid.querySelector(`[data-id="${targetId}"]`);
+                if (selectedCard) {
+                    selectedCard.classList.add('is-selected');
+
+                    if (
+                        typeof KeyboardNav !== 'undefined' &&
+                        KeyboardNav &&
+                        typeof KeyboardNav.getCharacterCards === 'function'
+                    ) {
+                        const allCards = KeyboardNav.getCharacterCards();
+                        const cardIndex = allCards.indexOf(selectedCard);
+                        if (cardIndex !== -1) {
+                            KeyboardNav.currentFocusIndex = cardIndex;
+                            // Keep keyboard focus visuals in sync without
+                            // re-triggering a sheet update.
+                            KeyboardNav.updateFocus(true);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Handle sheet rendering based on viewport
+        if (targetId && (targetId !== previousSelectedId || urlCharacterId)) {
+            if (isMobile) {
+                // On mobile with URL character, render sheet then open modal
+                // Use openMobileModal: false here since we handle modal opening manually
+                // IMPORTANT: viewCharacter is async - we must wait for it to complete
+                // before opening the mobile view, otherwise the sheet may be empty
+                const openMobileAfterLoad = async () => {
+                    await viewCharacter(targetId, { skipKeyboardSync: true, updateUrl: false, openMobileModal: false });
+                    if (urlCharacterId) {
+                        // Use double requestAnimationFrame to ensure DOM has painted
+                        // before cloning. This is more reliable than a fixed timeout.
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                                // Verify this is still the selected character
+                                if (AppState.selectedCharacterId === targetId) {
+                                    MobileView.open(targetId);
+                                }
+                            });
+                        });
+                    }
+                };
+                openMobileAfterLoad();
+            } else {
+                // Desktop: render sheet in right panel as usual
+                viewCharacter(targetId, { skipKeyboardSync: true, updateUrl: !urlCharacterId, openMobileModal: false });
+            }
+        } else if (targetId && !isMobile) {
+            // Same character still selected after data reload (e.g., after joining campaign)
+            // Restore sheet visibility that may have been hidden by setLoadingState(true)
+            if (placeholder) placeholder.classList.add('is-hidden');
+            if (sheetEl) sheetEl.classList.remove('is-hidden');
+            if (campaignSlot) campaignSlot.classList.remove('is-hidden');
+            if (navBarEl) navBarEl.classList.remove('is-hidden');
+        } else if (!targetId && !isMobile) {
+            // Desktop with no selection and no characters - show placeholder
+            if (placeholder) placeholder.classList.remove('is-hidden');
+            if (sheetEl) sheetEl.classList.add('is-hidden');
+            if (campaignSlot) campaignSlot.classList.add('is-hidden');
+            if (navBarEl) navBarEl.classList.add('is-hidden');
+        }
+    },
+
+    // Threshold for using batched rendering (characters above this count use progressive render)
+    BATCH_RENDER_THRESHOLD: 20,
+    
+    // Cancel any pending batched render
+    _cancelBatchedRender() {
+        if (this._batchRenderFrameId) {
+            cancelAnimationFrame(this._batchRenderFrameId);
+            this._batchRenderFrameId = null;
+        }
+    },
+    
+    renderCharacterGrid() {
+        if (DEBUG_MANAGER) {
+            console.log('🎨 RENDER: Starting grid render with', AppState.filteredCharacters.length, 'characters');
+            console.log('🎨 RENDER: Character names:', AppState.filteredCharacters.map(c => c.name).join(', '));
+        }
+        
+        // Cancel any pending batched render from previous call
+        this._cancelBatchedRender();
+        
+        // Theme inherits from parent - no need to set explicitly
+        
+        const grid = document.getElementById('characterGrid');
+        const emptyState = document.getElementById('emptyState');
+        const characters = AppState.filteredCharacters;
+
+        if (characters.length === 0) {
+            // Show a single "New Character" card in the grid, positioned as the
+            // first card would be when characters exist.
+            grid.innerHTML = `
+                <div class="character-card new-character-card" onclick="createNewCharacter()">
+                    <div class="card-details">
+                        <div class="card-name">+ New Character</div>
+                    </div>
+                </div>
+            `;
+
+            if (emptyState) {
+                emptyState.classList.remove('show');
+            }
+            KeyboardNav.isActive = true;
+            KeyboardNav.reset();
+            return;
+        }
+
+        emptyState.classList.remove('show');
+        
+        // For large character lists, use batched rendering to avoid UI freeze
+        if (characters.length > this.BATCH_RENDER_THRESHOLD) {
+            this._renderCharacterGridBatched(grid, characters);
+        } else {
+            // Small list: render immediately
+            grid.innerHTML = characters.map(char => this.renderCharacterCard(char)).join('');
+            this._postRenderCharacterGrid(characters);
+        }
+    },
+    
+    /**
+     * Render character cards in batches using requestAnimationFrame
+     * Shows skeleton placeholders first, then progressively replaces them
+     */
+    _renderCharacterGridBatched(grid, characters) {
+        const batchSize = this.RENDER_BATCH_SIZE;
+        let currentIndex = 0;
+        
+        // First, show skeleton placeholders for all cards (instant feedback)
+        grid.innerHTML = characters.map((char, i) => 
+            `<div class="character-card character-card--skeleton" data-placeholder-id="${char.id}">
+                <div class="card-thumbnail"></div>
+                <div class="card-details">
+                    <div class="skeleton-name"></div>
+                    <div class="skeleton-info"></div>
+                </div>
+            </div>`
+        ).join('');
+        
+        // Progressively replace skeletons with real cards
+        const renderBatch = () => {
+            const endIndex = Math.min(currentIndex + batchSize, characters.length);
+            
+            for (let i = currentIndex; i < endIndex; i++) {
+                const char = characters[i];
+                const placeholder = grid.querySelector(`[data-placeholder-id="${char.id}"]`);
+                if (placeholder) {
+                    // Create real card element and replace skeleton
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.renderCharacterCard(char);
+                    const realCard = tempDiv.firstElementChild;
+                    placeholder.replaceWith(realCard);
+                    
+                    // Populate ASCII thumbnail if needed
+                    this._populateCardThumbnail(char);
+                }
+            }
+            
+            currentIndex = endIndex;
+            
+            if (currentIndex < characters.length) {
+                // More cards to render, schedule next batch
+                this._batchRenderFrameId = requestAnimationFrame(renderBatch);
+            } else {
+                // All cards rendered, run post-render setup
+                this._batchRenderFrameId = null;
+                this._postRenderCharacterGrid(characters);
+            }
+        };
+        
+        // Start batched rendering on next frame
+        this._batchRenderFrameId = requestAnimationFrame(renderBatch);
+    },
+    
+    /**
+     * Populate a single card's ASCII thumbnail
+     */
+    _populateCardThumbnail(char) {
+        const thumbnailEl = document.getElementById(`card-thumb-${char.id}`);
+        if (!thumbnailEl) return;
+        
+        // Skip if this is an image thumbnail (already rendered in HTML)
+        if (thumbnailEl.classList.contains('card-thumbnail--image')) return;
+        
+        const asciiPortrait = window.CharacterSheet
+            ? window.CharacterSheet.getAsciiPortrait(char)
+            : (char.customPortraitAscii || char.portrait?.ascii || char.asciiPortrait || null);
+        if (asciiPortrait) {
+            thumbnailEl.innerHTML = '';
+            const pre = document.createElement('pre');
+            pre.textContent = this.cropAsciiForThumbnail(asciiPortrait);
+            thumbnailEl.appendChild(pre);
+        }
+    },
+    
+    /**
+     * Post-render setup (keyboard nav, tooltips, thumbnails)
+     * Called after all cards are rendered (immediate or batched)
+     */
+    _postRenderCharacterGrid(characters) {
+        // Populate ASCII thumbnails for all cards
+        characters.forEach(char => this._populateCardThumbnail(char));
+        
+        // Reset keyboard navigation to first card
+        KeyboardNav.isActive = true;
+        KeyboardNav.reset();
+        
+        // Setup tooltip portal
+        this._setupCardTooltips();
+    },
+    
+    /**
+     * Setup tooltip portal for card status icons
+     */
+    _setupCardTooltips() {
+        // Create a portal container at body level for tooltips (escapes all overflow/stacking contexts)
+        let tooltipPortal = document.getElementById('card-tooltip-portal');
+        if (!tooltipPortal) {
+            tooltipPortal = document.createElement('div');
+            tooltipPortal.id = 'card-tooltip-portal';
+            document.body.appendChild(tooltipPortal);
+        }
+        
+        document.querySelectorAll('.card-status-icon.has-tooltip').forEach(icon => {
+            const originalTooltip = icon.querySelector('.custom-tooltip');
+            if (!originalTooltip) return;
+            
+            let portalTooltip = null;
+            
+            icon.addEventListener('mouseenter', () => {
+                const iconRect = icon.getBoundingClientRect();
+                
+                // Clone tooltip content to portal
+                portalTooltip = originalTooltip.cloneNode(true);
+                portalTooltip.classList.add('card-portal-tooltip');
+                // Position to the right of the icon
+                portalTooltip.style.cssText = `
+                    position: fixed;
+                    top: ${iconRect.top}px;
+                    left: ${iconRect.right + 6}px;
+                    z-index: 10001;
+                    opacity: 1;
+                    transform: scale(1);
+                    pointer-events: none;
+                `;
+                tooltipPortal.appendChild(portalTooltip);
+            });
+            
+            icon.addEventListener('mouseleave', () => {
+                if (portalTooltip && portalTooltip.parentNode) {
+                    portalTooltip.parentNode.removeChild(portalTooltip);
+                    portalTooltip = null;
+                }
+            });
+        });
+    },
+    
+    cropAsciiForThumbnail(asciiArt, heightLines = 80, widthChars = 160) {
+        // Split into lines
+        const lines = asciiArt.split('\n');
+        
+        // VERTICAL: Crop from bottom only (keep top pinned for faces/heads)
+        const totalLines = lines.length;
+        const startLine = 0;
+        const endLine = Math.min(totalLines, heightLines);
+        
+        // HORIZONTAL: Crop equally from both sides to stay centered
+        const topLines = lines.slice(startLine, endLine).map(line => {
+            if (line.length <= widthChars) return line;
+            const excess = line.length - widthChars;
+            const cropLeft = Math.floor(excess / 2);
+            return line.slice(cropLeft, cropLeft + widthChars);
+        });
+        
+        return topLines.join('\n');
+    },
+
+    renderCharacterCard(character) {
+        // Handle race/class names (enhanced export has nested data)
+        const raceNameRaw = character.raceData?.name || character.race || '?';
+        const classNameRaw = character.classData?.name || character.class || '?';
+        const raceClassSentence = toSentenceCase(`${raceNameRaw}\u0020${classNameRaw}`.trim());
+        const raceClass = Utils.escapeHtml(raceClassSentence || '?');
+        const name = Utils.escapeHtml(character.name || 'Unnamed Character');
+        
+        // Get ASCII portrait for thumbnail using shared logic so the card
+        // matches the character sheet view.
+        const asciiPortrait = window.CharacterSheet
+            ? window.CharacterSheet.getAsciiPortrait(character)
+            : (character.customPortraitAscii || character.portrait?.ascii || character.asciiPortrait || null);
+        const hasAsciiPortrait = asciiPortrait && asciiPortrait.length > 0;
+        
+        // Get original portrait URL
+        const originalPortraitUrl = window.CharacterSheet
+            ? window.CharacterSheet.getOriginalPortraitUrl(character)
+            : (character.originalPortraitUrl || character.portrait?.url || null);
+
+        // Debug logging for portrait mismatch investigation
+        if (window.DEBUG_PORTRAITS) {
+            console.log(`🖼️ [PORTRAIT DEBUG] renderCharacterCard`, {
+                characterId: character.id,
+                characterName: character.name,
+                context: 'card',
+                hasAscii: hasAsciiPortrait,
+                asciiLength: asciiPortrait?.length || 0,
+                url: originalPortraitUrl,
+                portraitMetadataActiveId: character.portraitMetadata?.activeVersionId || null,
+                portraitMetadataVersionsCount: character.portraitMetadata?.versions?.length || 0
+            });
+        }
+        
+        // Check portrait view mode preference
+        let portraitViewMode = 'original';
+        try {
+            if (window.StorageService && StorageService.getPortraitViewMode) {
+                portraitViewMode = StorageService.getPortraitViewMode();
+            } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+                portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+            }
+        } catch (e) {
+            // Non-fatal: keep default
+        }
+        
+        // Determine which thumbnail to show
+        const showOriginalImage = portraitViewMode === 'original' && !!originalPortraitUrl;
+        const hasPortrait = hasAsciiPortrait || !!originalPortraitUrl;
+        
+        let thumbnailHtml = '';
+        if (hasPortrait) {
+            if (showOriginalImage) {
+                // Show original image (onload adds is-loaded class for fade-in effect)
+                thumbnailHtml = `<div class="card-thumbnail card-thumbnail--image" id="card-thumb-${character.id}">
+                    <img src="${Utils.escapeHtml(originalPortraitUrl)}" alt="${name}" loading="lazy" decoding="async" width="600" height="800" onload="this.classList.add('is-loaded')" />
+                </div>`;
+            } else if (hasAsciiPortrait) {
+                // Show ASCII art (content will be populated after render)
+                thumbnailHtml = `<div class="card-thumbnail" id="card-thumb-${character.id}"></div>`;
+            }
+        }
+
+        // Check if this is a demo character - only show SAMPLE tag in guest mode
+        const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
+        const isDemoMode = window.DemoCharacters && window.DemoCharacters.isDemoMode();
+        const demoTagHtml = (isDemo && isDemoMode) ? '<span class="card-demo-tag">SAMPLE</span>' : '';
+        
+        // Check if this is a shared character:
+        // - is_shared = true means current user is a collaborator (not owner)
+        // - collaborator_count > 0 means owner has shared with others
+        const isSharedWithMe = character.is_shared || character.isShared;
+        const collaboratorCount = character.collaborator_count || character.collaboratorCount || 0;
+        const hasCollaborators = collaboratorCount > 0;
+        const showSharedTag = isSharedWithMe || hasCollaborators;
+        
+        // Check if character is pinned
+        const isPinned = isCharacterPinned(character.id);
+        
+        // Check if character is in a campaign
+        const characterCampaignId = character.campaignId || character.campaign_id;
+        const isInCampaign = !!characterCampaignId;
+        const campaignName = character.campaignName || character.campaign_name || null;
+        
+        // Get owner email for shared characters
+        const ownerEmail = character.owner_email || character.ownerEmail || null;
+        const lastUpdatedByEmail = character.last_updated_by_email || character.lastUpdatedByEmail || null;
+        
+        // Build status icons (icon-only, no text) with tooltips
+        // Order: IN CAMPAIGN, SHARED, PINNED
+        const statusIcons = [];
+        if (isInCampaign) {
+            const campaignTooltip = campaignName 
+                ? Utils.escapeHtml(campaignName)
+                : 'In Campaign';
+            statusIcons.push(`<span class="card-status-icon card-status-icon--campaign has-tooltip">⚔<span class="custom-tooltip" data-position="right">${campaignTooltip}</span></span>`);
+        }
+        if (showSharedTag) {
+            // Build shared tooltip content (matching character sheet format)
+            const updatedAt = character.updatedAt || character.updated_at;
+            let lastUpdatedText = '';
+            if (updatedAt) {
+                lastUpdatedText = Utils.formatCompactDate(updatedAt);
+            }
+            
+            let sharedTooltip = '';
+            if (isSharedWithMe) {
+                // Collaborator's view
+                const sharedByLine = `Shared by ${Utils.escapeHtml(ownerEmail || 'unknown')}`;
+                let updatedLine = '';
+                if (lastUpdatedText) {
+                    updatedLine = lastUpdatedByEmail 
+                        ? `Last updated: ${lastUpdatedText}<br>by ${Utils.escapeHtml(lastUpdatedByEmail)}`
+                        : `Last updated: ${lastUpdatedText}`;
+                }
+                sharedTooltip = updatedLine ? `${sharedByLine}<br>${updatedLine}` : sharedByLine;
+            } else if (hasCollaborators) {
+                // Owner's view
+                const sharedWithLine = collaboratorCount === 1 ? 'Shared with 1 user' : `Shared with ${collaboratorCount} users`;
+                let updatedLine = '';
+                if (lastUpdatedText) {
+                    updatedLine = lastUpdatedByEmail 
+                        ? `Last updated: ${lastUpdatedText}<br>by ${Utils.escapeHtml(lastUpdatedByEmail)}`
+                        : `Last updated: ${lastUpdatedText}`;
+                }
+                sharedTooltip = updatedLine ? `${sharedWithLine}<br>${updatedLine}` : sharedWithLine;
+            } else {
+                sharedTooltip = 'Shared';
+            }
+            statusIcons.push(`<span class="card-status-icon card-status-icon--shared has-tooltip">↔<span class="custom-tooltip" data-position="right">${sharedTooltip}</span></span>`);
+        }
+        if (isPinned) {
+            statusIcons.push('<span class="card-status-icon card-status-icon--pinned">◆</span>');
+        }
+        
+        const statusIconsHtml = statusIcons.length > 0 
+            ? `<div class="card-status-icons">${statusIcons.join('')}</div>`
+            : '';
+
+        return `
+            <div class="character-card${showSharedTag ? ' is-shared' : ''}${isPinned ? ' is-pinned' : ''}" data-id="${character.id}" onclick="viewCharacter('${character.id}')">
+                ${demoTagHtml}
+                ${statusIconsHtml}
+                ${thumbnailHtml}
+                <div class="card-details">
+                    <div class="card-name">${name}</div>
+                    <div class="card-info">
+                        ${raceClass}${character.level ? ` • Lvl ${character.level}` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    updateCount() {
+        const searchInput = document.getElementById('searchInput');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        const total = AppState.characters.length;
+
+        // Disable search when there are no characters at all
+        if (searchInput) {
+            searchInput.disabled = total === 0;
+            // Include character count in placeholder (truncate on mobile)
+            if (total === 0 || MobileView.isMobile()) {
+                searchInput.placeholder = 'Search';
+            } else {
+                searchInput.placeholder = 'Search ' + total + ' character' + (total !== 1 ? 's' : '');
+            }
+        }
+        if (clearSearchBtn) {
+            clearSearchBtn.disabled = total === 0;
+        }
+    },
+
+    showCharacterSheet(character) {
+        const placeholder = document.querySelector('.sheet-placeholder');
+        const sheetContainer = document.getElementById('characterSheet');
+        const navBar = document.getElementById('sheetNavBar');
+        const sheetPanel = document.getElementById('characterSheetPanel');
+
+        placeholder.classList.add('is-hidden');
+        sheetContainer.classList.remove('is-hidden');
+        if (navBar) navBar.classList.remove('is-hidden');
+        
+        // Theme inherits from parent - no need to set explicitly on sheet panel and container
+        // (Theme classes removed - sheet panel and container now inherit from parent)
+        
+        // Nav bar is kept visible but empty - the "← Characters" button is now inside the sheet header
+        
+        // Check if this is a demo character - disable editing if so
+        const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
+        // Check if user is in demo mode (not authenticated) - sharing requires login
+        const isDemoMode = window.DemoCharacters && window.DemoCharacters.isDemoMode();
+        // Check if this is a shared character (not owned by current user)
+        const isSharedWithMe = character.is_shared || character.isShared;
+        // Check if owner has shared this character with others
+        const collaboratorCount = character.collaborator_count || character.collaboratorCount || 0;
+        const hasCollaborators = collaboratorCount > 0;
+        // Check permission level for shared characters
+        const canEdit = !isDemo && (!isSharedWithMe || character.permission === 'edit');
+        
+        // Check if character is pinned
+        const isPinned = typeof window.isCharacterPinned === 'function' 
+            && window.isCharacterPinned(character.id);
+        
+        // Get campaign name if character is in a campaign
+        // Prefer campaign_name from character data (loaded with character list)
+        const characterCampaignId = character.campaignId || character.campaign_id;
+        let campaignName = character.campaignName || character.campaign_name || null;
+        
+        // Fallback 1: try to get from cached campaign data (if this character's campaign is loaded)
+        if (characterCampaignId && !campaignName && typeof CampaignUI !== 'undefined') {
+            const cachedCampaign = CampaignUI._currentCampaign;
+            if (cachedCampaign && String(cachedCampaign.id) === String(characterCampaignId)) {
+                campaignName = cachedCampaign.name || null;
+            }
+        }
+        
+        // Fallback 2: try to get campaign name from DOM (campaign panel) if already loaded
+        // IMPORTANT: Only use DOM value if the campaign IDs match (avoid showing wrong campaign)
+        if (characterCampaignId && !campaignName) {
+            const campaignAreaEl = document.querySelector('.campaign-area[data-campaign-id]');
+            const domCampaignId = campaignAreaEl?.dataset?.campaignId;
+            if (domCampaignId && String(domCampaignId) === String(characterCampaignId)) {
+                const campaignNameEl = campaignAreaEl.querySelector('.campaign-name');
+                if (campaignNameEl) {
+                    campaignName = campaignNameEl.textContent?.trim() || null;
+                }
+            }
+        }
+        
+        // Last resort: async fetch if campaign name still not available
+        if (characterCampaignId && !campaignName && typeof CampaignUI !== 'undefined') {
+            CampaignUI.getCharacterCampaign(character.id).then(campaignData => {
+                if (campaignData?.campaign?.name) {
+                    const tooltipEl = document.querySelector('.sheet-status-badge--campaign .custom-tooltip');
+                    if (tooltipEl) {
+                        tooltipEl.textContent = campaignData.campaign.name;
+                    }
+                }
+            }).catch(() => {});
+        }
+        
+        // Use the shared CharacterSheet component
+        // Demo characters cannot be edited, renamed, deleted, or have portraits generated
+        // Shared characters with edit permission can edit but not delete/rename
+        sheetContainer.innerHTML = CharacterSheet.render(character, {
+            context: 'manager',
+            showPortrait: true,
+            onRename: !isDemo && !isSharedWithMe,  // Only owner can rename
+            onEdit: canEdit,
+            onDelete: !isDemo && !isSharedWithMe,  // Only owner can delete
+            onGeneratePortrait: canEdit,
+            onPrint: true,
+            onShare: !isDemo && !isDemoMode && !isSharedWithMe,  // Only owner can share
+            onLeave: isSharedWithMe,  // Show "Leave" option for shared characters
+            isShared: isSharedWithMe,
+            hasCollaborators: hasCollaborators,
+            collaboratorCount: collaboratorCount,
+            ownerEmail: character.owner_email || character.ownerEmail,
+            lastUpdatedByEmail: character.last_updated_by_email || character.lastUpdatedByEmail,
+            isPinned: isPinned,
+            campaignName: campaignName,
+            hasPastAdventures: CampaignUI._pastCampaignsCount > 0,
+        });
+        
+        // Move sheet-title-header out of characterSheet and into sheet__content (above the layout)
+        // Note: Status badges are now rendered inside the portrait overlay, not a separate row
+        const scrollWrapper = document.querySelector('.sheet__content');
+        const sheetCampaignGrid = document.querySelector('.sheet__layout');
+        const titleHeader = sheetContainer.querySelector('.sheet-title-header');
+        if (scrollWrapper && sheetCampaignGrid && titleHeader) {
+            // Remove any existing title header from scroll wrapper first
+            const existingHeader = scrollWrapper.querySelector('.sheet-title-header');
+            if (existingHeader) {
+                existingHeader.remove();
+            }
+            scrollWrapper.insertBefore(titleHeader, sheetCampaignGrid);
+        }
+        
+        // Populate ASCII portrait after rendering
+        CharacterSheet.populatePortrait(character);
+        
+        // Update character nav bar if expanded view is active
+        if (ExpandedView.isExpanded()) {
+            CharacterNavBar.update(character.id);
+        }
+    }
+};
+
+// Simple print helper for manager context – relies on print-specific CSS
+// to hide the left panel and UI chrome, focusing on the sheet content.
+function printCharacterSheet() {
+    if (!document.querySelector('.character-sheet')) {
+        alert('No character sheet to print yet.');
+        return;
+    }
+    window.print();
+}
+
+// ========================================
+// EVENT HANDLERS
+// ========================================
+
+function createNewCharacter() {
+    // Check if creation quota is exhausted (checked in _creationQuotaRemaining)
+    if (typeof _creationQuotaRemaining === 'number' && _creationQuotaRemaining === 0) {
+        showAlertDialog(
+            "You've reached your daily limit for character creation. Come back tomorrow for more adventures!"
+        );
+        return;
+    }
+    
+    // Launch the Character Builder in the same tab.
+    // The builder has an EXIT button to return to the manager view.
+    window.location.href = 'builder.html';
+}
+
+// Track creation quota state for NEW CHARACTER button
+let _creationQuotaRemaining = null;
+
+// Track image quota state for Customize portrait button (exposed globally for shared-character-sheet.js)
+window._imageQuotaRemaining = null;
+window._imageQuotaLimit = null;
+window._imageQuotaResetAt = null;
+
+window._creationQuotaRemaining = null;
+window._creationQuotaLimit = null;
+window._creationQuotaResetAt = null;
+
+function _formatCreationQuotaTooltip() {
+    const cr = window._creationQuotaRemaining;
+    const cl = window._creationQuotaLimit;
+    if (typeof cr !== 'number') return '';
+
+    // Unlimited/admin bypass: keep tooltip empty to reduce noise.
+    if (cr === -1) return '';
+
+    const remainingText =
+        typeof cl === 'number' ? cr + '/' + cl + ' remaining today' : cr + ' remaining today';
+
+    return remainingText;
+}
+
+function _updateQuotaTooltipText() {
+    const text = _formatCreationQuotaTooltip();
+    const gridTooltip = document.getElementById('gridNewCharacterTooltip');
+    if (gridTooltip) gridTooltip.textContent = text;
+}
+
+
+/**
+ * Fetch and update the creation quota state.
+ * Updates the NEW CHARACTER button's disabled state and title.
+ */
+async function updateCreationQuotaState() {
+    const overflowBtn = document.getElementById('overflowNewCharBtn');
+    const gridBtn = document.getElementById('gridNewCharacterBtn');
+    const gridTooltip = document.getElementById('gridNewCharacterTooltip');
+    
+    // Helper to update all buttons and the custom tooltip
+    const updateButtons = (disabled, tooltipText, addClass) => {
+        [overflowBtn, gridBtn].forEach(b => {
+            if (!b) return;
+            b.disabled = disabled;
+            // Clear native title - we use custom tooltip now
+            b.title = '';
+            if (addClass) {
+                b.classList.add('is-quota-exhausted');
+            } else {
+                b.classList.remove('is-quota-exhausted');
+            }
+        });
+        // Update the custom tooltip text (creation-only).
+        if (gridTooltip) {
+            gridTooltip.textContent = tooltipText;
+        }
+    };
+
+    if (!overflowBtn && !gridBtn) return;
+
+    try {
+        // Use AIService if available, otherwise make direct fetch
+        let quota = null;
+        if (window.AIService && typeof AIService.getCreationQuotaStatus === 'function') {
+            quota = await AIService.getCreationQuotaStatus();
+        } else {
+            // Fallback: direct fetch (manager page may not have AIService loaded)
+            // IMPORTANT: Include auth token so admins bypass quota
+            const headers = { 'Content-Type': 'application/json' };
+            const token = window.AuthService?.getToken?.();
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            const backendUrl = window.DanddyConfig?.BACKEND_ORIGIN || window.CONFIG?.BACKEND_URL || '';
+            const response = await fetch(
+                `${backendUrl}/api/ai/characters/quota`,
+                { method: 'GET', headers }
+            );
+            if (response.ok) {
+                quota = await response.json();
+            }
+        }
+
+        if (!quota) {
+            // Quota check failed - allow user to proceed (fail open)
+            _creationQuotaRemaining = null;
+            window._creationQuotaRemaining = null;
+            updateButtons(false, '', false);
+            return;
+        }
+
+        _creationQuotaRemaining = quota.remaining;
+        // Keep the window-scoped value in sync (tooltip reads from window.*)
+        window._creationQuotaRemaining = quota.remaining;
+        window._creationQuotaLimit = typeof quota.limit === 'number' ? quota.limit : null;
+        window._creationQuotaResetAt = quota.resetAt || quota.reset_at || null;
+
+        // If remaining is -1, quota is not enforced (admin/dev mode)
+        if (quota.remaining === -1) {
+            updateButtons(false, '', false);
+            _updateQuotaTooltipText();
+            return;
+        }
+
+        if (quota.remaining === 0) {
+            updateButtons(true, 'Daily limit reached', true);
+        } else if (quota.remaining === -1) {
+            updateButtons(false, '', false);
+        } else {
+            updateButtons(false, `${quota.remaining}${' '}creation${quota.remaining === 1 ? '' : 's'}${' '}remaining`, false);
+        }
+
+        _updateQuotaTooltipText();
+    } catch (e) {
+        console.warn('Failed to check creation quota:', e);
+        // Fail open - allow user to proceed
+        _creationQuotaRemaining = null;
+        window._creationQuotaRemaining = null;
+        updateButtons(false, '', false);
+        _updateQuotaTooltipText();
+    }
+}
+
+/**
+ * Fetch and update the image quota state.
+ * Used to disable "Customize portrait" button when exhausted.
+ */
+async function updateImageQuotaState() {
+    try {
+        let quota = null;
+        if (window.AIService && typeof AIService.getImageQuotaStatus === 'function') {
+            quota = await AIService.getImageQuotaStatus();
+        } else {
+            // Include auth token so admins bypass quota
+            const headers = { 'Content-Type': 'application/json' };
+            const token = window.AuthService?.getToken?.();
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            const backendUrl = window.DanddyConfig?.BACKEND_ORIGIN || window.CONFIG?.BACKEND_URL || '';
+            const response = await fetch(
+                `${backendUrl}/api/ai/images/quota`,
+                { method: 'GET', headers }
+            );
+            if (response.ok) {
+                quota = await response.json();
+            }
+        }
+
+        const oldRemaining = window._imageQuotaRemaining;
+
+        if (!quota) {
+            window._imageQuotaRemaining = null;
+            window._imageQuotaLimit = null;
+            window._imageQuotaResetAt = null;
+            return;
+        }
+
+        window._imageQuotaRemaining = quota.remaining;
+        window._imageQuotaLimit = typeof quota.limit === 'number' ? quota.limit : null;
+        window._imageQuotaResetAt = quota.resetAt || quota.reset_at || null;
+        
+        // Re-render current character sheet to update Customize portrait button state
+        // This ensures the button is correctly disabled on initial load when quota is exhausted
+        // Only re-render if quota was previously unknown (null) or changed
+        if (oldRemaining !== quota.remaining && AppState.selectedCharacterId) {
+            viewCharacter(AppState.selectedCharacterId, { skipKeyboardSync: true });
+        }
+    } catch (e) {
+        console.warn('Failed to check image quota:', e);
+        window._imageQuotaRemaining = null;
+    }
+}
+
+// Helper to show/hide loading spinner in sheet content (for collapsed view)
+function showSheetLoading(show) {
+    const sheetLoading = document.querySelector('.sheet__loading');
+    const sheetContent = document.querySelector('.sheet__content');
+    if (sheetLoading && sheetContent) {
+        if (show) {
+            sheetContent.classList.add('is-loading');
+        } else {
+            sheetContent.classList.remove('is-loading');
+        }
+    }
+}
+
+async function viewCharacter(id, options = {}) {
+    const { 
+        fromKeyboard = false, 
+        skipKeyboardSync = false, 
+        updateUrl = true,
+        openMobileModal = true  // Whether to open modal on mobile (true for user clicks)
+    } = options;
+
+    // Record this request so that slower async lookups for previously
+    // selected characters can't override the sheet for the most recently
+    // clicked or focused card.
+    const requestId = ++latestViewCharacterRequestId;
+
+    // Debug logging for portrait mismatch investigation
+    if (window.DEBUG_PORTRAITS) {
+        console.log(`🖼️ [PORTRAIT DEBUG] viewCharacter called`, {
+            id,
+            requestId,
+            options,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    if (typeof AppState !== 'undefined' && AppState) {
+        AppState.selectedCharacterId = id;
+    }
+
+    // Prefer the already-loaded characters from AppState to avoid extra storage/API calls
+    // Use String() comparison to handle type mismatches (cloud IDs may be numeric,
+    // but onclick handlers pass string IDs)
+    let character = null;
+    let characterSource = null;
+    if (typeof AppState !== 'undefined' && AppState && Array.isArray(AppState.filteredCharacters)) {
+        const idStr = String(id);
+        character = AppState.filteredCharacters.find(c => c && String(c.id) === idStr);
+        if (character) {
+            characterSource = 'filteredCharacters';
+        } else {
+            character = AppState.characters.find(c => c && String(c.id) === idStr);
+            if (character) characterSource = 'characters';
+        }
+    }
+
+    // If we found a lite record (from /characters/lite), we must fetch the full
+    // character before rendering the sheet; otherwise many sections will be blank.
+    const _isLiteRecord = !!(character && character._isLite);
+    
+    // Show loading spinner if we need to fetch data (lite record or no cache hit)
+    const needsAsyncLoad = _isLiteRecord || !character;
+    if (needsAsyncLoad) {
+        showSheetLoading(true);
+    }
+    if (_isLiteRecord) {
+        try {
+            const full = await CharacterStorage.getById(id);
+            character = full;
+            characterSource = 'storage_full_from_lite';
+
+            // Patch the caches so subsequent lookups get the full record.
+            const idStr = String(id);
+            if (typeof AppState !== 'undefined' && AppState) {
+                if (Array.isArray(AppState.characters)) {
+                    const idx = AppState.characters.findIndex(c => c && String(c.id) === idStr);
+                    if (idx >= 0) AppState.characters[idx] = full;
+                }
+                if (Array.isArray(AppState.filteredCharacters)) {
+                    const idx = AppState.filteredCharacters.findIndex(c => c && String(c.id) === idStr);
+                    if (idx >= 0) AppState.filteredCharacters[idx] = full;
+                }
+            }
+        } catch (error) {
+            if (error && error.message && error.message.toLowerCase().includes('session has expired')) {
+                showSessionExpiredModal();
+                return;
+            }
+            console.warn('Failed to upgrade lite character to full payload:', error);
+            // Fall through and render what we have (better than nothing).
+        }
+    }
+
+    if (!character) {
+        // Fallback to storage lookup (cloud/local)
+        try {
+            character = await CharacterStorage.getById(id);
+            characterSource = 'storage';
+        } catch (error) {
+            // Check if this is a session expiry error
+            if (error.message && error.message.toLowerCase().includes('session has expired')) {
+                showSessionExpiredModal();
+                return;
+            }
+            // Log other errors but don't block - character will just be null
+            console.warn('Failed to load character from storage:', error);
+        }
+    }
+
+    // If a newer viewCharacter call started while we were waiting on
+    // storage/cloud, abandon this update to avoid stale mismatches.
+    if (requestId !== latestViewCharacterRequestId) {
+        if (window.DEBUG_PORTRAITS) {
+            console.log(`🖼️ [PORTRAIT DEBUG] viewCharacter ABANDONED (stale request)`, {
+                id,
+                requestId,
+                latestRequestId: latestViewCharacterRequestId
+            });
+        }
+        // Hide loading spinner before abandoning (the newer request will handle its own loading state)
+        showSheetLoading(false);
+        return;
+    }
+
+    if (character) {
+        // Auto-recalculate level-dependent stats if they appear outdated
+        character = await autoRecalculateLevelStats(character);
+        
+        // Hide loading spinner before rendering
+        showSheetLoading(false);
+        
+        // Debug: Log the character data being used to render the sheet
+        if (window.DEBUG_PORTRAITS) {
+            console.log(`🖼️ [PORTRAIT DEBUG] viewCharacter rendering`, {
+                id: character.id,
+                name: character.name,
+                source: characterSource,
+                requestId,
+                portraitMetadataActiveId: character.portraitMetadata?.activeVersionId || null,
+                portraitMetadataVersionsCount: character.portraitMetadata?.versions?.length || 0,
+                originalPortraitUrl: character.originalPortraitUrl || null,
+                portraitUrl: character.portrait?.url || null,
+                hasCustomPortraitAscii: !!character.customPortraitAscii,
+                hasAsciiPortrait: !!character.asciiPortrait,
+                timestamp: new Date().toISOString()
+            });
+        }
+        UI.showCharacterSheet(character);
+        
+        // Load campaign panel when switching characters (shown at bottom of sheet in grid view)
+        const campaignSlot = document.querySelector('.sidebar__content') || document.querySelector('.sheet__sidebar');
+        if (campaignSlot) {
+            // Show skeleton loader while fetching campaign data
+            campaignSlot.innerHTML = ExpandedView._renderCampaignSkeleton();
+            campaignSlot.classList.remove('is-hidden');
+        }
+        // Fire and forget - don't block character sheet rendering for campaign panel
+        // After loading, refresh character sheet if past adventures became available
+        // (the sheet is rendered before the past campaigns count is fetched)
+        ExpandedView._loadCampaignPanel().then(() => {
+            // Re-render character sheet if past adventures count changed (for overflow menu)
+            if (CampaignUI._pastCampaignsCount > 0 && character) {
+                UI.showCharacterSheet(character);
+            }
+        }).catch(() => {});
+        
+        // Update URL with selected character (for sharing/bookmarking)
+        if (updateUrl && id) {
+            updateUrlWithCharacter(id);
+        }
+        
+        // Highlight selected card
+        document.querySelectorAll('.character-card').forEach(card => {
+            card.classList.remove('is-selected');
+        });
+        const selectedCard = document.querySelector(`[data-id="${id}"]`);
+        if (selectedCard) {
+            selectedCard.classList.add('is-selected');
+
+            // When selection changes via mouse or programmatic calls, keep the
+            // keyboard focus index in sync without re-triggering a sheet update.
+            if (!skipKeyboardSync && typeof KeyboardNav !== 'undefined' && KeyboardNav.getCharacterCards) {
+                const allCards = KeyboardNav.getCharacterCards();
+                const cardIndex = allCards.indexOf(selectedCard);
+                if (cardIndex !== -1) {
+                    KeyboardNav.currentFocusIndex = cardIndex;
+                    KeyboardNav.updateFocus(true); // true => don't update sheet again
+                }
+            }
+        }
+
+        // On mobile, open the character sheet view after rendering
+        const isMobile = typeof MobileView !== 'undefined' && MobileView.isMobile();
+        if (isMobile && openMobileModal) {
+            // Use double requestAnimationFrame to ensure the DOM has painted
+            // before cloning. This is more reliable than a fixed timeout as it
+            // waits for the browser's actual rendering cycle to complete.
+            // First rAF schedules for next frame, second ensures paint occurred.
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    // Verify this is still the selected character before opening
+                    // (prevents race condition if user tapped another card quickly)
+                    if (AppState.selectedCharacterId === id) {
+                        MobileView.open(id);
+                    }
+                });
+            });
+        }
+    } else {
+        // Character not found - hide loading spinner
+        showSheetLoading(false);
+    }
+}
+
+// Update URL with character ID without triggering page reload
+function updateUrlWithCharacter(characterId) {
+    const url = new URL(window.location.href);
+    if (characterId) {
+        url.searchParams.set('character', characterId);
+    } else {
+        url.searchParams.delete('character');
+    }
+    // Remove 'from' param if present (one-time use)
+    url.searchParams.delete('from');
+    history.replaceState({ characterId }, '', url.toString());
+}
+
+// Get character ID from URL
+function getCharacterIdFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('character');
+}
+
+// Clear character selection from URL
+function clearCharacterFromUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('character');
+    history.replaceState({}, '', url.toString());
+}
+
+let currentEditCharacterId = null;
+let originalEditLevel = null;
+// Store the original modal content HTML so we can restore it after level change dialog
+let originalEditModalContent = null;
+
+function selectAlignment(value, label) {
+    // Update hidden select value
+    const select = document.getElementById('editAlignment');
+    if (select) {
+        select.value = value;
+    }
+    
+    // Update visible trigger label
+    const labelEl = document.getElementById('editAlignment-label');
+    if (labelEl) {
+        labelEl.textContent = label;
+    }
+    
+    // Update selected state in menu options
+    const trigger = document.getElementById('editAlignment-trigger');
+    if (trigger) {
+        const shell = trigger.closest('.selector-shell');
+        if (shell) {
+            const options = shell.querySelectorAll('.selector-option');
+            options.forEach(opt => {
+                const isSelected = opt.getAttribute('data-value') === value;
+                opt.classList.toggle('is-selected', isSelected);
+                opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+        }
+    }
+}
+
+function selectSex(value, label) {
+    // Update hidden select value
+    const select = document.getElementById('editSex');
+    if (select) {
+        select.value = value;
+    }
+    
+    // Update visible trigger label
+    const labelEl = document.getElementById('editSex-label');
+    if (labelEl) {
+        labelEl.textContent = label;
+    }
+    
+    // Update selected state in menu options
+    const trigger = document.getElementById('editSex-trigger');
+    if (trigger) {
+        const shell = trigger.closest('.selector-shell');
+        if (shell) {
+            const options = shell.querySelectorAll('.selector-option');
+            options.forEach(opt => {
+                const isSelected = opt.getAttribute('data-value') === value;
+                opt.classList.toggle('is-selected', isSelected);
+                opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+        }
+    }
+}
+
+async function editCharacter(id, options = {}) {
+    const { scrollTo } = options;
+    const character = await CharacterStorage.getById(id);
+    if (!character) return;
+
+    currentEditCharacterId = id;
+
+    // Ensure the modal content is restored to the original form HTML.
+    // This is necessary because showLevelChangeDialog replaces the content
+    // with a loading spinner when auto-calculating stats, and that content
+    // may persist if the modal wasn't fully closed before opening again.
+    const modal = document.getElementById('editDetailsModal');
+    if (modal) {
+        const modalContent = modal.querySelector('.modal-content');
+        if (modalContent) {
+            // Store original content on first open if not already stored
+            if (!originalEditModalContent) {
+                originalEditModalContent = modalContent.innerHTML;
+            } else {
+                // Restore original content in case it was replaced by level change dialog
+                modalContent.innerHTML = originalEditModalContent;
+            }
+        }
+        // Also ensure any stale closing state is cleared
+        modal.classList.remove('closing');
+    }
+
+    // Use parsed data to pre-fill, so we respect any derived values
+    const parsed = CharacterSheet._parseCharacterData(character);
+
+    // Helper to safely set textarea values
+    const setValue = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.value = value || '';
+    };
+
+    // CHARACTER NAME
+    setValue('editName', character.name || '');
+
+    // LEVEL - store original for change detection (ensure it's a number)
+    const level = parsed.level != null ? Number(parsed.level) : Number(character.level || 1);
+    originalEditLevel = level;
+    setValue('editLevel', level);
+
+    // EXPERIENCE POINTS
+    const xp = parsed.experiencePoints != null ? Number(parsed.experiencePoints) : Number(character.experiencePoints || 0);
+    setValue('editExperiencePoints', xp);
+
+    // ALIGNMENT (default to 'n' - True Neutral if not set)
+    const alignmentValue = character.alignment || 'n';
+    setValue('editAlignment', alignmentValue);
+
+    // SEX
+    const sexValue = character.sex || '';
+    setValue('editSex', sexValue);
+
+    // ABILITY SCORES
+    const abilities = parsed.abilities || {};
+    setValue('editStr', abilities.str != null ? abilities.str : '');
+    setValue('editDex', abilities.dex != null ? abilities.dex : '');
+    setValue('editCon', abilities.con != null ? abilities.con : '');
+    setValue('editInt', abilities.int != null ? abilities.int : '');
+    setValue('editWis', abilities.wis != null ? abilities.wis : '');
+    setValue('editCha', abilities.cha != null ? abilities.cha : '');
+
+    // COMBAT STATS (match sheet's Combat Stats section)
+    setValue('editHpMax', parsed.hpMax != null ? parsed.hpMax : '');
+    setValue('editHpCurrent', parsed.hpCurrent != null ? parsed.hpCurrent : '');
+    const tempHp =
+        character.hitPoints && typeof character.hitPoints === 'object'
+            ? character.hitPoints.temp || 0
+            : 0;
+    setValue('editHpTemp', tempHp);
+    setValue('editArmorClass', parsed.armorClass != null ? parsed.armorClass : '');
+    setValue('editInitiative', parsed.initiative != null ? parsed.initiative : '');
+    setValue('editSpeed', parsed.speed != null ? parsed.speed : '');
+    setValue('editProfBonus', parsed.proficiencyBonus != null ? parsed.proficiencyBonus : '');
+
+    // SKILL PROFICIENCIES (text-only list, one per line)
+    const skillList = (parsed.skillProficiencies || []).map(s => CharacterSheet.formatSkillName(s)).join('\n');
+    setValue('editSkills', skillList);
+
+    // CLASS EQUIPMENT / EQUIPMENT (one per line)
+    const equipmentList = (parsed.equipment || []).join('\n');
+    setValue('editEquipment', equipmentList);
+
+    // TOOL PROFICIENCIES (one per line)
+    const toolList = (parsed.toolProficiencies || []).map(t => CharacterSheet.formatSkillName(t)).join('\n');
+    setValue('editTools', toolList);
+
+    // LANGUAGES (one per line)
+    const languageList = (parsed.languages || []).join('\n');
+    setValue('editLanguages', languageList);
+
+    // BACKSTORY (free text)
+    setValue('editBackstory', character.backstory || '');
+
+    // Handle field permissions for shared characters
+    // Only the owner can edit the character name (owner_only_fields on backend)
+    const isSharedWithMe = character.is_shared || character.isShared;
+    const nameInput = document.getElementById('editName');
+    if (nameInput) {
+        if (isSharedWithMe) {
+            nameInput.disabled = true;
+            nameInput.title = 'Only the owner can rename this character';
+            nameInput.classList.add('is-owner-only');
+        } else {
+            nameInput.disabled = false;
+            nameInput.title = '';
+            nameInput.classList.remove('is-owner-only');
+        }
+    }
+
+    // Show modal (reuse modal variable from earlier in function)
+    if (modal) {
+        modal.classList.add('show');
+        
+        // Snapshot form values for dirty checking (after a tick to let values settle)
+        setTimeout(() => ModalManager.snapshotForm('editDetailsModal'), 50);
+        
+        // Update alignment selector after modal is visible (needs to be deferred)
+        const savedAlignmentValue = alignmentValue; // Capture in closure
+        const savedSexValue = sexValue; // Capture in closure
+        setTimeout(() => {
+            const alignmentNames = {
+                'lg': 'Lawful Good',
+                'ng': 'Neutral Good',
+                'cg': 'Chaotic Good',
+                'ln': 'Lawful Neutral',
+                'n': 'True Neutral',
+                'cn': 'Chaotic Neutral',
+                'le': 'Lawful Evil',
+                'ne': 'Neutral Evil',
+                'ce': 'Chaotic Evil'
+            };
+            const alignmentName = alignmentNames[savedAlignmentValue] || 'Select Alignment';
+            const alignmentLabel = document.getElementById('editAlignment-label');
+            if (alignmentLabel) {
+                alignmentLabel.textContent = alignmentName;
+            }
+            
+            // Mark selected option in menu
+            const alignmentTrigger = document.getElementById('editAlignment-trigger');
+            if (alignmentTrigger) {
+                const shell = alignmentTrigger.closest('.selector-shell');
+                if (shell) {
+                    const options = shell.querySelectorAll('.selector-option');
+                    options.forEach(opt => {
+                        const isSelected = opt.getAttribute('data-value') === savedAlignmentValue;
+                        opt.classList.toggle('is-selected', isSelected);
+                        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+                    });
+                }
+            }
+
+            // Update sex selector
+            const sexNames = {
+                'male': 'Male',
+                'female': 'Female'
+            };
+            const sexName = sexNames[savedSexValue] || 'Select Sex';
+            const sexLabel = document.getElementById('editSex-label');
+            if (sexLabel) {
+                sexLabel.textContent = sexName;
+            }
+            
+            // Mark selected option in sex menu
+            const sexTrigger = document.getElementById('editSex-trigger');
+            if (sexTrigger) {
+                const shell = sexTrigger.closest('.selector-shell');
+                if (shell) {
+                    const options = shell.querySelectorAll('.selector-option');
+                    options.forEach(opt => {
+                        const isSelected = opt.getAttribute('data-value') === savedSexValue;
+                        opt.classList.toggle('is-selected', isSelected);
+                        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+                    });
+                }
+            }
+            
+            // Scroll to specific section if requested
+            if (scrollTo) {
+                const targetSection = document.getElementById(scrollTo);
+                if (targetSection) {
+                    setTimeout(() => {
+                        targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                }
+            }
+        }, 0);
+    }
+}
+
+function closeEditDetailsModal() {
+    const modal = document.getElementById('editDetailsModal');
+    if (!modal) {
+        currentEditCharacterId = null;
+        originalEditLevel = null;
+        return;
+    }
+
+    // Hide loading overlay when modal closes
+    const loadingOverlay = document.getElementById('editDetailsLoading');
+    if (loadingOverlay) {
+        loadingOverlay.classList.remove('is-visible');
+    }
+
+    animateModalClose(modal, {
+        removeOnClose: false,
+        onClosed: () => {
+            currentEditCharacterId = null;
+            originalEditLevel = null;
+        },
+    });
+}
+
+async function saveEditDetails() {
+    if (!currentEditCharacterId) {
+        closeEditDetailsModal();
+        return;
+    }
+
+    const character = await CharacterStorage.getById(currentEditCharacterId);
+    if (!character) {
+        closeEditDetailsModal();
+        return;
+    }
+
+    // Show loading overlay
+    const loadingOverlay = document.getElementById('editDetailsLoading');
+    if (loadingOverlay) {
+        loadingOverlay.classList.add('is-visible');
+    }
+
+    const getLines = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return [];
+        return el.value
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+    };
+
+    const skillLines = getLines('editSkills');
+    const equipmentLines = getLines('editEquipment');
+    const toolLines = getLines('editTools');
+    const languageLines = getLines('editLanguages');
+
+    const backstoryEl = document.getElementById('editBackstory');
+    const backstoryText = backstoryEl ? backstoryEl.value.trim() : '';
+    
+    const nameEl = document.getElementById('editName');
+    const nameText = nameEl ? nameEl.value.trim() : '';
+
+    const getNumber = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return null;
+        const raw = el.value.trim();
+        if (!raw) return null;
+        const value = parseInt(raw, 10);
+        return Number.isFinite(value) ? value : null;
+    };
+
+    let levelValue = getNumber('editLevel');
+    const experiencePointsValue = getNumber('editExperiencePoints');
+    
+    // Validate level range (D&D 5e: 1-20)
+    if (levelValue !== null && (levelValue < 1 || levelValue > 20)) {
+        // Hide loading overlay while showing validation error
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('is-visible');
+        }
+        showAlertDialog(`Level must be between 1 and 20.\n\nYou entered: ${levelValue}`);
+        return;
+    }
+    
+    // Check if XP increase should trigger automatic level-up
+    const currentLevel = levelValue ?? originalEditLevel ?? 1;
+    let xpTriggeredLevelUp = false;
+    if (experiencePointsValue !== null) {
+        const levelFromXP = calculateLevelFromXP(experiencePointsValue);
+        if (levelFromXP > currentLevel) {
+            // XP warrants a higher level - auto-update the level
+            levelValue = levelFromXP;
+            xpTriggeredLevelUp = true;
+            // Update the form field to show the new level
+            const levelEl = document.getElementById('editLevel');
+            if (levelEl) {
+                levelEl.value = levelFromXP;
+            }
+        }
+    }
+    
+    // Check if level has changed - prompt user for stat recalculation choice
+    const safeLevel = levelValue;
+    let levelChangeChoice = 'manual'; // default to manual if no change
+    let autoCalculatedStats = null;
+    let levelChangedFrom = null;
+    let levelChangedTo = null;
+    
+    if (safeLevel !== null && originalEditLevel !== null && safeLevel !== originalEditLevel) {
+        levelChangedFrom = originalEditLevel;
+        levelChangedTo = safeLevel;
+        // Hide loading overlay while showing the dialog
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('is-visible');
+        }
+        
+        levelChangeChoice = await showLevelChangeDialog(originalEditLevel, safeLevel, xpTriggeredLevelUp);
+        
+        if (levelChangeChoice === 'cancel' || levelChangeChoice === 'manual') {
+            // User cancelled or chose manual - return to edit form without saving
+            return;
+        }
+        
+        // Show loading overlay again after dialog closes
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('is-visible');
+        }
+        
+        if (levelChangeChoice === 'auto') {
+            // Calculate stats based on the new level and current abilities
+            const formAbilities = {
+                str: getNumber('editStr') ?? character.abilities?.str ?? 10,
+                dex: getNumber('editDex') ?? character.abilities?.dex ?? 10,
+                con: getNumber('editCon') ?? character.abilities?.con ?? 10,
+                int: getNumber('editInt') ?? character.abilities?.int ?? 10,
+                wis: getNumber('editWis') ?? character.abilities?.wis ?? 10,
+                cha: getNumber('editCha') ?? character.abilities?.cha ?? 10,
+            };
+            const tempCharacter = { ...character, abilities: formAbilities };
+            autoCalculatedStats = calculateStatsForLevel(tempCharacter, safeLevel);
+        }
+    }
+
+    // Ability scores
+    const abilityUpdates = {};
+    const str = getNumber('editStr');
+    const dex = getNumber('editDex');
+    const con = getNumber('editCon');
+    const intScore = getNumber('editInt');
+    const wis = getNumber('editWis');
+    const cha = getNumber('editCha');
+
+    if (str !== null) abilityUpdates.str = str;
+    if (dex !== null) abilityUpdates.dex = dex;
+    if (con !== null) abilityUpdates.con = con;
+    if (intScore !== null) abilityUpdates.int = intScore;
+    if (wis !== null) abilityUpdates.wis = wis;
+    if (cha !== null) abilityUpdates.cha = cha;
+
+    // Combat stats - use auto-calculated values if user chose auto, otherwise use form values
+    let hpMax = getNumber('editHpMax');
+    let hpCurrent = getNumber('editHpCurrent');
+    const hpTemp = getNumber('editHpTemp');
+    const armorClass = getNumber('editArmorClass');
+    const initiative = getNumber('editInitiative');
+    const speed = getNumber('editSpeed');
+    let profBonus = getNumber('editProfBonus');
+    
+    // Apply auto-calculated stats if user chose auto
+    let autoSpellSlots = null;
+    let autoHitDiceMax = null;
+    let autoClassResources = null;
+    if (autoCalculatedStats) {
+        hpMax = autoCalculatedStats.hpMax;
+        // Set current HP to max HP when auto-calculating (leveling up usually means full health)
+        hpCurrent = autoCalculatedStats.hpMax;
+        profBonus = autoCalculatedStats.proficiencyBonus;
+        autoSpellSlots = autoCalculatedStats.spellSlots;
+        autoHitDiceMax = autoCalculatedStats.hitDiceMax;
+        autoClassResources = autoCalculatedStats.classResources;
+    }
+
+    // Alignment
+    const alignmentValue = document.getElementById('editAlignment')?.value || '';
+
+    // Sex
+    const sexValue = document.getElementById('editSex')?.value || '';
+
+    const updates = {
+        // Store raw IDs/names; CharacterSheet will format as needed
+        skillProficiencies: skillLines.map(s => s.toLowerCase().replace(/\s+/g, '-')),
+        equipment: equipmentLines,
+        toolProficiencies: toolLines.map(t => t.toLowerCase().replace(/\s+/g, '-')),
+        languages: languageLines,
+        backstory: backstoryText,
+    };
+    
+    // Only update name if non-empty (prevent accidental wiping)
+    // Also skip for shared characters - only owner can rename (backend enforces this too)
+    const isSharedWithMe = character.is_shared || character.isShared;
+    if (nameText && !isSharedWithMe) {
+        updates.name = nameText;
+    } else if (!nameText) {
+        console.warn('⚠️ EDIT: Name field was empty - preserving existing name');
+    }
+
+    if (levelValue !== null) {
+        updates.level = levelValue;
+    }
+
+    if (experiencePointsValue !== null) {
+        updates.experiencePoints = experiencePointsValue;
+    }
+
+    if (alignmentValue) {
+        updates.alignment = alignmentValue;
+    }
+
+    if (sexValue) {
+        updates.sex = sexValue;
+    }
+
+    if (Object.keys(abilityUpdates).length > 0) {
+        updates.abilities = {
+            ...(character.abilities || character.abilityScores || {}),
+            ...abilityUpdates,
+        };
+    }
+
+    const hasHpUpdate = hpMax !== null || hpCurrent !== null || hpTemp !== null;
+    if (hasHpUpdate) {
+        const prevHp = character.hitPoints;
+        const baseHp =
+            prevHp && typeof prevHp === 'object'
+                ? { ...prevHp }
+                : { max: prevHp || 0, current: prevHp || 0, temp: 0 };
+        if (hpMax !== null) baseHp.max = hpMax;
+        if (hpCurrent !== null) baseHp.current = hpCurrent;
+        if (hpTemp !== null) baseHp.temp = hpTemp;
+        updates.hitPoints = baseHp;
+    }
+
+    if (armorClass !== null) {
+        updates.armorClass = armorClass;
+    }
+    if (initiative !== null) {
+        updates.initiative = initiative;
+    }
+    if (speed !== null) {
+        updates.speed = speed;
+    }
+    if (profBonus !== null) {
+        updates.proficiencyBonus = profBonus;
+    }
+    
+    // Apply auto-calculated spell slots for spellcasting classes
+    if (autoSpellSlots) {
+        updates.spellSlots = autoSpellSlots;
+        // Reset spell slots used when level changes
+        updates.spellSlotsUsed = {};
+    }
+
+    // Apply auto-calculated hit dice (reset to full on level up)
+    if (autoHitDiceMax) {
+        updates.hitDiceMax = autoHitDiceMax;
+        // Reset to full hit dice on level up (null means full = level)
+        updates.hitDiceCurrent = null;
+    }
+
+    // Apply auto-calculated class resources (reset to full on level up)
+    if (autoClassResources && Object.keys(autoClassResources).length > 0) {
+        updates.classResources = autoClassResources;
+    }
+
+    try {
+        await CharacterStorage.update(currentEditCharacterId, updates);
+        markUserChanges(); // Show guest notice if applicable
+        await AppState.loadCharacters();
+        UI.render();
+        viewCharacter(currentEditCharacterId);
+        showNotification('Character details updated');
+        closeEditDetailsModal();
+        
+        // After a successful level-up with auto-calculation, check if the user needs to select new spells
+        if (autoCalculatedStats && autoCalculatedStats.spellProgression && levelChangedFrom !== null && levelChangedTo !== null) {
+            const updatedCharacter = await CharacterStorage.getById(currentEditCharacterId);
+            if (updatedCharacter) {
+                // Small delay to let the modal close animation complete
+                setTimeout(() => {
+                    checkAndPromptForNewSpells(updatedCharacter, levelChangedFrom, levelChangedTo);
+                }, 400);
+            }
+        }
+    } catch (error) {
+        console.error('Failed to save character details:', error);
+        showNotification('Failed to save changes', 'error');
+    } finally {
+        // Hide loading overlay
+        const loadingOverlay = document.getElementById('editDetailsLoading');
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('is-visible');
+        }
+    }
+}
+
+// Resolve the best host element for manager UI modals so that they are
+// visually scoped to the terminal frame instead of the full viewport.
+function getManagerModalHost() {
+    return (
+        document.querySelector('.app-root') ||
+        document.querySelector('.terminal-frame') ||
+        document.querySelector('.terminal-container') ||
+        document.body
+    );
+}
+
+async function renameCharacter(id) {
+    const character = await CharacterStorage.getById(id);
+    if (!character) return;
+
+    // Only owner can rename - check if this is a shared character
+    const isShared = character.is_shared || character.isShared;
+    if (isShared) {
+        showNotification('Only the owner can rename this character', 'error');
+        return;
+    }
+
+    const existing = document.getElementById('renameModal');
+    if (existing) existing.remove();
+
+    const safeCurrentName = Utils.escapeHtml(character.name || '');
+    const modalHtml = `
+      <div id="renameModal" class="modal show">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title">RENAME CHARACTER</h2>
+            <button class="modal-close" onclick="closeRenameModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text-small modal-section-label">New name:</p>
+            <input type="text" id="renameInput" class="terminal-input" value="${safeCurrentName}" data-1p-ignore>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" id="renameCancel">Cancel</button>
+            <button class="terminal-btn terminal-btn-primary" id="renameOk">Apply</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('renameModal');
+    const input = document.getElementById('renameInput');
+    const cancelBtn = document.getElementById('renameCancel');
+    const okBtn = document.getElementById('renameOk');
+
+    const close = () => {
+        if (!modal) return;
+        animateModalClose(modal, { removeOnClose: true });
+    };
+
+    cancelBtn.addEventListener('click', close);
+    okBtn.addEventListener('click', async () => {
+        const newName = input.value.trim();
+        if (!newName) {
+            return;
+        }
+        close();
+        await CharacterStorage.update(id, { name: newName });
+        markUserChanges(); // Show guest notice if applicable
+        await AppState.loadCharacters();
+        UI.render();
+        viewCharacter(id);
+        showNotification('Character renamed to: ' + newName);
+    });
+
+    // Focus first field in the rename modal
+    if (typeof focusFirstFieldInModal === 'function') {
+        focusFirstFieldInModal(modal);
+    } else if (input) {
+        input.focus();
+        input.select();
+    }
+}
+
+// ========================================
+// CHARACTER SHARING
+// ========================================
+
+/**
+ * Open the share character modal.
+ * Shows existing collaborators and allows adding/removing access.
+ * @param {string|number} characterId - The character ID to share
+ */
+async function openShareModal(characterId) {
+    // Must be logged in to share
+    if (!AuthService.isAuthenticated()) {
+        showNotification('Please log in to share characters', 'error');
+        return;
+    }
+
+    const character = await CharacterStorage.getById(characterId);
+    if (!character) {
+        showNotification('Character not found', 'error');
+        return;
+    }
+
+    const existing = document.getElementById('shareModal');
+    if (existing) existing.remove();
+
+    const safeName = Utils.escapeHtml(character.name || 'Unnamed');
+    const modalHtml = `
+      <div id="shareModal" class="modal show">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title">SHARE CHARACTER</h2>
+            <button class="modal-close" onclick="closeShareModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text">Sharing <strong>${safeName}</strong></p>
+            
+            <div id="shareCollaboratorsSection" class="share-section" style="margin-top: 1.25rem; display: none;">
+              <label class="terminal-text-small modal-section-label">PEOPLE WITH ACCESS</label>
+              <div id="shareCollaboratorsList" class="share-collaborators-list"></div>
+            </div>
+            
+            <div class="share-section" style="margin-top: 1.25rem;">
+              <label class="terminal-text-small modal-section-label" for="shareUsernameInput">ADD PERSON</label>
+              <div class="share-add-row">
+                <input type="text" id="shareUsernameInput" class="terminal-input" placeholder="@username" autocomplete="off" data-1p-ignore>
+                <button class="terminal-btn" id="shareAddBtn">Add</button>
+              </div>
+              <p id="shareUsernameError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
+            </div>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn terminal-btn-primary" id="shareDoneBtn">Done</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('shareModal');
+    const input = document.getElementById('shareUsernameInput');
+    const errorEl = document.getElementById('shareUsernameError');
+    const addBtn = document.getElementById('shareAddBtn');
+    const doneBtn = document.getElementById('shareDoneBtn');
+    const collaboratorsSection = document.getElementById('shareCollaboratorsSection');
+    const collaboratorsList = document.getElementById('shareCollaboratorsList');
+
+    const close = () => {
+        if (!modal) return;
+        animateModalClose(modal, { removeOnClose: true });
+    };
+
+    const showError = (msg) => {
+        errorEl.textContent = msg;
+        errorEl.style.display = 'block';
+    };
+
+    const clearError = () => {
+        errorEl.style.display = 'none';
+    };
+
+    // Render collaborators and pending shares list
+    const renderAccessList = (collaborators, pendingShares) => {
+        const hasCollaborators = collaborators && collaborators.length > 0;
+        const hasPending = pendingShares && pendingShares.length > 0;
+        
+        if (!hasCollaborators && !hasPending) {
+            // Hide the entire section if nothing to show
+            collaboratorsSection.style.display = 'none';
+            collaboratorsList.innerHTML = '';
+            return;
+        }
+
+        // Show section
+        collaboratorsSection.style.display = 'block';
+        
+        // Build HTML for collaborators (accepted)
+        const collabHtml = (collaborators || []).map(collab => {
+            // Prefer username over email for display
+            const displayName = collab.username 
+                ? `@${Utils.escapeHtml(collab.username)}` 
+                : Utils.escapeHtml(collab.user_email);
+            return `
+            <div class="share-collaborator-item" data-id="${collab.id}" data-type="collaborator">
+                <span class="share-collaborator-email">${displayName}</span>
+                <button class="share-collaborator-remove" title="Remove access" data-id="${collab.id}" data-type="collaborator">&times;</button>
+            </div>
+        `;
+        }).join('');
+        
+        // Build HTML for pending shares
+        const pendingHtml = (pendingShares || []).map(share => `
+            <div class="share-collaborator-item share-collaborator-pending" data-id="${share.id}" data-type="pending">
+                <span class="share-collaborator-email">${Utils.escapeHtml(share.to_email)}</span>
+                <span class="share-collaborator-status">PENDING</span>
+                <button class="share-collaborator-remove" title="Cancel invitation" data-id="${share.id}" data-type="pending">&times;</button>
+            </div>
+        `).join('');
+        
+        collaboratorsList.innerHTML = collabHtml + pendingHtml;
+
+        // Attach remove handlers for collaborators
+        collaboratorsList.querySelectorAll('.share-collaborator-remove[data-type="collaborator"]').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const collabId = e.target.dataset.id;
+                const itemEl = collaboratorsList.querySelector(`.share-collaborator-item[data-id="${collabId}"][data-type="collaborator"]`);
+                if (itemEl) {
+                    itemEl.classList.add('removing');
+                }
+                try {
+                    await CharacterCloudStorage.removeCollaborator(characterId, collabId);
+                    await loadAccessList();
+                    showNotification('Access removed');
+                } catch (error) {
+                    if (itemEl) {
+                        itemEl.classList.remove('removing');
+                    }
+                    showNotification(error.message || 'Failed to remove access', 'error');
+                }
+            });
+        });
+        
+        // Attach remove handlers for pending shares
+        collaboratorsList.querySelectorAll('.share-collaborator-remove[data-type="pending"]').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const shareId = e.target.dataset.id;
+                const itemEl = collaboratorsList.querySelector(`.share-collaborator-item[data-id="${shareId}"][data-type="pending"]`);
+                if (itemEl) {
+                    itemEl.classList.add('removing');
+                }
+                try {
+                    await CharacterCloudStorage.cancelPendingShare(characterId, shareId);
+                    await loadAccessList();
+                    showNotification('Invitation canceled');
+                } catch (error) {
+                    if (itemEl) {
+                        itemEl.classList.remove('removing');
+                    }
+                    showNotification(error.message || 'Failed to cancel invitation', 'error');
+                }
+            });
+        });
+    };
+
+    // Load collaborators and pending shares
+    const loadAccessList = async () => {
+        try {
+            const [collaborators, pendingShares] = await Promise.all([
+                CharacterCloudStorage.getCollaborators(characterId),
+                CharacterCloudStorage.getPendingSharesForCharacter(characterId)
+            ]);
+            renderAccessList(collaborators, pendingShares);
+        } catch (error) {
+            console.error('Failed to load access list:', error);
+            collaboratorsSection.style.display = 'none';
+        }
+    };
+
+    // Load access list on modal open
+    loadAccessList();
+
+    doneBtn.addEventListener('click', close);
+    
+    input.addEventListener('input', clearError);
+    
+    // Handle Enter key in input
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addBtn.click();
+        }
+    });
+
+    addBtn.addEventListener('click', async () => {
+        let rawValue = input.value.trim();
+        
+        if (!rawValue) {
+            showError('Please enter a username');
+            return;
+        }
+        
+        // Auto-add @ prefix if not present
+        if (!rawValue.startsWith('@')) {
+            rawValue = '@' + rawValue;
+        }
+        
+        const identifier = rawValue.toLowerCase();
+        
+        // Username validation: @username (3-30 chars, alphanumeric + underscore)
+        const usernamePattern = /^@[a-zA-Z0-9_]{3,30}$/;
+        if (!usernamePattern.test(rawValue)) {
+            showError('Username must be 3-30 characters (letters, numbers, underscores)');
+            return;
+        }
+
+        // Disable button while processing
+        addBtn.disabled = true;
+        addBtn.textContent = 'ADDING...';
+
+        try {
+            // Build share data (username only)
+            const shareData = { to_username: identifier.substring(1) };  // Remove @ prefix
+            
+            await CharacterCloudStorage.shareCharacterByUsernameOrEmail(characterId, shareData);
+            input.value = '';
+            showNotification(`Invitation sent to ${identifier}`);
+            // Refresh the access list (shows pending invitation)
+            await loadAccessList();
+        } catch (error) {
+            showError(error.message || 'Failed to share character');
+        } finally {
+            addBtn.disabled = false;
+            addBtn.textContent = 'Add';
+        }
+    });
+
+    // Focus the email input
+    if (typeof focusFirstFieldInModal === 'function') {
+        focusFirstFieldInModal(modal);
+    } else if (input) {
+        input.focus();
+    }
+}
+
+function closeShareModal() {
+    const modal = document.getElementById('shareModal');
+    if (!modal) return;
+    animateModalClose(modal, { removeOnClose: true });
+}
+
+/**
+ * Check for pending shares and show the modal if there are any.
+ * Called after successful login.
+ */
+async function checkPendingShares() {
+    if (!AuthService.isAuthenticated()) return;
+
+    try {
+        const pendingShares = await CharacterCloudStorage.getPendingShares();
+        if (pendingShares && pendingShares.length > 0) {
+            showPendingSharesModal(pendingShares);
+        }
+    } catch (error) {
+        console.error('Failed to check pending shares:', error);
+        // Don't show error to user - this is a background check
+    }
+}
+
+/**
+ * Show the pending shares modal with all pending character shares.
+ * @param {Array} shares - Array of pending share objects
+ */
+function showPendingSharesModal(shares) {
+    if (!shares || shares.length === 0) return;
+
+    const existing = document.getElementById('pendingSharesModal');
+    if (existing) existing.remove();
+
+    const shareCount = shares.length;
+    const title = shareCount === 1 ? 'CHARACTER SHARED WITH YOU' : `${shareCount} CHARACTERS SHARED WITH YOU`;
+
+    // Build share cards HTML
+    const shareCardsHtml = shares.map((share, index) => {
+        const char = share.character;
+        
+        // Title case helper (e.g., "halfling" -> "Halfling", "neutral evil" -> "Neutral Evil")
+        const toTitleCase = (str) => {
+            if (!str) return '—';
+            return str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        };
+        
+        const safeName = Utils.escapeHtml(char.name || 'Unnamed');
+        const safeRace = Utils.escapeHtml(toTitleCase(char.race || 'Unknown'));
+        const safeClass = Utils.escapeHtml(toTitleCase(char.character_class || 'Unknown'));
+        const level = char.level || 1;
+        const safeBackground = Utils.escapeHtml(toTitleCase(char.background || '—'));
+        // Prefer username over email for sender display
+        const fromDisplay = share.from_username 
+            ? `@${Utils.escapeHtml(share.from_username)}`
+            : Utils.escapeHtml(share.from_email || 'Unknown');
+        
+        // Format sex (title case)
+        const safeSex = Utils.escapeHtml(toTitleCase(char.sex));
+        
+        // Format the date
+        const createdDate = new Date(share.created_at);
+        const dateStr = createdDate.toLocaleDateString();
+
+        // Portrait: prefer image, fallback to ASCII, then placeholder
+        let portraitHtml = '<div class="share-card-portrait-placeholder">No Portrait</div>';
+        if (char.original_portrait_url) {
+            // Image portrait
+            portraitHtml = `<img class="share-card-portrait-image" src="${Utils.escapeHtml(char.original_portrait_url)}" alt="${safeName} portrait" />`;
+        } else if (char.ascii_portrait) {
+            // ASCII portrait fallback
+            portraitHtml = `<pre class="share-card-portrait">${Utils.escapeHtml(char.ascii_portrait)}</pre>`;
+        }
+
+        return `
+          <div class="pending-share-card" data-share-id="${share.id}" data-index="${index}">
+            <div class="share-card-layout">
+              <div class="share-card-portrait-col">
+                ${portraitHtml}
+              </div>
+              <div class="share-card-info-col">
+                <h3 class="share-card-name">${safeName}</h3>
+                <div class="share-card-stats">
+                  <div class="share-card-stat">
+                    <span class="share-card-label">Race</span>
+                    <span class="share-card-value">${safeRace}</span>
+                  </div>
+                  <div class="share-card-stat">
+                    <span class="share-card-label">Class</span>
+                    <span class="share-card-value">${safeClass}</span>
+                  </div>
+                  <div class="share-card-stat">
+                    <span class="share-card-label">Level</span>
+                    <span class="share-card-value">${level}</span>
+                  </div>
+                </div>
+                <p class="share-card-from">
+                  From: ${fromDisplay} · ${dateStr}
+                </p>
+                <div class="share-card-actions">
+                  <button class="terminal-btn pending-share-ignore" data-share-id="${share.id}">Ignore</button>
+                  <button class="terminal-btn pending-share-accept" data-share-id="${share.id}">Add character</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+    }).join('');
+
+    const modalHtml = `
+      <div id="pendingSharesModal" class="modal show">
+        <div class="modal-content pending-shares-modal">
+          <div class="modal-header">
+            <h2 class="modal-title">${title}</h2>
+            <button class="modal-close" onclick="closePendingSharesModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text-small terminal-text-dim" style="margin-bottom: 1rem;">
+              ${shareCount === 1 ? 'Someone shared a character with you!' : 'Other users have shared characters with you!'} 
+              Add them to your collection or ignore to dismiss.
+            </p>
+            <div class="pending-shares-list">
+              ${shareCardsHtml}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('pendingSharesModal');
+
+    // Add event listeners for accept/ignore buttons
+    modal.querySelectorAll('.pending-share-accept').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const shareId = e.target.dataset.shareId;
+            await handleAcceptShare(shareId);
+        });
+    });
+
+    modal.querySelectorAll('.pending-share-ignore').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const shareId = e.target.dataset.shareId;
+            await handleDismissShare(shareId);
+        });
+    });
+}
+
+/**
+ * Handle accepting a pending share.
+ * @param {string|number} shareId - The share ID to accept
+ */
+async function handleAcceptShare(shareId) {
+    const card = document.querySelector(`.pending-share-card[data-share-id="${shareId}"]`);
+    const acceptBtn = card?.querySelector('.pending-share-accept');
+    
+    if (acceptBtn) {
+        acceptBtn.disabled = true;
+        acceptBtn.textContent = 'ADDING...';
+    }
+
+    try {
+        const result = await CharacterCloudStorage.acceptShare(shareId);
+        
+        // Remove the card from the modal
+        if (card) {
+            card.style.opacity = '0.5';
+            card.style.pointerEvents = 'none';
+            setTimeout(() => card.remove(), 300);
+        }
+
+        // Check if there are any cards left
+        setTimeout(() => {
+            const remainingCards = document.querySelectorAll('.pending-share-card');
+            if (remainingCards.length === 0) {
+                closePendingSharesModal();
+            }
+        }, 350);
+
+        // Refresh the character list
+        await AppState.loadCharacters();
+        UI.render();
+        
+        showNotification('Character added to your collection!');
+        
+        // View the newly added character
+        if (result && result.character_id) {
+            viewCharacter(result.character_id);
+        }
+    } catch (error) {
+        if (acceptBtn) {
+            acceptBtn.disabled = false;
+            acceptBtn.textContent = 'ADD CHARACTER';
+        }
+        showNotification(error.message || 'Failed to add character', 'error');
+    }
+}
+
+/**
+ * Handle dismissing a pending share.
+ * @param {string|number} shareId - The share ID to dismiss
+ */
+async function handleDismissShare(shareId) {
+    const card = document.querySelector(`.pending-share-card[data-share-id="${shareId}"]`);
+    const ignoreBtn = card?.querySelector('.pending-share-ignore');
+    
+    if (ignoreBtn) {
+        ignoreBtn.disabled = true;
+        ignoreBtn.textContent = 'IGNORING...';
+    }
+
+    try {
+        await CharacterCloudStorage.dismissShare(shareId);
+        
+        // Remove the card from the modal
+        if (card) {
+            card.style.opacity = '0.5';
+            card.style.pointerEvents = 'none';
+            setTimeout(() => card.remove(), 300);
+        }
+
+        // Check if there are any cards left
+        setTimeout(() => {
+            const remainingCards = document.querySelectorAll('.pending-share-card');
+            if (remainingCards.length === 0) {
+                closePendingSharesModal();
+            }
+        }, 350);
+
+        showNotification('Share dismissed');
+    } catch (error) {
+        if (ignoreBtn) {
+            ignoreBtn.disabled = false;
+            ignoreBtn.textContent = 'Ignore';
+        }
+        showNotification(error.message || 'Failed to dismiss share', 'error');
+    }
+}
+
+function closePendingSharesModal() {
+    const modal = document.getElementById('pendingSharesModal');
+    if (!modal) return;
+    animateModalClose(modal, { removeOnClose: true });
+}
+
+let currentPortraitCharacterId = null;
+let currentPortraitStyle = null;
+
+/**
+ * Convert a theme id/label to title case.
+ * e.g., "cinematic-inks" -> "Cinematic Inks"
+ *       "my-custom-style" -> "My Custom Style"
+ */
+function formatStyleLabel(idOrLabel) {
+    if (!idOrLabel) return '';
+    
+    // Remove "Custom: " prefix if present
+    let cleaned = String(idOrLabel).replace(/^Custom:\s*/i, '');
+    
+    // Remove " (default)" suffix
+    cleaned = cleaned.replace(/\s*\(default\)\s*$/i, '');
+    
+    // Replace dashes/underscores with spaces
+    cleaned = cleaned.replace(/[-_]/g, ' ');
+    
+    // Title case: capitalize first letter of each word
+    if (cleaned.length > 0) {
+        cleaned = cleaned.split(' ').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
+    }
+    
+    return cleaned;
+}
+
+/**
+ * Populate the style listbox menu in the portrait prompt modal.
+ * Uses the same selector pattern as the settings modal.
+ * Returns the currently selected/default style ID.
+ * 
+ * This is now async to properly wait for API sync before fetching themes.
+ */
+async function populatePortraitStyleDropdown(activeStyle) {
+    const menu = document.getElementById('portraitStyleMenu');
+    const label = document.getElementById('portraitStyleLabel');
+    if (!menu) return null;
+
+    // Clear existing options
+    menu.innerHTML = '';
+
+    // Wait for API sync to complete before fetching themes
+    // This ensures global styles are loaded for authenticated users
+    if (window.PortraitPrompt && typeof PortraitPrompt.syncFromAPI === 'function') {
+        try {
+            await PortraitPrompt.syncFromAPI();
+        } catch (e) {
+            console.warn('populatePortraitStyleDropdown: API sync failed', e);
+        }
+    }
+
+    // Get available themes from PortraitPrompt
+    let themes = [];
+    let defaultThemeId = 'cinematic-inks';
+    
+    try {
+        if (window.PortraitPrompt) {
+            if (typeof PortraitPrompt.getThemes === 'function') {
+                themes = PortraitPrompt.getThemes() || [];
+            }
+            if (typeof PortraitPrompt.getDefaultThemeId === 'function') {
+                defaultThemeId = PortraitPrompt.getDefaultThemeId() || defaultThemeId;
+            }
+        }
+    } catch (e) {
+        console.warn('populatePortraitStyleDropdown: Error getting themes', e);
+    }
+
+    // Always ensure at least the default theme is available
+    if (!themes.length) {
+        themes = [
+            { id: 'cinematic-inks', label: 'Cinematic Inks (default)' }
+        ];
+    }
+
+    // NOTE: Custom styles from admin storage are already included via PortraitPrompt.getThemes()
+    // which properly handles API sync for authenticated users (including global vs user-owned filtering).
+    // We no longer read localStorage directly here to avoid showing non-global styles
+    // that may have been cached by another user on the same browser.
+
+    // Sort themes alphabetically by id
+    themes = themes.slice().sort((a, b) => {
+        const nameA = (a.id || '').toLowerCase();
+        const nameB = (b.id || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+    });
+
+    // Determine selected value
+    const selectedStyle = activeStyle || defaultThemeId;
+    let selectedLabel = formatStyleLabel(defaultThemeId);
+
+    // Populate menu with options (same pattern as settings modal)
+    themes.forEach((theme) => {
+        const formattedLabel = formatStyleLabel(theme.id);
+        const isSelected = theme.id === selectedStyle;
+        
+        if (isSelected) {
+            selectedLabel = formattedLabel;
+        }
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'selector-option' + (isSelected ? ' is-selected' : '');
+        button.setAttribute('role', 'option');
+        button.setAttribute('data-value', theme.id);
+        button.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        button.innerHTML = `<span class="selector-option-label">${formattedLabel}</span>`;
+        menu.appendChild(button);
+    });
+
+    // Update trigger label
+    if (label) {
+        label.textContent = selectedLabel;
+    }
+
+    currentPortraitStyle = selectedStyle;
+    
+    // Wire up option clicks (same pattern as SettingsModal.initSelectors)
+    initPortraitStyleSelector();
+    
+    return selectedStyle;
+}
+
+/**
+ * Initialize the portrait style selector click handlers.
+ * Uses the same pattern as SettingsModal.initSelectors.
+ */
+function initPortraitStyleSelector() {
+    const menu = document.getElementById('portraitStyleMenu');
+    const label = document.getElementById('portraitStyleLabel');
+    const trigger = document.getElementById('portraitStyleTrigger');
+    
+    if (!menu) return;
+    
+    const options = menu.querySelectorAll('.selector-option');
+    
+    options.forEach((option) => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const value = option.getAttribute('data-value');
+            const optionLabel = option.querySelector('.selector-option-label');
+            
+            if (value && optionLabel) {
+                // Update trigger label
+                if (label) {
+                    label.textContent = optionLabel.textContent.trim();
+                }
+                
+                // Update current style
+                currentPortraitStyle = value;
+                
+                // Update visual selection state
+                options.forEach((opt) => {
+                    const isSelected = opt.getAttribute('data-value') === value;
+                    opt.classList.toggle('is-selected', isSelected);
+                    opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+                });
+                
+                // Close the menu using the standard toggle
+                if (trigger && window.CharacterSheet && typeof CharacterSheet.toggleSelectorMenu === 'function') {
+                    CharacterSheet.toggleSelectorMenu(trigger);
+                }
+            }
+        });
+    });
+}
+
+async function generatePortraitForCharacter(id) {
+    let character;
+    try {
+        character = await CharacterStorage.getById(id);
+    } catch (error) {
+        // Check if this is a session expiry error
+        if (error.message && error.message.toLowerCase().includes('session has expired')) {
+            // Session has expired - show the modal and don't proceed
+            showSessionExpiredModal();
+            return;
+        }
+        // Some other error - show alert
+        console.error('Failed to load character for portrait generation:', error);
+        showAlertDialog('Failed to load character. Please try again.');
+        return;
+    }
+    
+    if (!character) {
+        // Character not found - might have been deleted or never synced
+        showAlertDialog('Character not found. It may have been deleted or not yet synced.');
+        return;
+    }
+
+    // Block custom art generation for sample (demo) characters
+    if (window.DemoCharacters && DemoCharacters.isDemo(character)) {
+        showAlertDialog(
+            'Custom art generation is not available for sample characters. ' +
+            'Create your own character to generate custom portraits!'
+        );
+        return;
+    }
+
+    // Check if image quota is exhausted (backend enforces daily limits)
+    // Demo users get 5/day, logged-in users get 20/day
+    if (typeof window._imageQuotaRemaining === 'number' && window._imageQuotaRemaining === 0) {
+        const isDemoMode = window.DemoCharacters && 
+            typeof DemoCharacters.isDemoMode === 'function' && 
+            DemoCharacters.isDemoMode();
+        
+        if (isDemoMode) {
+            showAlertDialog(
+                "You've reached the daily portrait limit in guest mode. Create an account for higher limits!",
+                {
+                    actionLabel: 'Create a free account',
+                    onAction: () => {
+                        showAuthModal();
+                        showRegisterForm();
+                    }
+                }
+            );
+        } else {
+            showAlertDialog(
+                "You've reached your daily limit for portrait generation. Come back tomorrow for more adventures!"
+            );
+        }
+        return;
+    }
+
+    // Check if race and class are defined
+    if (!character.race || !character.class) {
+        showAlertDialog('This character needs both a race and class to generate a custom portrait.');
+        return;
+    }
+
+    // Check if backend is available
+    try {
+        const statusCheck = await fetch(`${window.CONFIG.BACKEND_URL}/api/ai/status`);
+        if (!statusCheck.ok) {
+            showAlertDialog('Backend server is not available. Make sure the backend is running on port 8000.');
+            return;
+        }
+        const statusData = await statusCheck.json();
+        if (!statusData.available) {
+            showAlertDialog('AI features are not available. The backend server is not configured properly.');
+            return;
+        }
+    } catch (error) {
+        showAlertDialog('Cannot connect to backend server. Make sure it is running on http://localhost:8000');
+        return;
+    }
+
+    // Show prompt modal
+    currentPortraitCharacterId = id;
+    
+    // Build default prompt:
+    // Use the stored characterDescription from the active portrait version if available.
+    // This preserves the exact prompt the user used (or was auto-generated) for the
+    // current portrait, allowing them to regenerate with a different style.
+    // Fall back to buildCharacterDescription() for older portraits without this field.
+    let defaultPrompt = '';
+    let activeStyle = null;
+    
+    try {
+        // Get the characterDescription and style from the active portrait version (if any)
+        try {
+            const metadata = character.portraitMetadata || {};
+            const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+            if (versions.length) {
+                const activeId = metadata.activeVersionId;
+                let active =
+                    (activeId && versions.find((v) => v && v.id === activeId)) ||
+                    versions[versions.length - 1];
+                // Get the characterDescription from the active version if available
+                if (active && active.characterDescription) {
+                    defaultPrompt = active.characterDescription;
+                }
+                // Get the style from the active version if available
+                if (active && active.style) {
+                    activeStyle = active.style;
+                }
+            }
+        } catch (e) {
+            // Non-fatal – continue to fallback below.
+        }
+
+        // Fallback: if no stored characterDescription, generate one from character data
+        // This handles older portraits that don't have characterDescription stored.
+        if (!defaultPrompt) {
+            if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
+                defaultPrompt = AIService.buildCharacterDescription(character);
+            } else {
+                defaultPrompt = `${character.race}\u0020${character.class}`;
+            }
+        }
+    } catch (e) {
+        defaultPrompt = `${character.race}\u0020${character.class}`;
+    }
+    
+    // Populate style dropdown before setting the prompt
+    // Use active style from portrait version, or fall back to user's saved preference
+    if (!activeStyle) {
+        try {
+            if (window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
+                activeStyle = StorageService.getPortraitPromptTheme();
+            }
+        } catch (e) {
+            // Non-fatal
+        }
+    }
+    // Await the async dropdown population to ensure API sync completes first
+    // This ensures global/shared styles are loaded for all authenticated users
+    await populatePortraitStyleDropdown(activeStyle);
+    
+    document.getElementById('portraitPrompt').value = defaultPrompt;
+    const promptModal = document.getElementById('portraitPromptModal');
+    if (promptModal) {
+        promptModal.classList.add('show');
+        if (typeof focusFirstFieldInModal === 'function') {
+            focusFirstFieldInModal(promptModal);
+        }
+        // Snapshot form values for dirty checking
+        setTimeout(() => ModalManager.snapshotForm('portraitPromptModal'), 50);
+    }
+
+    // Populate the quota line (and keep it updated while the modal is open).
+    try {
+        // Helper to disable/enable modal controls based on quota state
+        const updateModalControlsState = (isExhausted) => {
+            const promptTextarea = document.getElementById('portraitPrompt');
+            const styleTrigger = document.getElementById('portraitStyleTrigger');
+            const footerBtns = promptModal?.querySelectorAll('.modal-footer button');
+            
+            if (promptTextarea) {
+                promptTextarea.disabled = isExhausted;
+                if (isExhausted) {
+                    promptTextarea.placeholder = 'Daily limit reached - come back tomorrow!';
+                } else {
+                    promptTextarea.placeholder = 'Enter custom description...';
+                }
+            }
+            if (styleTrigger) {
+                styleTrigger.disabled = isExhausted;
+            }
+            if (footerBtns) {
+                footerBtns.forEach(btn => {
+                    btn.disabled = isExhausted;
+                });
+            }
+        };
+
+        const updateQuotaLine = (detail) => {
+            const el = document.getElementById('managerImageQuotaLine');
+            if (!el) return;
+            const remaining = detail && typeof detail.remaining === 'number' ? detail.remaining : null;
+            const limit = detail && typeof detail.limit === 'number' ? detail.limit : null;
+
+            // Update disabled state based on quota
+            const isExhausted = remaining === 0;
+            updateModalControlsState(isExhausted);
+
+            if (remaining === -1) {
+                el.textContent = 'Image quota: unlimited (admin/dev)';
+                return;
+            }
+
+            if (remaining === 0 && limit != null) {
+                el.textContent = 'Custom portraits left today: 0/' + limit;
+                return;
+            }
+
+            if (remaining != null && limit != null) {
+                el.textContent = 'Custom portraits left today: ' + remaining + '/' + limit;
+                return;
+            }
+
+            el.textContent = 'Image quota: unavailable';
+        };
+
+        // Remove any previous handler to avoid duplicates
+        if (window._managerQuotaHandler) {
+            window.removeEventListener('danddy:imageQuotaUpdate', window._managerQuotaHandler);
+        }
+        window._managerQuotaHandler = (e) => updateQuotaLine(e && e.detail);
+        window.addEventListener('danddy:imageQuotaUpdate', window._managerQuotaHandler);
+
+        // Initial fetch
+        if (window.AIService && typeof AIService.getImageQuotaStatus === 'function') {
+            const quota = await AIService.getImageQuotaStatus();
+            if (quota) {
+                updateQuotaLine({ limit: quota.limit, remaining: quota.remaining });
+            }
+        }
+    } catch (e) {
+        // Non-fatal
+    }
+}
+
+function closePortraitPromptModal() {
+    // Close the style menu if open (using standard selector toggle)
+    const trigger = document.getElementById('portraitStyleTrigger');
+    if (trigger && trigger.classList.contains('is-open') && window.CharacterSheet) {
+        CharacterSheet.toggleSelectorMenu(trigger);
+    }
+    
+    const modal = document.getElementById('portraitPromptModal');
+    if (!modal) {
+        const promptInput = document.getElementById('portraitPrompt');
+        if (promptInput) promptInput.value = '';
+        currentPortraitCharacterId = null;
+        currentPortraitStyle = null;
+        return;
+    }
+
+    const cleanup = () => {
+        const promptInput = document.getElementById('portraitPrompt');
+        if (promptInput) promptInput.value = '';
+        currentPortraitCharacterId = null;
+        currentPortraitStyle = null;
+
+        // Remove quota listener (if set)
+        try {
+            if (window._managerQuotaHandler) {
+                window.removeEventListener('danddy:imageQuotaUpdate', window._managerQuotaHandler);
+                window._managerQuotaHandler = null;
+            }
+        } catch (e) {}
+    };
+
+    animateModalClose(modal, {
+        removeOnClose: false,
+        onClosed: cleanup,
+    });
+}
+
+async function confirmGeneratePortrait() {
+    // Defensive check: block if quota is exhausted (in case modal was opened before quota loaded)
+    if (typeof window._imageQuotaRemaining === 'number' && window._imageQuotaRemaining === 0) {
+        showAlertDialog(
+            "You've reached your daily limit for portrait generation. Come back tomorrow for more adventures!"
+        );
+        closePortraitPromptModal();
+        return;
+    }
+
+    // Capture the current character ID and style in local variables so they're not lost
+    // when we close the modal (which resets currentPortraitCharacterId and currentPortraitStyle to null).
+    const portraitCharacterId = currentPortraitCharacterId;
+    const selectedStyle = currentPortraitStyle;
+    
+    if (!portraitCharacterId) {
+        closePortraitPromptModal();
+        return;
+    }
+
+    const character = await CharacterStorage.getById(portraitCharacterId);
+    if (!character) {
+        closePortraitPromptModal();
+        return;
+    }
+
+    const customPrompt = document.getElementById('portraitPrompt').value.trim();
+    if (!customPrompt) {
+        showAlertDialog('Please enter a description for your character portrait.');
+        return;
+    }
+
+    // Close modal
+    closePortraitPromptModal();
+
+    // Show loading state in the portrait area
+    const portraitId = `character-portrait-${portraitCharacterId}`;
+    const portraitEl = document.getElementById(portraitId);
+    const originalPortraitDomId = `original-portrait-${portraitCharacterId}`;
+    const originalPortraitEl = document.getElementById(originalPortraitDomId);
+
+    // If the user prefers original images, temporarily switch the visible
+    // portrait frame from original → ASCII so they see the cube loader and
+    // status text while art is generating. Once the new portrait is ready,
+    // we'll switch back to original mode so their preference is respected.
+    let shouldRestoreOriginalView = false;
+    if (portraitEl && originalPortraitEl) {
+        const container = portraitEl.closest('.portrait-container');
+        const toggleBtn = document.getElementById(`toggle-portrait-btn-${portraitCharacterId}`);
+
+        // Read the persisted portrait view preference, falling back to config.
+        let portraitViewMode = 'original';
+        try {
+            if (window.StorageService && StorageService.getPortraitViewMode) {
+                portraitViewMode = StorageService.getPortraitViewMode();
+            } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+                portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+            }
+        } catch (e) {
+            // Non-fatal: keep default
+        }
+
+        const isAsciiHidden = portraitEl.classList.contains('is-hidden');
+        const isOriginalVisible = !originalPortraitEl.classList.contains('is-hidden');
+        const isContainerOriginal =
+            !!container && container.classList.contains('portrait-container--original-mode');
+
+        // Only flip the view if:
+        // - the global preference is "original"
+        // - the DOM is currently showing the original image
+        if (portraitViewMode === 'original' && isAsciiHidden && isOriginalVisible && isContainerOriginal) {
+            shouldRestoreOriginalView = true;
+
+            // Switch to ASCII view so the loader is visible.
+            portraitEl.classList.remove('is-hidden');
+            originalPortraitEl.classList.add('is-hidden');
+            if (container) {
+                container.classList.remove('portrait-container--original-mode');
+            }
+
+            // Update the toggle label to match the temporary ASCII view.
+            if (toggleBtn) {
+                const iconSpan = toggleBtn.querySelector('.selector-option-icon');
+                const labelSpan = toggleBtn.querySelector('.selector-option-label');
+                if (iconSpan && labelSpan) {
+                    iconSpan.textContent = '◉';
+                    labelSpan.textContent = 'View Original Art';
+                } else {
+                    toggleBtn.textContent = '◉ View Original Art';
+                }
+            }
+        }
+    }
+
+    let portraitLoadingInterval;
+    let portraitElapsed = 0;
+    let portraitLoadingActive = true;
+    
+   const updatePortraitLoading = () => {
+       if (!portraitEl || !portraitLoadingActive) return;
+
+       // Single-line status with animated ellipsis and a subtext that reflects the current image model.
+       const baseMessage = 'Generating character art';
+
+       // Default subtext assumes DALL·E 3 timing; GPT Image 1 can take longer.
+       let subtext = '(This usually takes 20–30 seconds)';
+       try {
+           let imageModel = 'dall-e-3';
+           if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+               imageModel = StorageService.getImageModel();
+           } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_IMAGE_MODEL) {
+               imageModel = CONFIG.DEFAULT_IMAGE_MODEL;
+           }
+
+           if (imageModel === 'gpt-image-1') {
+               subtext = '(This can take up to a minute)';
+           } else if (imageModel === 'gpt-image-1.5') {
+               subtext = '(GPT Image 1.5 – usually 15–30 seconds)';
+           }
+       } catch (e) {
+           // Fall back to default subtext on any error.
+       }
+
+       const dotCount = (portraitElapsed % 3) + 1;
+
+       // Use shared cube loader so builder + manager share the same UI and
+       // image-model timing hint logic.
+       if (
+           window.PortraitUI &&
+           typeof PortraitUI.renderGeneratingLoader === 'function'
+       ) {
+           PortraitUI.renderGeneratingLoader(portraitEl, {
+               baseMessage,
+               subtext,
+               dotCount,
+               isLoading: true,
+           });
+       } else {
+           // Fallback: inline markup if the shared helper is unavailable.
+           let textEl = portraitEl.querySelector('.portrait-placeholder-text');
+           if (!textEl) {
+               portraitEl.innerHTML = `
+                    <div class="portrait-placeholder-content">
+                        <div class="portrait-placeholder-cube-container">
+                            <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+                                <i></i>
+                                <i></i>
+                                <i></i>
+                                <i></i>
+                                <i></i>
+                                <i></i>
+                            </div>
+                        </div>
+                        <div class="portrait-placeholder-text" data-dots="${dotCount}">
+                            <span class="portrait-placeholder-message">${baseMessage}</span>
+                            <span class="portrait-placeholder-dots">
+                                <span class="dot dot-1">.</span>
+                                <span class="dot dot-2">.</span>
+                                <span class="dot dot-3">.</span>
+                            </span>
+                            <div class="portrait-placeholder-subtext">
+                                ${subtext}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                textEl = portraitEl.querySelector('.portrait-placeholder-text');
+           } else {
+               textEl.setAttribute('data-dots', String(dotCount));
+               const messageEl = textEl.querySelector('.portrait-placeholder-message');
+               if (messageEl) {
+                   messageEl.textContent = baseMessage;
+               }
+           }
+       }
+
+       portraitElapsed++;
+    };
+    
+    if (portraitEl) {
+        // Add placeholder class for proper cube display with flexbox and 3D context
+        portraitEl.classList.add('ascii-portrait--placeholder');
+        portraitEl.classList.remove('ascii-portrait--loading');
+        portraitEl.style.fontSize = '';
+        updatePortraitLoading();
+        portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
+    }
+
+    console.log('%c🎨 PORTRAIT: Starting AI portrait generation...', 'color: #0ff; font-weight: 500');
+    console.log('  Note: DALL-E takes 20-30s when backend is warm, 60s+ on cold start...');
+
+    try {
+        // Add rendering instructions to the user's character description
+        // Use shared pose + camera data from PortraitPoseData module
+        const classKey = (character.class || 'default').toLowerCase();
+
+        const { pose: posePrompt, camera: cameraPrompt } =
+            window.PortraitPoseData && typeof PortraitPoseData.getRandomPoseAndCamera === 'function'
+                ? PortraitPoseData.getRandomPoseAndCamera(classKey)
+                : {
+                      pose: 'standing in a relaxed but heroic stance',
+                      camera: 'Camera angle: three-quarter view that clearly shows the full silhouette.',
+                  };
+
+        let renderingInstructions;
+        if (
+            typeof window !== 'undefined' &&
+            window.PortraitPrompt &&
+            typeof window.PortraitPrompt.buildCustomPortraitInstructions ===
+                'function'
+        ) {
+            // Shared helper so builder + manager use the exact same STYLE / Scene
+            // logic (including admin-defined prompt styles) for custom prompts.
+            // Use the style selected in the modal dropdown (captured before closing).
+            const promptThemeId = selectedStyle || null;
+
+            renderingInstructions =
+                window.PortraitPrompt.buildCustomPortraitInstructions({
+                    posePrompt,
+                    cameraPrompt,
+                    themeId: promptThemeId,
+                });
+        } else {
+            // Fallback if PortraitPrompt is unavailable.
+            // Note: Camera temporarily disabled - may interfere with pose
+            renderingInstructions = [
+                'Create a high-contrast black-and-white fantasy illustration.',
+                'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
+                'Include some controlled, directional hatching to define form (light mid-tone texture only).',
+                `Pose: ${posePrompt}`,
+                // cameraPrompt,
+                'Background should be simple, entirely black, and free of symbols or text.',
+                'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+                'Aspect ratio 3:4.',
+            ];
+        }
+        
+        // Combine character description with rendering instructions.
+        // Character info comes first, then style/pose/camera instructions.
+        // The backend has a 4000 character limit on prompts, so we need to truncate
+        // if necessary. Prioritize keeping the character description (customPrompt)
+        // and trim style instructions if we exceed the limit.
+        const MAX_PROMPT_LENGTH = 3900; // Leave some margin below the 4000 limit
+        let fullPrompt = [customPrompt, ...renderingInstructions].join(' ');
+        
+        if (fullPrompt.length > MAX_PROMPT_LENGTH) {
+            console.warn(`Portrait prompt exceeds ${MAX_PROMPT_LENGTH} chars (${fullPrompt.length}), truncating...`);
+            // Try to keep the custom prompt intact and reduce style instructions
+            const styleInstructionsText = renderingInstructions.join(' ');
+            const availableForStyle = MAX_PROMPT_LENGTH - customPrompt.length - 50; // 50 chars buffer
+            
+            if (availableForStyle > 200) {
+                // We have room for some style instructions
+                const truncatedStyle = styleInstructionsText.substring(0, availableForStyle);
+                fullPrompt = truncatedStyle + ' ' + customPrompt;
+            } else {
+                // Not much room - just use the custom prompt with minimal style
+                const minimalStyle = 'High-contrast black-and-white fantasy ink illustration.';
+                fullPrompt = minimalStyle + ' ' + customPrompt.substring(0, MAX_PROMPT_LENGTH - minimalStyle.length - 1);
+            }
+            console.log(`Truncated prompt length: ${fullPrompt.length}`);
+        }
+        
+        // Generate custom portrait with full prompt
+        const result = await window.AsciiArtService.generateCustomAIPortraitWithPrompt(fullPrompt);
+
+        // Check if generation actually succeeded
+        if (!result || !result.asciiArt || !result.imageUrl) {
+            throw new Error('Portrait generation returned incomplete result');
+        }
+
+        // Stop the loading animation (guard against any final timer ticks)
+        portraitLoadingActive = false;
+        if (portraitLoadingInterval) {
+            clearInterval(portraitLoadingInterval);
+        }
+
+        console.log('%c🎨 PORTRAIT (Success) ✨', 'color: #0f0; font-weight: 500');
+
+        // Update character in storage and append a new portrait version
+        const currentCount = character.customPortraitCount || 0;
+
+        console.log('%c🎨 PORTRAIT HISTORY CHECK', 'color: #0ff; font-weight: 500');
+        console.log('  window.PortraitHistory exists:', !!window.PortraitHistory);
+        console.log('  addVersion is function:', typeof window.PortraitHistory?.addVersion === 'function');
+
+        // Use the style selected in the modal dropdown for tagging
+        const managerStyle = selectedStyle || null;
+
+        let updatedMetadata;
+        if (window.PortraitHistory && typeof window.PortraitHistory.addVersion === 'function') {
+            const existingMetadata = character.portraitMetadata || {};
+            const existingVersions = Array.isArray(existingMetadata.versions)
+                ? existingMetadata.versions
+                : [];
+
+            let baseCharacterForHistory = character;
+
+            // If this character already has a portrait but no version history yet,
+            // seed the history with the *current* portrait before we overwrite it.
+            if (existingVersions.length === 0) {
+                const priorAscii =
+                    character.customPortraitAscii ||
+                    character.asciiPortrait ||
+                    character.portrait?.ascii ||
+                    '';
+                const priorUrl =
+                    character.originalPortraitUrl ||
+                    character.portrait?.url ||
+                    null;
+
+                if (priorAscii || priorUrl) {
+                    const seededMetadata = window.PortraitHistory.addVersion(
+                        character,
+                        priorAscii,
+                        priorUrl,
+                        {
+                            source: 'original-ai',
+                            prompt: null,
+                            style: null,
+                        },
+                    );
+
+                    baseCharacterForHistory = {
+                        ...character,
+                        portraitMetadata: seededMetadata,
+                    };
+                }
+            }
+
+            // Capture the model and quality that were used for generation
+            let generationModel = 'dall-e-3';
+            let generationQuality = null;
+            try {
+                if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+                    generationModel = StorageService.getImageModel();
+                } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_IMAGE_MODEL) {
+                    generationModel = CONFIG.DEFAULT_IMAGE_MODEL;
+                }
+                if (window.StorageService && typeof StorageService.getImageQuality === 'function') {
+                    generationQuality = StorageService.getImageQuality(generationModel);
+                }
+            } catch (e) {
+                // Non-fatal: use defaults
+            }
+
+            updatedMetadata = window.PortraitHistory.addVersion(
+                baseCharacterForHistory,
+                result.asciiArt,
+                result.imageUrl,
+                {
+                    source: 'custom-ai',
+                    prompt: fullPrompt,
+                    characterDescription: customPrompt,
+                    style: managerStyle,
+                    model: generationModel,
+                    quality: generationQuality,
+                },
+            );
+            console.log('%c🎨 PORTRAIT HISTORY UPDATED', 'color: #0f0; font-weight: 500');
+            console.log('  Versions count:', updatedMetadata.versions?.length || 0);
+            console.log('  Active version:', updatedMetadata.activeVersionId);
+        } else {
+            console.log('%c⚠️ PORTRAIT HISTORY NOT AVAILABLE!', 'color: #f00; font-weight: 500');
+            console.log('  Using fallback - no versions will be saved');
+            updatedMetadata = character.portraitMetadata || {};
+        }
+
+        const updates = {
+            originalPortraitUrl: result.imageUrl,
+            customPortraitAscii: result.asciiArt,
+            customPortraitCount: currentCount + 1,
+            portraitMetadata: updatedMetadata,
+            // Keep portrait object in sync for manager sheet rendering
+            portrait: {
+                ...(character.portrait || {}),
+                url: result.imageUrl,
+                ascii: result.asciiArt,
+            },
+        };
+
+        // Persist to storage (cloud or local depending on auth state)
+        await CharacterStorage.update(portraitCharacterId, updates);
+        markUserChanges(); // Show guest notice if applicable
+
+        // Apply the new portrait directly into the currently visible manager UI
+        // so we avoid a full grid/sheet re-render and instead "draw in" the art.
+        try {
+            const portraitArt = result.asciiArt;
+            const portraitDomId = `character-portrait-${portraitCharacterId}`;
+            const originalPortraitDomId = `original-portrait-${portraitCharacterId}`;
+            const asciiEl = document.getElementById(portraitDomId);
+            const imgEl = document.getElementById(originalPortraitDomId);
+
+            // If we temporarily switched from original → ASCII to show the
+            // loader, restore the original image view now that the new art
+            // is ready. Skip the ASCII animation when in original mode.
+            if (shouldRestoreOriginalView && asciiEl && imgEl) {
+                const container = asciiEl.closest('.portrait-container');
+                const toggleBtn = document.getElementById(`toggle-portrait-btn-${portraitCharacterId}`);
+
+                // Store the ASCII art in the element without animation so it's
+                // available if user toggles to ASCII view later.
+                if (portraitArt) {
+                    if (window.CharacterSheet && typeof CharacterSheet.setPortraitContent === 'function') {
+                        CharacterSheet.setPortraitContent(asciiEl, portraitArt);
+                    } else {
+                        asciiEl.innerHTML = '';
+                        const pre = document.createElement('pre');
+                        pre.textContent = portraitArt;
+                        asciiEl.appendChild(pre);
+                    }
+                    // Remove loading/placeholder classes since content is now set
+                    asciiEl.classList.remove('ascii-portrait--placeholder', 'ascii-portrait--loading');
+                }
+
+                // Restore original image view with reveal animation
+                asciiEl.classList.add('is-hidden');
+                imgEl.classList.remove('is-hidden', 'is-loaded', 'portrait-reveal');
+                if (container) {
+                    container.classList.add('portrait-container--original-mode');
+                }
+
+                // Set image src and trigger reveal animation when it loads
+                imgEl.onload = function() {
+                    this.classList.add('is-loaded', 'portrait-reveal');
+                    // Clean up the reveal class after animation completes
+                    this.addEventListener('animationend', () => {
+                        this.classList.remove('portrait-reveal');
+                    }, { once: true });
+                };
+                imgEl.src = result.imageUrl;
+
+                if (toggleBtn) {
+                    const iconSpan = toggleBtn.querySelector('.selector-option-icon');
+                    const labelSpan = toggleBtn.querySelector('.selector-option-label');
+                    if (iconSpan && labelSpan) {
+                        iconSpan.textContent = '≡';
+                        labelSpan.textContent = 'View ASCII Art';
+                    } else {
+                        toggleBtn.textContent = '≡ View ASCII Art';
+                    }
+                }
+            } else {
+                // Update original image src so it's ready if user toggles view
+                if (imgEl && result.imageUrl) {
+                    imgEl.src = result.imageUrl;
+                }
+                // In ASCII mode: animate the ASCII portrait into place, mirroring
+                // the builder's typewriter-style reveal so it feels consistent.
+                if (asciiEl && portraitArt) {
+                    await typeManagerPortrait(asciiEl, portraitArt);
+                }
+            }
+
+            // Also update the character card thumbnail (if it exists) so the
+            // grid immediately reflects the newly generated portrait.
+            // Respect the user's portrait view mode preference (original vs ASCII).
+            const thumbEl = document.getElementById(`card-thumb-${portraitCharacterId}`);
+            if (thumbEl) {
+                try {
+                    // Check the user's portrait view mode preference
+                    let thumbViewMode = 'original';
+                    try {
+                        if (window.StorageService && StorageService.getPortraitViewMode) {
+                            thumbViewMode = StorageService.getPortraitViewMode();
+                        } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+                            thumbViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+                        }
+                    } catch (e) {
+                        // Non-fatal: keep default
+                    }
+
+                    const showOriginalImage = thumbViewMode === 'original' && !!result.imageUrl;
+
+                    if (showOriginalImage) {
+                        // Update to show the original image
+                        let thumbImgEl = thumbEl.querySelector('img');
+                        if (thumbImgEl) {
+                            // Just update the src
+                            thumbImgEl.src = result.imageUrl;
+                        } else {
+                            // Need to switch from ASCII to image mode
+                            thumbEl.innerHTML = '';
+                            thumbEl.classList.add('card-thumbnail--image');
+                            thumbImgEl = document.createElement('img');
+                            thumbImgEl.src = result.imageUrl;
+                            thumbImgEl.alt = 'Character portrait';
+                            thumbImgEl.loading = 'lazy';
+                            thumbImgEl.onload = function() { this.classList.add('is-loaded'); };
+                            thumbEl.appendChild(thumbImgEl);
+                        }
+                    } else if (portraitArt) {
+                        // Update to show ASCII art
+                        let croppedArt;
+                        if (window.UI && typeof UI.cropAsciiForThumbnail === 'function') {
+                            croppedArt = UI.cropAsciiForThumbnail(portraitArt);
+                        } else {
+                            const lines = portraitArt.split('\n');
+                            const topLines = lines
+                                .slice(0, 80)
+                                .map(line => line.slice(0, 160));
+                            croppedArt = topLines.join('\n');
+                        }
+                        // Remove image mode class if present
+                        thumbEl.classList.remove('card-thumbnail--image');
+                        // Use <pre> wrapper for proper CSS flex centering
+                        thumbEl.innerHTML = '';
+                        const pre = document.createElement('pre');
+                        pre.textContent = croppedArt;
+                        thumbEl.appendChild(pre);
+                    }
+                } catch (thumbError) {
+                    console.error('Portrait thumbnail update failed', thumbError);
+                }
+            }
+        } catch (applyError) {
+            console.error('Error applying new custom portrait to manager UI', applyError);
+        }
+
+        // Keep AppState in sync for any future renders/navigations so that if
+        // the grid or sheet re-renders later, it uses this new portrait.
+        // Use String() comparison to handle type mismatches (cloud IDs may be
+        // numeric, but portraitCharacterId from onclick is always a string).
+        try {
+            const nextCharacter = { ...character, ...updates };
+            const idStr = String(portraitCharacterId);
+
+            // Debug: Log the character state being applied
+            if (window.DEBUG_PORTRAITS) {
+                console.log(`🖼️ [PORTRAIT DEBUG] After generation - updating AppState`, {
+                    characterId: idStr,
+                    characterName: nextCharacter.name,
+                    newPortraitUrl: updates.originalPortraitUrl,
+                    newActiveVersionId: updates.portraitMetadata?.activeVersionId,
+                    hasCustomPortraitAscii: !!updates.customPortraitAscii,
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            // Update AppState arrays directly (avoid window.AppState check which
+            // could reference a different object due to module scoping)
+            if (Array.isArray(AppState.characters)) {
+                const idx = AppState.characters.findIndex(
+                    c => c && String(c.id) === idStr,
+                );
+                if (idx !== -1) {
+                    AppState.characters[idx] = nextCharacter;
+                }
+            }
+            if (Array.isArray(AppState.filteredCharacters)) {
+                const fIdx = AppState.filteredCharacters.findIndex(
+                    c => c && String(c.id) === idStr,
+                );
+                if (fIdx !== -1) {
+                    AppState.filteredCharacters[fIdx] = nextCharacter;
+                }
+            }
+
+            // Debug: Verify the AppState update
+            if (window.DEBUG_PORTRAITS) {
+                const verifyChar = AppState.characters.find(c => c && String(c.id) === idStr);
+                console.log(`🖼️ [PORTRAIT DEBUG] AppState AFTER in-place update`, {
+                    characterId: idStr,
+                    portraitUrl: verifyChar?.originalPortraitUrl,
+                    activeVersionId: verifyChar?.portraitMetadata?.activeVersionId,
+                    hasCustomPortraitAscii: !!verifyChar?.customPortraitAscii,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        } catch (stateError) {
+            console.error('Error syncing AppState after portrait generation', stateError);
+        }
+
+        // Re-sort and re-render the grid WITHOUT reloading from storage.
+        // Previously we called `await AppState.loadCharacters()` here, but that
+        // could return stale data from storage/cloud if the write hadn't fully
+        // propagated, causing portrait mismatches when switching characters.
+        // Since we already updated AppState.characters in-place above, we just
+        // need to re-apply filters (which handles sorting) and re-render.
+        if (window.DEBUG_PORTRAITS) {
+            console.log(`🖼️ [PORTRAIT DEBUG] Re-sorting grid (no storage reload)`, {
+                characterId: portraitCharacterId,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // Update the character's updatedAt timestamp so it sorts correctly in "date modified" mode
+        const idStr = String(portraitCharacterId);
+        const charInState = AppState.characters.find(c => c && String(c.id) === idStr);
+        if (charInState) {
+            charInState.updatedAt = new Date().toISOString();
+            // Also update in filteredCharacters if present
+            const filteredChar = AppState.filteredCharacters.find(c => c && String(c.id) === idStr);
+            if (filteredChar) {
+                filteredChar.updatedAt = charInState.updatedAt;
+            }
+        }
+
+        // Re-apply filters (handles sorting) and re-render
+        AppState.applyFilters();
+        UI.render();
+
+        // Debug: Verify the character data is still correct after re-render
+        if (window.DEBUG_PORTRAITS) {
+            const charAfterRender = AppState.characters.find(c => c && String(c.id) === idStr);
+            console.log(`🖼️ [PORTRAIT DEBUG] AppState AFTER re-render (no reload)`, {
+                characterId: idStr,
+                portraitUrl: charAfterRender?.originalPortraitUrl,
+                activeVersionId: charAfterRender?.portraitMetadata?.activeVersionId,
+                hasCustomPortraitAscii: !!charAfterRender?.customPortraitAscii,
+                versionsCount: charAfterRender?.portraitMetadata?.versions?.length || 0,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // Notify the user that the portrait was generated successfully.
+        // Previously this message included a "3 remaining" counter, which
+        // implied a hard limit on custom portraits per character. That limit
+        // has been removed, so we no longer show a remaining count here.
+        showNotification('Custom portrait generated!');
+
+        // Clear the global pointer once we're done
+        currentPortraitCharacterId = null;
+    } catch (error) {
+        console.error('Error generating custom AI portrait:', error);
+        
+        // Stop the loading animation
+        if (portraitLoadingInterval) {
+            clearInterval(portraitLoadingInterval);
+        }
+        // Restore portrait font size and remove placeholder class on error as well
+        if (portraitEl) {
+            portraitEl.style.fontSize = '';
+            portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
+        }
+        
+        // Restore previous portrait first
+        if (portraitEl) {
+            const asciiPortrait = window.CharacterSheet.getAsciiPortrait(character);
+            if (asciiPortrait && window.CharacterSheet) {
+                CharacterSheet.setPortraitContent(portraitEl, asciiPortrait);
+            } else if (window.CharacterSheet) {
+                CharacterSheet.setPortraitContent(portraitEl, '[ NO PORTRAIT ]');
+            }
+        }
+        
+        // Graceful error handling - inform but don't block
+        if (error.isSafetyRejection) {
+            console.log('%c🎨 PORTRAIT (Safety System Rejection)', 'color: #fa0; font-weight: 500');
+            console.log('  OpenAI flagged this request:', error.originalMessage || error.message);
+            showNotification('⚠️ OpenAI flagged this portrait request. Try modifying your character description or prompt.');
+        } else if (error.isRateLimit) {
+            console.log('%c🎨 PORTRAIT (Rate Limited)', 'color: #fa0; font-weight: 500');
+            showNotification('⚠️ Rate limit exceeded. Please wait a few minutes before trying again.');
+        } else if (error.name === 'AbortError' || (error.message && error.message.includes('timed out'))) {
+            console.log('%c🎨 PORTRAIT (Timeout - Backend Waking Up)', 'color: #fa0; font-weight: 500');
+            console.log('  ⏰ Request timed out. Backend may be waking up from cold start.');
+            console.log('  ✅ Try again in a moment - server should be warm now!');
+            showNotification('⏰ Request timed out. Backend may be waking up. Try again in a moment!');
+            
+            // Trigger background warmup like other AI features
+            if (window.AIService && window.AIService.warmupBackend) {
+                window.AIService.warmupBackend();
+            }
+        } else if (error.message && error.message.includes('fetch')) {
+            console.log('%c🎨 PORTRAIT (Connection Error)', 'color: #f00; font-weight: 500');
+            console.log('  Cannot connect to backend server');
+            showNotification('🔌 Cannot connect to backend server. Check that it\'s running.');
+        } else {
+            console.log('%c🎨 PORTRAIT (Failed)', 'color: #f00; font-weight: 500');
+            console.log('  Error:', error.message);
+            showNotification('Portrait generation failed. Check console for details and try again.');
+        }
+    }
+}
+
+async function surpriseMePortrait() {
+    // Defensive check: block if quota is exhausted
+    if (typeof window._imageQuotaRemaining === 'number' && window._imageQuotaRemaining === 0) {
+        showAlertDialog(
+            "You've reached your daily limit for portrait generation. Come back tomorrow for more adventures!"
+        );
+        closePortraitPromptModal();
+        return;
+    }
+
+    const portraitCharacterId = currentPortraitCharacterId;
+    if (!portraitCharacterId) {
+        closePortraitPromptModal();
+        return;
+    }
+
+    const character = await CharacterStorage.getById(portraitCharacterId);
+    if (!character) {
+        closePortraitPromptModal();
+        return;
+    }
+
+    // Build a fresh randomized character description for the user to edit.
+    // NOTE: Use buildCharacterDescription (not buildPortraitPrompt) so that
+    // rendering instructions (Pose/Camera/STYLE/Scene) are only added once
+    // by confirmGeneratePortrait, avoiding duplication in the final prompt.
+    let templatePrompt = '';
+    try {
+        if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
+            templatePrompt = AIService.buildCharacterDescription(character);
+        } else {
+            templatePrompt = `${character.race}\u0020${character.class}`;
+        }
+    } catch (e) {
+        templatePrompt = `${character.race}\u0020${character.class}`;
+    }
+
+    const promptInput = document.getElementById('portraitPrompt');
+    if (promptInput) {
+        promptInput.value = templatePrompt;
+    }
+
+    // Reuse the existing generation pipeline.
+    await confirmGeneratePortrait();
+}
+
+// Animate ASCII portrait character-by-character, line-by-line in the manager
+// sheet, mirroring the builder's quick-create behavior but scoped to the
+// manager DOM. This keeps the "new art fades in" feel without reloading.
+async function typeManagerPortrait(element, portraitText) {
+    if (!element || !portraitText) return;
+
+    // Normalize the portrait container back to the base ASCII frame in case
+    // any loader/placeholder styles are still hanging around.
+    element.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
+    element.style.fontSize = '';
+    element.style.whiteSpace = '';
+    element.style.textAlign = '';
+    element.style.overflowX = '';
+    element.style.overflowY = '';
+
+    const lines = portraitText.split('\n');
+    // Use a <pre> child element for proper CSS flex centering
+    element.innerHTML = '';
+    const pre = document.createElement('pre');
+    element.appendChild(pre);
+
+    let currentText = '';
+    const charsPerFrame = 40; // Batch multiple characters per frame for speed
+    let charCount = 0;
+
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const line = lines[lineIndex];
+
+        for (let charIndex = 0; charIndex < line.length; charIndex++) {
+            currentText += line[charIndex];
+            charCount++;
+
+            if (charCount >= charsPerFrame) {
+                pre.textContent = currentText;
+                charCount = 0;
+                await new Promise(resolve => requestAnimationFrame(resolve));
+            }
+        }
+
+        if (lineIndex < lines.length - 1) {
+            currentText += '\n';
+        }
+    }
+
+    // Final flush to ensure all text is visible
+    pre.textContent = currentText;
+}
+
+// Panel loading cubes are now defined directly in index.html using
+// portrait-style cube markup (larger, simpler Y-axis rotation).
+
+// ===== PORTRAIT HISTORY (MANAGER) =====
+// The full portrait history UI is now handled by the shared PortraitUI
+// module (portraits-ui.js). Keep this wrapper for backwards compatibility
+// with any code that still calls openPortraitHistory(characterId) directly.
+async function openPortraitHistory(characterId) {
+    if (window.PortraitUI && typeof window.PortraitUI.openManagerHistory === 'function') {
+        return window.PortraitUI.openManagerHistory(characterId);
+    }
+}
+
+async function duplicateCharacter(id) {
+    showConfirmDialog('Create a copy of this character?', async () => {
+        const duplicate = await CharacterStorage.duplicate(id);
+        if (duplicate) {
+            await AppState.loadCharacters();
+            UI.render();
+            showNotification(`Created: ${duplicate.name}`);
+        }
+    });
+}
+
+async function exportCharacter(id) {
+    const json = await CharacterStorage.export(id);
+    if (json) {
+        const character = await CharacterStorage.getById(id);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${character.name || 'character'}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showNotification('Character exported!');
+    }
+}
+
+async function deleteCharacter(id) {
+    const character = await CharacterStorage.getById(id);
+    if (!character) return;
+
+    // On mobile, close the sheet view first before showing the confirmation dialog.
+    // This returns the user to the grid so they see the context of what they're deleting.
+    if (typeof MobileView !== 'undefined' && MobileView.isMobile() && MobileView.isOpen()) {
+        MobileView.close();
+    }
+
+    showConfirmDialog(`Delete ${character.name}?\n\nThis cannot be undone.`, async () => {
+        await CharacterStorage.delete(id);
+        await AppState.loadCharacters();
+        UI.render();
+        showNotification('Character deleted');
+    });
+}
+
+/**
+ * Leave a shared character (remove yourself as a collaborator).
+ * This removes the character from your collection but doesn't delete it for the owner.
+ * @param {string|number} id - The character ID
+ */
+async function leaveSharedCharacter(id) {
+    const character = await CharacterStorage.getById(id);
+    if (!character) return;
+
+    // On mobile, close the sheet view first
+    if (typeof MobileView !== 'undefined' && MobileView.isMobile() && MobileView.isOpen()) {
+        MobileView.close();
+    }
+
+    const ownerEmail = character.owner_email || character.ownerEmail || 'the owner';
+    showConfirmDialog(
+        `Leave shared character "${character.name}"?\n\nThis character was shared with you by ${ownerEmail}. You will no longer have access to it, but the owner will keep it.`,
+        async () => {
+            try {
+                await CharacterCloudStorage.leaveSharedCharacter(id);
+                await AppState.loadCharacters();
+                UI.render();
+                showNotification('Left shared character');
+            } catch (error) {
+                console.error('Failed to leave shared character:', error);
+                showNotification(error.message || 'Failed to leave character', 'error');
+            }
+        }
+    );
+}
+
+let isImporting = false;  // Flag to prevent concurrent imports
+
+// Helper: get the primary action button inside the Import modal only.
+// This avoids accidentally targeting primary buttons from other modals.
+function getImportModalPrimaryButton() {
+    const importModal = document.getElementById('importModal');
+    return importModal
+        ? importModal.querySelector('.modal-footer .terminal-btn-primary')
+        : null;
+}
+
+function showImportModal() {
+    const modal = document.getElementById('importModal');
+    if (modal) {
+        modal.classList.add('show');
+
+        if (typeof focusFirstFieldInModal === 'function') {
+            focusFirstFieldInModal(modal);
+        }
+
+        // Disable import button until file is selected
+        const importButton = modal.querySelector('.modal-footer .terminal-btn-primary');
+        if (importButton) {
+            importButton.disabled = true;
+        }
+    }
+}
+
+function closeImportModal() {
+    console.log('🚪 closeImportModal() called, isImporting was:', isImporting);
+    const modal = document.getElementById('importModal');
+    if (!modal) {
+        isImporting = false;
+        return;
+    }
+
+    const cleanup = () => {
+        const fileInput = document.getElementById('importFile');
+        const fileName = document.getElementById('fileName');
+        if (fileInput) fileInput.value = '';
+        if (fileName) fileName.textContent = '';
+
+        // Re-enable the import button and reset text
+        const importButton = getImportModalPrimaryButton();
+        if (importButton) {
+            importButton.disabled = true;  // Disable for next time modal opens
+            importButton.textContent = 'Import';
+        }
+
+        isImporting = false;  // Reset flag when closing
+        console.log('🚪 closeImportModal() done, isImporting now:', isImporting);
+    };
+
+    animateModalClose(modal, {
+        removeOnClose: false,
+        onClosed: cleanup,
+    });
+}
+
+// Store duplicate resolution data temporarily
+let pendingDuplicateResolution = null;
+
+function showDuplicateResolutionModal(characterName, existingId, importData) {
+    console.log('⚠️ DUPLICATE MODAL: Showing resolution options for', characterName);
+    
+    // Store the data for resolution
+    pendingDuplicateResolution = {
+        characterName,
+        existingId,
+        importData
+    };
+    
+    // Update modal content
+    document.getElementById('duplicateCharName').textContent = characterName;
+    
+    // Close import modal and show duplicate modal
+    document.getElementById('importModal').classList.remove('show');
+    const duplicateModal = document.getElementById('duplicateModal');
+    if (duplicateModal) {
+        duplicateModal.classList.add('show');
+        if (typeof focusFirstFieldInModal === 'function') {
+            focusFirstFieldInModal(duplicateModal);
+        }
+    }
+}
+
+function closeDuplicateModal() {
+    console.log('🚪 DUPLICATE MODAL: Closing');
+    const modal = document.getElementById('duplicateModal');
+    if (!modal) {
+        pendingDuplicateResolution = null;
+        isImporting = false;
+        return;
+    }
+
+    animateModalClose(modal, {
+        removeOnClose: false,
+        onClosed: () => {
+            pendingDuplicateResolution = null;
+            isImporting = false;  // Reset flag
+        },
+    });
+}
+
+function saveDuplicateResolution() {
+    const selectedRadio = document.querySelector('input[name="duplicateAction"]:checked');
+    if (!selectedRadio) {
+        console.error('No duplicate action selected!');
+        return;
+    }
+    resolveDuplicate(selectedRadio.value);
+}
+
+function resolveDuplicate(action) {
+    if (!pendingDuplicateResolution) {
+        console.error('No pending duplicate resolution!');
+        return;
+    }
+    
+    const { existingId, importData } = pendingDuplicateResolution;
+    
+    console.log('🔧 DUPLICATE RESOLUTION: Action =', action);
+    
+    if (action === 'overwrite') {
+        handleOverwriteCharacter(existingId, importData);
+    } else if (action === 'keep-both') {
+        handleKeepBothCharacters(importData);
+    }
+    
+    // Close modal and cleanup
+    closeDuplicateModal();
+}
+
+async function handleOverwriteCharacter(existingId, importData) {
+    console.log('🔄 OVERWRITE: Replacing existing character with ID:', existingId);
+    
+    // Delete the existing character
+    await CharacterStorage.delete(existingId);
+    
+    // Import the new one (bypassing duplicate check but preserving stable UID)
+    const character = JSON.parse(importData);
+    delete character.id;
+    
+    // Preserve stable UID on overwrite so future exports/imports still match
+    const importedUid =
+        character.metadata?.characterUid ||
+        character.characterUid ||
+        null;
+    if (importedUid) {
+        if (!character.metadata) character.metadata = {};
+        character.metadata.characterUid = importedUid;
+        character.characterUid = importedUid;
+    }
+
+    const result = await CharacterStorage.add(character);
+    markUserChanges(); // Show guest notice if applicable
+    
+    if (result) {
+        console.log('✅ KEEP BOTH SUCCESS: Character imported as', newName);
+        await AppState.loadCharacters();
+        UI.render();
+        closeImportModal();
+        showNotification(`Replaced: ${result.name}`);
+        setTimeout(() => viewCharacter(result.id), 100);
+    }
+}
+
+async function handleKeepBothCharacters(importData) {
+    console.log('📋 KEEP BOTH: Importing with modified name');
+    
+    // Parse and modify the character name
+    const character = JSON.parse(importData);
+    const originalName = character.name;
+    
+    // Find a unique name by adding (Copy N)
+    const existing = await CharacterStorage.getAll();
+    let copyNumber = 1;
+    let newName = `${originalName} (Copy)`;
+    
+    while (existing.some(c => c.name === newName)) {
+        copyNumber++;
+        newName = `${originalName} (Copy ${copyNumber})`;
+    }
+    
+    character.name = newName;
+    
+    // For "keep both", treat this as a new logical character: give it a new UID
+    const newUid = `danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    if (!character.metadata) character.metadata = {};
+    character.metadata.characterUid = newUid;
+    character.characterUid = newUid;
+    delete character.id;
+    
+    const result = await CharacterStorage.add(character);
+    markUserChanges(); // Show guest notice if applicable
+    
+    if (result) {
+        console.log('✅ KEEP BOTH SUCCESS: Character imported as', newName);
+        await AppState.loadCharacters();
+        UI.render();
+        closeImportModal();
+        showNotification(`Imported as: ${result.name}`);
+        setTimeout(() => viewCharacter(result.id), 100);
+    }
+}
+
+async function importCharacter() {
+    console.log('🔵 importCharacter() called, isImporting =', isImporting);
+    
+    // Prevent concurrent imports
+    if (isImporting) {
+        console.log('⚠️ Import already in progress, blocking duplicate call');
+        return;
+    }
+    
+    // Set flag IMMEDIATELY to prevent race condition
+    isImporting = true;
+    console.log('🔒 Import locked, isImporting =', isImporting);
+    
+    // Disable the import button immediately
+    const importButton = getImportModalPrimaryButton();
+    if (importButton) {
+        importButton.disabled = true;
+        importButton.textContent = 'IMPORTING...';
+    }
+    
+    const fileInput = document.getElementById('importFile');
+
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        console.log('📂 FILE: Selected file:', file.name, 'Size:', file.size);
+        const reader = new FileReader();
+        console.log('📖 READER: Created new FileReader');
+        reader.onload = async (e) => {
+            console.log('📖 READER.ONLOAD: Callback triggered, isImporting =', isImporting);
+            const importData = e.target.result;
+            const result = await CharacterStorage.import(importData);
+            
+            // Check if it's a duplicate
+            if (result && result.isDuplicate) {
+                console.warn('⚠️ DUPLICATE: Character already exists');
+                
+                // Show duplicate resolution modal instead of simple alert
+                showDuplicateResolutionModal(result.name, result.existingIds[0], importData);
+                
+                // Re-enable button
+                const importButton = getImportModalPrimaryButton();
+                if (importButton) {
+                    importButton.disabled = false;
+                    importButton.textContent = 'Import';
+                }
+                isImporting = false;  // Reset flag
+                return;
+            }
+            
+            if (result) {
+                console.log('✅ SUCCESS: Character imported, calling loadCharacters()');
+                await AppState.loadCharacters();
+                console.log('🎨 RENDER: Calling UI.render()');
+                UI.render();
+                console.log('🚪 MODAL: Calling closeImportModal()');
+                closeImportModal();
+                showNotification(`Imported: ${result.name}`);
+                // Auto-select the imported character
+                setTimeout(() => viewCharacter(result.id), 100);
+            } else {
+                showAlertDialog('Invalid character file!');
+                // Re-enable button on error
+                const importButton = getImportModalPrimaryButton();
+                if (importButton) {
+                    importButton.disabled = false;
+                    importButton.textContent = 'Import';
+                }
+                isImporting = false;  // Reset on error
+            }
+        };
+        reader.onerror = () => {
+            showAlertDialog('Error reading file!');
+            // Re-enable button on error
+            const importButton = getImportModalPrimaryButton();
+            if (importButton) {
+                importButton.disabled = false;
+                importButton.textContent = 'Import';
+            }
+            isImporting = false;  // Reset on error
+        };
+        console.log('📖 READER: Starting readAsText()');
+        reader.readAsText(file);
+    } else {
+        showAlertDialog('Please select a file to import.');
+        // Re-enable button and reset flag
+        const importButton = getImportModalPrimaryButton();
+        if (importButton) {
+            importButton.disabled = false;
+            importButton.textContent = 'Import';
+        }
+        isImporting = false;  // Reset flag
+    }
+}
+
+function togglePortraitView(characterId) {
+    const asciiPortrait = document.getElementById(`character-portrait-${characterId}`);
+    const originalPortrait = document.getElementById(`original-portrait-${characterId}`);
+    const toggleBtn = document.getElementById(`toggle-portrait-btn-${characterId}`);
+    const container = asciiPortrait
+        ? asciiPortrait.closest('.portrait-container')
+        : null;
+
+    if (!asciiPortrait || !originalPortrait || !toggleBtn) {
+        console.warn('Portrait elements not found for character:', characterId);
+        return;
+    }
+
+    const isShowingAscii = !asciiPortrait.classList.contains('is-hidden');
+
+    const iconSpan = toggleBtn.querySelector('.selector-option-icon');
+    const labelSpan = toggleBtn.querySelector('.selector-option-label');
+
+    if (isShowingAscii) {
+        // Switch to original
+        asciiPortrait.classList.add('is-hidden');
+        originalPortrait.classList.remove('is-hidden');
+        if (container) {
+            container.classList.add('portrait-container--original-mode');
+        }
+
+        if (iconSpan && labelSpan) {
+            iconSpan.textContent = '≡';
+            labelSpan.textContent = 'View ASCII Art';
+        } else {
+            toggleBtn.textContent = '≡ View ASCII Art';
+        }
+
+        toggleBtn.title = 'Toggle between ASCII and original art';
+    } else {
+        // Switch to ASCII
+        asciiPortrait.classList.remove('is-hidden');
+        originalPortrait.classList.add('is-hidden');
+        if (container) {
+            container.classList.remove('portrait-container--original-mode');
+        }
+
+        if (iconSpan && labelSpan) {
+            iconSpan.textContent = '◉';
+            labelSpan.textContent = 'View Original Art';
+        } else {
+            toggleBtn.textContent = '◉ View Original Art';
+        }
+
+        toggleBtn.title = 'Toggle between ASCII and original art';
+    }
+}
+
+function showNotification(rawMessage, duration = 4000) {
+    // Normalize to string so callers can safely pass anything.
+    const message = (rawMessage == null) ? '' : String(rawMessage);
+
+    // Console notification with visual styling (preserve any glyphs for logs)
+    console.log('%c✓ ' + message, 'color: #0f0; font-weight: 500');
+
+    // Strip leading glyphs (checkmarks, warning icons, etc.) from the toast text
+    // while keeping them available in logs. This keeps toasts purely textual
+    // with the exception of the "×" close button. Also trim leading/trailing
+    // whitespace so any stray spaces from callers are cleaned up.
+    const cleanedMessage = message
+        .replace(
+            /^[\s\u200b]*(?:[✓✔✕✖✗★⚠💡❌⏰🔌]+[\s\u00a0\u200b]*)+/u,
+            ''
+        )
+        .trim();
+
+    // Normalize overly-emphatic punctuation so toast messages stay calm and
+    // readable. We keep question marks intact but strip trailing exclamation
+    // marks (including "!!" etc.) which tend to feel shouty in short toasts.
+    const displayMessage = cleanedMessage
+        // Collapse any run of exclamation marks to a single one
+        .replace(/!{2,}/g, '!')
+        // Remove a trailing exclamation mark (or run of them) while preserving
+        // any final period or closing paren that may follow.
+        .replace(/!+(\s*[\.\)])?$/u, '$1')
+        .trim();
+
+    // Toast notification shared across the app (anchored to the terminal frame)
+    let toast = document.getElementById('toastNotification');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toastNotification';
+        toast.className = 'toast-notification';
+        toast.setAttribute('role', 'status');
+        toast.setAttribute('aria-live', 'polite');
+
+        // Inner structure: message + dismiss "X" pinned to the right in its own wrapper
+        toast.innerHTML = `
+            <span class="toast-message"></span>
+            <div class="toast-dismiss-wrapper">
+                <button type="button" class="toast-dismiss" aria-label="Dismiss notification">
+                    <span class="toast-dismiss-icon">&times;</span>
+                </button>
+            </div>
+        `;
+
+        const container = document.querySelector('.app-root') || document.querySelector('.terminal-frame') || document.body;
+        container.appendChild(toast);
+
+        const dismissBtn = toast.querySelector('.toast-dismiss');
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', () => {
+                toast.classList.remove('show');
+                // Clear any pending show/hide timers
+                if (window._toastShowTimeout) {
+                    clearTimeout(window._toastShowTimeout);
+                    window._toastShowTimeout = null;
+                }
+                if (window._toastTimeout) {
+                    clearTimeout(window._toastTimeout);
+                    window._toastTimeout = null;
+                }
+            });
+        }
+    }
+
+    const messageEl = toast.querySelector('.toast-message');
+    if (messageEl) {
+        messageEl.textContent = displayMessage;
+    } else {
+        // Fallback in case markup is missing for any reason
+        toast.textContent = displayMessage;
+    }
+
+    // Reset any in-flight timers so we can replay the entrance animation
+    if (window._toastShowTimeout) {
+        clearTimeout(window._toastShowTimeout);
+        window._toastShowTimeout = null;
+    }
+    if (window._toastTimeout) {
+        clearTimeout(window._toastTimeout);
+        window._toastTimeout = null;
+    }
+
+    // Ensure we start from the hidden state so the transition always plays,
+    // even immediately after a page reload.
+    toast.classList.remove('show');
+    // Force a reflow so the browser acknowledges the hidden state
+    // before we add the "show" class.
+    void toast.offsetWidth; // eslint-disable-line no-unused-expressions
+
+    window._toastShowTimeout = setTimeout(() => {
+        toast.classList.add('show');
+        window._toastShowTimeout = null;
+
+        // Auto-dismiss after specified duration (default 4s for success messages)
+        window._toastTimeout = setTimeout(() => {
+            toast.classList.remove('show');
+            window._toastTimeout = null;
+        }, duration);
+    }, 80);
+}
+
+// Focus the first meaningful field inside a modal (inputs/textareas/selects first, then primary button).
+function focusFirstFieldInModal(modal) {
+    if (!modal || typeof modal.querySelector !== 'function') return;
+
+    const fieldSelectors = [
+        // High-priority: styled terminal inputs
+        'input.terminal-input:not([type="hidden"]):not(.file-input-hidden):not([disabled])',
+        'textarea.terminal-input:not([disabled])',
+        'textarea.terminal-textarea:not([disabled])',
+        'select.terminal-select:not([disabled])',
+        // Generic fallbacks
+        'input:not([type="hidden"]):not(.file-input-hidden):not([disabled])',
+        'textarea:not([disabled])',
+        'select:not([disabled])',
+    ];
+
+    let target = null;
+    for (const selector of fieldSelectors) {
+        target = modal.querySelector(selector);
+        if (target) break;
+    }
+
+    if (!target) {
+        const fallbackSelectors = [
+            '.modal-footer .terminal-btn-primary:not([disabled])',
+            '.modal-footer button:not([disabled])',
+            'button.terminal-btn-primary:not([disabled])',
+            'button:not([disabled])',
+            '[tabindex]:not([tabindex="-1"])',
+        ];
+        for (const selector of fallbackSelectors) {
+            target = modal.querySelector(selector);
+            if (target) break;
+        }
+    }
+
+    if (target && typeof target.focus === 'function') {
+        // Defer slightly to ensure any CSS animations / layout are ready.
+        // We intentionally do NOT auto-select the text; we only move focus.
+        setTimeout(() => {
+            try {
+                target.focus();
+            } catch (e) {
+                // Non-fatal
+            }
+        }, 0);
+    }
+}
+
+// Manager now uses the shared SettingsModal defined in character-builder-components.js
+
+// Generic helper: animate modal close so it shrinks toward center instead of
+// disappearing instantly. Expects terminal-theme.css modal keyframes.
+/**
+ * @param {HTMLElement} modal
+ * @param {{ removeOnClose?: boolean, onClosed?: () => void }} options
+ */
+function animateModalClose(modal, options = {}) {
+    if (!modal) return;
+
+    const { removeOnClose = false, onClosed } = options;
+
+    // Avoid double-closing the same modal.
+    if (modal.classList.contains('closing')) {
+        return;
+    }
+
+    // Keep .show so layout stays active while the close animation runs.
+    modal.classList.add('closing');
+
+    const content = modal.querySelector('.modal-content') || modal;
+
+    let finished = false;
+    const finish = () => {
+        // Prevent double-execution from both animationend and fallback timeout
+        if (finished) return;
+        finished = true;
+
+        if (removeOnClose) {
+            if (modal && modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
+        } else {
+            modal.classList.remove('show');
+            modal.classList.remove('closing');
+        }
+
+        if (typeof onClosed === 'function') {
+            onClosed();
+        }
+    };
+
+    if (content && typeof content.addEventListener === 'function') {
+        content.addEventListener('animationend', finish, { once: true });
+        // Fallback timeout in case animationend doesn't fire
+        // (e.g., animation was already running or browser quirk)
+        setTimeout(finish, 400);
+    } else {
+        finish();
+    }
+}
+
+// Helper hooks so inline onclick handlers can use the shared animator.
+function closeGenericConfirmModal() {
+    const modal = document.getElementById('genericConfirmModal');
+    if (!modal) return;
+    animateModalClose(modal, { removeOnClose: true });
+}
+
+function closeGenericAlertModal() {
+    const modal = document.getElementById('genericAlertModal');
+    if (!modal) return;
+    animateModalClose(modal, { removeOnClose: true });
+}
+
+function closeRenameModal() {
+    const modal = document.getElementById('renameModal');
+    if (!modal) return;
+    animateModalClose(modal, { removeOnClose: true });
+}
+
+/**
+ * Close all editor/character-related modals.
+ * Called during logout and login to ensure a clean state.
+ */
+function closeAllEditorModals() {
+    // List of modal IDs that should be closed on auth state changes
+    const modalIds = [
+        'editDetailsModal',
+        'spellEditModal',
+        'portraitPromptModal',
+        'importModal',
+        'duplicateModal',
+        'renameModal',
+        'shareModal',
+        'pendingSharesModal',
+        'genericConfirmModal',
+        'genericAlertModal',
+        'sessionExpiredModal',
+        'createCampaignModal',
+        'joinCampaignModal',
+        'campaignCreatedModal',
+        'journalEntryModal',
+        'partyMemberSheetModal',
+        'pastAdventuresModal',
+    ];
+    
+    modalIds.forEach(id => {
+        const modal = document.getElementById(id);
+        if (modal && modal.classList.contains('show')) {
+            // Force immediate close without animation to avoid race conditions
+            modal.classList.remove('show', 'closing');
+        }
+    });
+    
+    // Also restore the editDetailsModal content to its original state
+    // in case it was showing the level change dialog
+    const editModal = document.getElementById('editDetailsModal');
+    if (editModal && originalEditModalContent) {
+        const modalContent = editModal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.innerHTML = originalEditModalContent;
+        }
+    }
+    
+    // Clear any editing state
+    currentEditCharacterId = null;
+    originalEditLevel = null;
+}
+
+// Generic confirmation modal using terminal modal styles
+function showConfirmDialog(message, onConfirm, onCancel) {
+    const existing = document.getElementById('genericConfirmModal');
+    if (existing) existing.remove();
+
+    const escapedMessage = Utils.escapeHtml(message).replace(/\n/g, '<br>');
+    const modalHtml = `
+      <div id="genericConfirmModal" class="modal show">
+        <div class="modal-content modal-content--narrow">
+          <div class="modal-header">
+            <h2 class="modal-title">CONFIRM</h2>
+            <button class="modal-close" id="genericConfirmClose">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text">${escapedMessage}</p>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" id="genericConfirmCancel">Cancel</button>
+            <button class="terminal-btn terminal-btn-primary" id="genericConfirmOk">OK</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('genericConfirmModal');
+    const closeBtn = document.getElementById('genericConfirmClose');
+    const cancelBtn = document.getElementById('genericConfirmCancel');
+    const okBtn = document.getElementById('genericConfirmOk');
+
+    const close = (cancelled = false) => {
+        if (!modal) return;
+        animateModalClose(modal, { removeOnClose: true });
+        if (cancelled && onCancel) {
+            onCancel();
+        }
+    };
+
+    closeBtn.addEventListener('click', () => close(true));
+    cancelBtn.addEventListener('click', () => close(true));
+    okBtn.addEventListener('click', async () => {
+        close(false);
+        if (onConfirm) {
+            await onConfirm();
+        }
+    });
+
+    if (modal) {
+        focusFirstFieldInModal(modal);
+    }
+}
+
+// Helper to animate modal content transition with height change
+function animateModalContentSwap(modalContent, newHtml, onComplete) {
+    const startHeight = modalContent.offsetHeight;
+    
+    // Phase 1: Fade out current content
+    modalContent.style.overflow = 'hidden';
+    modalContent.style.height = startHeight + 'px';
+    modalContent.style.transition = 'opacity 0.15s ease-out';
+    modalContent.style.opacity = '0';
+    
+    setTimeout(() => {
+        // Swap content
+        modalContent.innerHTML = newHtml;
+        
+        // Measure new height (temporarily set to auto)
+        modalContent.style.height = 'auto';
+        const endHeight = modalContent.offsetHeight;
+        
+        // Reset to start height for animation
+        modalContent.style.height = startHeight + 'px';
+        modalContent.style.opacity = '0';
+        
+        // Force reflow
+        void modalContent.offsetHeight;
+        
+        // Phase 2: Animate height and fade in
+        modalContent.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease-out 0.1s';
+        modalContent.style.height = endHeight + 'px';
+        modalContent.style.opacity = '1';
+        
+        setTimeout(() => {
+            // Clean up - let height be auto again
+            modalContent.style.height = '';
+            modalContent.style.overflow = '';
+            modalContent.style.transition = '';
+            if (onComplete) onComplete();
+        }, 350);
+    }, 150);
+}
+
+// Show dialog when user changes level in character editor
+// Transforms the existing edit modal content instead of overlaying a new modal
+// Returns a promise that resolves to: 'auto' | 'manual' | 'cancel'
+function showLevelChangeDialog(oldLevel, newLevel, xpTriggered = false) {
+    return new Promise((resolve) => {
+        const editModal = document.getElementById('editDetailsModal');
+        if (!editModal) {
+            resolve('manual');
+            return;
+        }
+
+        const modalContent = editModal.querySelector('.modal-content');
+        if (!modalContent) {
+            resolve('manual');
+            return;
+        }
+
+        // Store original content
+        const originalContent = modalContent.innerHTML;
+
+        const levelDiff = newLevel - oldLevel;
+        const direction = levelDiff > 0 ? 'up' : 'down';
+        const levelText = Math.abs(levelDiff) === 1 ? 'level' : 'levels';
+
+        // Customize message based on whether this was triggered by XP increase
+        let titleText, mainText;
+        if (xpTriggered && levelDiff > 0) {
+            titleText = 'LEVEL UP!';
+            mainText = `Your XP has reached the threshold for <strong>Level\u00A0${newLevel}</strong>! (${Math.abs(levelDiff)} ${levelText} ${direction})`;
+        } else {
+            titleText = 'LEVEL CHANGE';
+            mainText = `You're changing from <strong>Level\u00A0${oldLevel}</strong> to <strong>Level\u00A0${newLevel}</strong> (${Math.abs(levelDiff)} ${levelText} ${direction}).`;
+        }
+
+        // Create new content for level change dialog
+        const levelChangeHtml = `
+          <div class="modal-header">
+            <h2 class="modal-title">${titleText}</h2>
+            <button class="modal-close" id="levelChangeClose">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text level-change-text">${mainText}</p>
+            <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">
+              Would you like to automatically recalculate stats (HP, Proficiency Bonus, Spell Slots) for the new level, or update them manually?
+            </p>
+          </div>
+          <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">
+            <button class="terminal-btn" id="levelChangeManual">Keep manual</button>
+            <button class="terminal-btn terminal-btn-primary" id="levelChangeAuto">Auto-calculate</button>
+          </div>
+        `;
+
+        // Animate transition to level change dialog
+        animateModalContentSwap(modalContent, levelChangeHtml, () => {
+            const closeBtn = document.getElementById('levelChangeClose');
+            const manualBtn = document.getElementById('levelChangeManual');
+            const autoBtn = document.getElementById('levelChangeAuto');
+
+            const restoreAndResolve = (result) => {
+                if (result === 'cancel') {
+                    // Animate back to original content
+                    animateModalContentSwap(modalContent, originalContent, () => {
+                        // Restore the level value the user had entered (not the original)
+                        const levelInput = document.getElementById('editLevel');
+                        if (levelInput) {
+                            levelInput.value = newLevel;
+                        }
+                        resolve(result);
+                    });
+                } else if (result === 'auto') {
+                    // Show cube loader while "calculating", then proceed with save
+                    const loadingHtml = `
+                      <div class="modal-header">
+                        <h2 class="modal-title">LEVEL CHANGE</h2>
+                      </div>
+                      <div class="modal-body" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px;">
+                        <div class="panel-loading-cube-container">
+                          <div class="panel-loading-cube">
+                            <i></i><i></i><i></i><i></i><i></i><i></i>
+                          </div>
+                        </div>
+                        <p class="terminal-text-small" style="margin-top: 1rem; opacity: 0.8;">Calculating stats for Level ${newLevel}...</p>
+                      </div>
+                    `;
+                    
+                    animateModalContentSwap(modalContent, loadingHtml, () => {
+                        // Show loader briefly, then resolve to proceed with save
+                        setTimeout(() => {
+                            resolve(result);
+                        }, 500);
+                    });
+                } else {
+                    // Restore original form content for manual, keeping the new level value
+                    animateModalContentSwap(modalContent, originalContent, () => {
+                        // Restore the level value the user had entered (the new level)
+                        const levelInput = document.getElementById('editLevel');
+                        if (levelInput) {
+                            levelInput.value = newLevel;
+                        }
+                        resolve(result);
+                    });
+                }
+            };
+
+            closeBtn?.addEventListener('click', () => restoreAndResolve('cancel'));
+            manualBtn?.addEventListener('click', () => restoreAndResolve('manual'));
+            autoBtn?.addEventListener('click', () => restoreAndResolve('auto'));
+
+            // Focus the auto-calculate button after animation
+            autoBtn?.focus();
+        });
+    });
+}
+
+// Standalone level-up dialog for contexts where the edit modal isn't open (e.g., journal entries)
+// Returns a promise that resolves to: 'auto' | 'manual' | 'cancel'
+function showStandaloneLevelUpDialog(oldLevel, newLevel, characterName = '') {
+    return new Promise((resolve) => {
+        const levelDiff = newLevel - oldLevel;
+        const direction = levelDiff > 0 ? 'up' : 'down';
+        const levelText = Math.abs(levelDiff) === 1 ? 'level' : 'levels';
+        
+        const nameDisplay = characterName ? ` for ${characterName}` : '';
+        const mainText = `XP gained has reached the threshold for <strong>Level\u00A0${newLevel}</strong>${nameDisplay}! (${Math.abs(levelDiff)} ${levelText} ${direction})`;
+        
+        const modalHtml = `
+          <div id="levelUpStandaloneModal" class="modal show">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h2 class="modal-title">LEVEL UP!</h2>
+                <button class="modal-close" id="levelUpClose">&times;</button>
+              </div>
+              <div class="modal-body">
+                <p class="terminal-text level-change-text">${mainText}</p>
+                <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">
+                  Would you like to automatically recalculate stats (HP, Proficiency Bonus, Spell Slots) for the new level, or update them manually?
+                </p>
+              </div>
+              <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">
+                <button class="terminal-btn" id="levelUpCancel">Skip</button>
+                <button class="terminal-btn" id="levelUpManual">Level up (manual stats)</button>
+                <button class="terminal-btn terminal-btn-primary" id="levelUpAuto">Level up (auto-calculate)</button>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
+        const modal = document.getElementById('levelUpStandaloneModal');
+        
+        const closeAndResolve = (result) => {
+            if (modal) {
+                animateModalClose(modal, { removeOnClose: true });
+            }
+            resolve(result);
+        };
+        
+        document.getElementById('levelUpClose')?.addEventListener('click', () => closeAndResolve('cancel'));
+        document.getElementById('levelUpCancel')?.addEventListener('click', () => closeAndResolve('cancel'));
+        document.getElementById('levelUpManual')?.addEventListener('click', () => closeAndResolve('manual'));
+        document.getElementById('levelUpAuto')?.addEventListener('click', () => closeAndResolve('auto'));
+        
+        // Focus the auto-calculate button
+        document.getElementById('levelUpAuto')?.focus();
+    });
+}
+
+// D&D 5e XP thresholds for each level (same as CharacterSheet.XP_THRESHOLDS)
+const XP_THRESHOLDS = [
+    0,       // Level 1
+    300,     // Level 2
+    900,     // Level 3
+    2700,    // Level 4
+    6500,    // Level 5
+    14000,   // Level 6
+    23000,   // Level 7
+    34000,   // Level 8
+    48000,   // Level 9
+    64000,   // Level 10
+    85000,   // Level 11
+    100000,  // Level 12
+    120000,  // Level 13
+    140000,  // Level 14
+    165000,  // Level 15
+    195000,  // Level 16
+    225000,  // Level 17
+    265000,  // Level 18
+    305000,  // Level 19
+    355000,  // Level 20
+];
+
+/**
+ * Calculate the level a character should be at based on their XP.
+ * @param {number} xp - Current experience points
+ * @returns {number} - Level (1-20)
+ */
+function calculateLevelFromXP(xp) {
+    const currentXP = xp || 0;
+    // Find the highest level where XP >= threshold
+    for (let level = 20; level >= 1; level--) {
+        if (currentXP >= XP_THRESHOLDS[level - 1]) {
+            return level;
+        }
+    }
+    return 1;
+}
+
+// Calculate derived stats for a given level
+// Returns { proficiencyBonus, hpMax, hitDie, hitDiceMax, spellSlots, spellProgression }
+// spellProgression: { cantrips, spellsKnown, maxSpellLevel } for casters, null for non-casters
+// spellsKnown is null for "prepared" casters (Cleric, Druid, Paladin) who prepare from full spell list
+function calculateStatsForLevel(character, newLevel) {
+    // Hit die mapping for standard 5e classes
+    const HIT_DIE_BY_CLASS = {
+        barbarian: 12,
+        fighter: 10,
+        paladin: 10,
+        ranger: 10,
+        cleric: 8,
+        druid: 8,
+        monk: 8,
+        rogue: 8,
+        bard: 8,
+        warlock: 8,
+        wizard: 6,
+        sorcerer: 6,
+    };
+
+    // Full caster spell slot progression (Wizard, Sorcerer, Bard, Cleric, Druid)
+    // Format: level -> { slotLevel: count }
+    const FULL_CASTER_SLOTS = {
+        1:  { 1: 2 },
+        2:  { 1: 3 },
+        3:  { 1: 4, 2: 2 },
+        4:  { 1: 4, 2: 3 },
+        5:  { 1: 4, 2: 3, 3: 2 },
+        6:  { 1: 4, 2: 3, 3: 3 },
+        7:  { 1: 4, 2: 3, 3: 3, 4: 1 },
+        8:  { 1: 4, 2: 3, 3: 3, 4: 2 },
+        9:  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 1 },
+        10: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2 },
+        11: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1 },
+        12: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1 },
+        13: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1 },
+        14: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1 },
+        15: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1 },
+        16: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1 },
+        17: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1, 9: 1 },
+        18: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 1, 7: 1, 8: 1, 9: 1 },
+        19: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 2, 7: 1, 8: 1, 9: 1 },
+        20: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 2, 7: 2, 8: 1, 9: 1 },
+    };
+
+    // Warlock Pact Magic slots (all slots are at highest available level, short rest recovery)
+    const WARLOCK_PACT_SLOTS = {
+        1:  { slots: 1, level: 1 },
+        2:  { slots: 2, level: 1 },
+        3:  { slots: 2, level: 2 },
+        4:  { slots: 2, level: 2 },
+        5:  { slots: 2, level: 3 },
+        6:  { slots: 2, level: 3 },
+        7:  { slots: 2, level: 4 },
+        8:  { slots: 2, level: 4 },
+        9:  { slots: 2, level: 5 },
+        10: { slots: 2, level: 5 },
+        11: { slots: 3, level: 5 },
+        12: { slots: 3, level: 5 },
+        13: { slots: 3, level: 5 },
+        14: { slots: 3, level: 5 },
+        15: { slots: 3, level: 5 },
+        16: { slots: 3, level: 5 },
+        17: { slots: 4, level: 5 },
+        18: { slots: 4, level: 5 },
+        19: { slots: 4, level: 5 },
+        20: { slots: 4, level: 5 },
+    };
+
+    // Half caster spell slot progression (Paladin, Ranger) - starts at level 2
+    const HALF_CASTER_SLOTS = {
+        1:  {},
+        2:  { 1: 2 },
+        3:  { 1: 3 },
+        4:  { 1: 3 },
+        5:  { 1: 4, 2: 2 },
+        6:  { 1: 4, 2: 2 },
+        7:  { 1: 4, 2: 3 },
+        8:  { 1: 4, 2: 3 },
+        9:  { 1: 4, 2: 3, 3: 2 },
+        10: { 1: 4, 2: 3, 3: 2 },
+        11: { 1: 4, 2: 3, 3: 3 },
+        12: { 1: 4, 2: 3, 3: 3 },
+        13: { 1: 4, 2: 3, 3: 3, 4: 1 },
+        14: { 1: 4, 2: 3, 3: 3, 4: 1 },
+        15: { 1: 4, 2: 3, 3: 3, 4: 2 },
+        16: { 1: 4, 2: 3, 3: 3, 4: 2 },
+        17: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 1 },
+        18: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 1 },
+        19: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2 },
+        20: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2 },
+    };
+
+    // Full casters
+    const FULL_CASTERS = ['wizard', 'sorcerer', 'bard', 'cleric', 'druid'];
+    // Half casters
+    const HALF_CASTERS = ['paladin', 'ranger'];
+
+    // Spells Known progression by class and level
+    // Format: { cantrips, spellsKnown, maxSpellLevel }
+    // Note: "prepared" casters (Cleric, Druid, Paladin) use spellsKnown: null (they prepare instead)
+    
+    // Sorcerer - "known" caster (PHB p.100)
+    const SORCERER_PROGRESSION = {
+        1:  { cantrips: 4, spellsKnown: 2,  maxSpellLevel: 1 },
+        2:  { cantrips: 4, spellsKnown: 3,  maxSpellLevel: 1 },
+        3:  { cantrips: 4, spellsKnown: 4,  maxSpellLevel: 2 },
+        4:  { cantrips: 5, spellsKnown: 5,  maxSpellLevel: 2 },
+        5:  { cantrips: 5, spellsKnown: 6,  maxSpellLevel: 3 },
+        6:  { cantrips: 5, spellsKnown: 7,  maxSpellLevel: 3 },
+        7:  { cantrips: 5, spellsKnown: 8,  maxSpellLevel: 4 },
+        8:  { cantrips: 5, spellsKnown: 9,  maxSpellLevel: 4 },
+        9:  { cantrips: 5, spellsKnown: 10, maxSpellLevel: 5 },
+        10: { cantrips: 6, spellsKnown: 11, maxSpellLevel: 5 },
+        11: { cantrips: 6, spellsKnown: 12, maxSpellLevel: 6 },
+        12: { cantrips: 6, spellsKnown: 12, maxSpellLevel: 6 },
+        13: { cantrips: 6, spellsKnown: 13, maxSpellLevel: 7 },
+        14: { cantrips: 6, spellsKnown: 13, maxSpellLevel: 7 },
+        15: { cantrips: 6, spellsKnown: 14, maxSpellLevel: 8 },
+        16: { cantrips: 6, spellsKnown: 14, maxSpellLevel: 8 },
+        17: { cantrips: 6, spellsKnown: 15, maxSpellLevel: 9 },
+        18: { cantrips: 6, spellsKnown: 15, maxSpellLevel: 9 },
+        19: { cantrips: 6, spellsKnown: 15, maxSpellLevel: 9 },
+        20: { cantrips: 6, spellsKnown: 15, maxSpellLevel: 9 },
+    };
+
+    // Warlock - "known" caster with Pact Magic (PHB p.106)
+    // Note: maxSpellLevel caps at 5 (Pact Magic), higher levels get Mystic Arcanum
+    const WARLOCK_PROGRESSION = {
+        1:  { cantrips: 2, spellsKnown: 2,  maxSpellLevel: 1 },
+        2:  { cantrips: 2, spellsKnown: 3,  maxSpellLevel: 1 },
+        3:  { cantrips: 2, spellsKnown: 4,  maxSpellLevel: 2 },
+        4:  { cantrips: 3, spellsKnown: 5,  maxSpellLevel: 2 },
+        5:  { cantrips: 3, spellsKnown: 6,  maxSpellLevel: 3 },
+        6:  { cantrips: 3, spellsKnown: 7,  maxSpellLevel: 3 },
+        7:  { cantrips: 3, spellsKnown: 8,  maxSpellLevel: 4 },
+        8:  { cantrips: 3, spellsKnown: 9,  maxSpellLevel: 4 },
+        9:  { cantrips: 3, spellsKnown: 10, maxSpellLevel: 5 },
+        10: { cantrips: 4, spellsKnown: 10, maxSpellLevel: 5 },
+        11: { cantrips: 4, spellsKnown: 11, maxSpellLevel: 5 },
+        12: { cantrips: 4, spellsKnown: 11, maxSpellLevel: 5 },
+        13: { cantrips: 4, spellsKnown: 12, maxSpellLevel: 5 },
+        14: { cantrips: 4, spellsKnown: 12, maxSpellLevel: 5 },
+        15: { cantrips: 4, spellsKnown: 13, maxSpellLevel: 5 },
+        16: { cantrips: 4, spellsKnown: 13, maxSpellLevel: 5 },
+        17: { cantrips: 4, spellsKnown: 14, maxSpellLevel: 5 },
+        18: { cantrips: 4, spellsKnown: 14, maxSpellLevel: 5 },
+        19: { cantrips: 4, spellsKnown: 15, maxSpellLevel: 5 },
+        20: { cantrips: 4, spellsKnown: 15, maxSpellLevel: 5 },
+    };
+
+    // Bard - "known" caster (PHB p.53)
+    const BARD_PROGRESSION = {
+        1:  { cantrips: 2, spellsKnown: 4,  maxSpellLevel: 1 },
+        2:  { cantrips: 2, spellsKnown: 5,  maxSpellLevel: 1 },
+        3:  { cantrips: 2, spellsKnown: 6,  maxSpellLevel: 2 },
+        4:  { cantrips: 3, spellsKnown: 7,  maxSpellLevel: 2 },
+        5:  { cantrips: 3, spellsKnown: 8,  maxSpellLevel: 3 },
+        6:  { cantrips: 3, spellsKnown: 9,  maxSpellLevel: 3 },
+        7:  { cantrips: 3, spellsKnown: 10, maxSpellLevel: 4 },
+        8:  { cantrips: 3, spellsKnown: 11, maxSpellLevel: 4 },
+        9:  { cantrips: 3, spellsKnown: 12, maxSpellLevel: 5 },
+        10: { cantrips: 4, spellsKnown: 14, maxSpellLevel: 5 },
+        11: { cantrips: 4, spellsKnown: 15, maxSpellLevel: 6 },
+        12: { cantrips: 4, spellsKnown: 15, maxSpellLevel: 6 },
+        13: { cantrips: 4, spellsKnown: 16, maxSpellLevel: 7 },
+        14: { cantrips: 4, spellsKnown: 18, maxSpellLevel: 7 },
+        15: { cantrips: 4, spellsKnown: 19, maxSpellLevel: 8 },
+        16: { cantrips: 4, spellsKnown: 19, maxSpellLevel: 8 },
+        17: { cantrips: 4, spellsKnown: 20, maxSpellLevel: 9 },
+        18: { cantrips: 4, spellsKnown: 22, maxSpellLevel: 9 },
+        19: { cantrips: 4, spellsKnown: 22, maxSpellLevel: 9 },
+        20: { cantrips: 4, spellsKnown: 22, maxSpellLevel: 9 },
+    };
+
+    // Wizard - "spellbook" caster (PHB p.113)
+    // spellsKnown = spellbook capacity (starts 6, +2 per level)
+    // Note: Wizards can also copy found spells into spellbook
+    const WIZARD_PROGRESSION = {
+        1:  { cantrips: 3, spellsKnown: 6,  maxSpellLevel: 1 },
+        2:  { cantrips: 3, spellsKnown: 8,  maxSpellLevel: 1 },
+        3:  { cantrips: 3, spellsKnown: 10, maxSpellLevel: 2 },
+        4:  { cantrips: 4, spellsKnown: 12, maxSpellLevel: 2 },
+        5:  { cantrips: 4, spellsKnown: 14, maxSpellLevel: 3 },
+        6:  { cantrips: 4, spellsKnown: 16, maxSpellLevel: 3 },
+        7:  { cantrips: 4, spellsKnown: 18, maxSpellLevel: 4 },
+        8:  { cantrips: 4, spellsKnown: 20, maxSpellLevel: 4 },
+        9:  { cantrips: 4, spellsKnown: 22, maxSpellLevel: 5 },
+        10: { cantrips: 5, spellsKnown: 24, maxSpellLevel: 5 },
+        11: { cantrips: 5, spellsKnown: 26, maxSpellLevel: 6 },
+        12: { cantrips: 5, spellsKnown: 28, maxSpellLevel: 6 },
+        13: { cantrips: 5, spellsKnown: 30, maxSpellLevel: 7 },
+        14: { cantrips: 5, spellsKnown: 32, maxSpellLevel: 7 },
+        15: { cantrips: 5, spellsKnown: 34, maxSpellLevel: 8 },
+        16: { cantrips: 5, spellsKnown: 36, maxSpellLevel: 8 },
+        17: { cantrips: 5, spellsKnown: 38, maxSpellLevel: 9 },
+        18: { cantrips: 5, spellsKnown: 40, maxSpellLevel: 9 },
+        19: { cantrips: 5, spellsKnown: 42, maxSpellLevel: 9 },
+        20: { cantrips: 5, spellsKnown: 44, maxSpellLevel: 9 },
+    };
+
+    // Cleric - "prepared" caster (PHB p.57)
+    // spellsKnown: null (prepares WIS mod + level from full class list)
+    const CLERIC_PROGRESSION = {
+        1:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 1 },
+        2:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 1 },
+        3:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 2 },
+        4:  { cantrips: 4, spellsKnown: null, maxSpellLevel: 2 },
+        5:  { cantrips: 4, spellsKnown: null, maxSpellLevel: 3 },
+        6:  { cantrips: 4, spellsKnown: null, maxSpellLevel: 3 },
+        7:  { cantrips: 4, spellsKnown: null, maxSpellLevel: 4 },
+        8:  { cantrips: 4, spellsKnown: null, maxSpellLevel: 4 },
+        9:  { cantrips: 4, spellsKnown: null, maxSpellLevel: 5 },
+        10: { cantrips: 5, spellsKnown: null, maxSpellLevel: 5 },
+        11: { cantrips: 5, spellsKnown: null, maxSpellLevel: 6 },
+        12: { cantrips: 5, spellsKnown: null, maxSpellLevel: 6 },
+        13: { cantrips: 5, spellsKnown: null, maxSpellLevel: 7 },
+        14: { cantrips: 5, spellsKnown: null, maxSpellLevel: 7 },
+        15: { cantrips: 5, spellsKnown: null, maxSpellLevel: 8 },
+        16: { cantrips: 5, spellsKnown: null, maxSpellLevel: 8 },
+        17: { cantrips: 5, spellsKnown: null, maxSpellLevel: 9 },
+        18: { cantrips: 5, spellsKnown: null, maxSpellLevel: 9 },
+        19: { cantrips: 5, spellsKnown: null, maxSpellLevel: 9 },
+        20: { cantrips: 5, spellsKnown: null, maxSpellLevel: 9 },
+    };
+
+    // Druid - "prepared" caster (PHB p.66)
+    // spellsKnown: null (prepares WIS mod + level from full class list)
+    const DRUID_PROGRESSION = {
+        1:  { cantrips: 2, spellsKnown: null, maxSpellLevel: 1 },
+        2:  { cantrips: 2, spellsKnown: null, maxSpellLevel: 1 },
+        3:  { cantrips: 2, spellsKnown: null, maxSpellLevel: 2 },
+        4:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 2 },
+        5:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 3 },
+        6:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 3 },
+        7:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 4 },
+        8:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 4 },
+        9:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 5 },
+        10: { cantrips: 4, spellsKnown: null, maxSpellLevel: 5 },
+        11: { cantrips: 4, spellsKnown: null, maxSpellLevel: 6 },
+        12: { cantrips: 4, spellsKnown: null, maxSpellLevel: 6 },
+        13: { cantrips: 4, spellsKnown: null, maxSpellLevel: 7 },
+        14: { cantrips: 4, spellsKnown: null, maxSpellLevel: 7 },
+        15: { cantrips: 4, spellsKnown: null, maxSpellLevel: 8 },
+        16: { cantrips: 4, spellsKnown: null, maxSpellLevel: 8 },
+        17: { cantrips: 4, spellsKnown: null, maxSpellLevel: 9 },
+        18: { cantrips: 4, spellsKnown: null, maxSpellLevel: 9 },
+        19: { cantrips: 4, spellsKnown: null, maxSpellLevel: 9 },
+        20: { cantrips: 4, spellsKnown: null, maxSpellLevel: 9 },
+    };
+
+    // Ranger - half caster, "known" spells, no cantrips (PHB p.91)
+    // Spellcasting starts at level 2
+    const RANGER_PROGRESSION = {
+        1:  { cantrips: 0, spellsKnown: 0,  maxSpellLevel: 0 },
+        2:  { cantrips: 0, spellsKnown: 2,  maxSpellLevel: 1 },
+        3:  { cantrips: 0, spellsKnown: 3,  maxSpellLevel: 1 },
+        4:  { cantrips: 0, spellsKnown: 3,  maxSpellLevel: 1 },
+        5:  { cantrips: 0, spellsKnown: 4,  maxSpellLevel: 2 },
+        6:  { cantrips: 0, spellsKnown: 4,  maxSpellLevel: 2 },
+        7:  { cantrips: 0, spellsKnown: 5,  maxSpellLevel: 2 },
+        8:  { cantrips: 0, spellsKnown: 5,  maxSpellLevel: 2 },
+        9:  { cantrips: 0, spellsKnown: 6,  maxSpellLevel: 3 },
+        10: { cantrips: 0, spellsKnown: 6,  maxSpellLevel: 3 },
+        11: { cantrips: 0, spellsKnown: 7,  maxSpellLevel: 3 },
+        12: { cantrips: 0, spellsKnown: 7,  maxSpellLevel: 3 },
+        13: { cantrips: 0, spellsKnown: 8,  maxSpellLevel: 4 },
+        14: { cantrips: 0, spellsKnown: 8,  maxSpellLevel: 4 },
+        15: { cantrips: 0, spellsKnown: 9,  maxSpellLevel: 4 },
+        16: { cantrips: 0, spellsKnown: 9,  maxSpellLevel: 4 },
+        17: { cantrips: 0, spellsKnown: 10, maxSpellLevel: 5 },
+        18: { cantrips: 0, spellsKnown: 10, maxSpellLevel: 5 },
+        19: { cantrips: 0, spellsKnown: 11, maxSpellLevel: 5 },
+        20: { cantrips: 0, spellsKnown: 11, maxSpellLevel: 5 },
+    };
+
+    // Paladin - half caster, "prepared" spells, no cantrips (PHB p.83)
+    // Spellcasting starts at level 2, prepares CHA mod + half level
+    const PALADIN_PROGRESSION = {
+        1:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 0 },
+        2:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 1 },
+        3:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 1 },
+        4:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 1 },
+        5:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 2 },
+        6:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 2 },
+        7:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 2 },
+        8:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 2 },
+        9:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 3 },
+        10: { cantrips: 0, spellsKnown: null, maxSpellLevel: 3 },
+        11: { cantrips: 0, spellsKnown: null, maxSpellLevel: 3 },
+        12: { cantrips: 0, spellsKnown: null, maxSpellLevel: 3 },
+        13: { cantrips: 0, spellsKnown: null, maxSpellLevel: 4 },
+        14: { cantrips: 0, spellsKnown: null, maxSpellLevel: 4 },
+        15: { cantrips: 0, spellsKnown: null, maxSpellLevel: 4 },
+        16: { cantrips: 0, spellsKnown: null, maxSpellLevel: 4 },
+        17: { cantrips: 0, spellsKnown: null, maxSpellLevel: 5 },
+        18: { cantrips: 0, spellsKnown: null, maxSpellLevel: 5 },
+        19: { cantrips: 0, spellsKnown: null, maxSpellLevel: 5 },
+        20: { cantrips: 0, spellsKnown: null, maxSpellLevel: 5 },
+    };
+
+    // Map class to progression table
+    const SPELL_PROGRESSION_BY_CLASS = {
+        sorcerer: SORCERER_PROGRESSION,
+        warlock: WARLOCK_PROGRESSION,
+        bard: BARD_PROGRESSION,
+        wizard: WIZARD_PROGRESSION,
+        cleric: CLERIC_PROGRESSION,
+        druid: DRUID_PROGRESSION,
+        ranger: RANGER_PROGRESSION,
+        paladin: PALADIN_PROGRESSION,
+    };
+
+    // Get hit die
+    let hitDie = character.hitDie || character.classData?.hitDie || null;
+    if (!hitDie) {
+        const rawClass = character.class || '';
+        const normalized = rawClass.toString().trim().toLowerCase().replace(/\s+/g, '-');
+        if (normalized && HIT_DIE_BY_CLASS[normalized]) {
+            hitDie = HIT_DIE_BY_CLASS[normalized];
+        }
+    }
+    if (!hitDie && window.DND_DATA && Array.isArray(window.DND_DATA.classes)) {
+        const classIdOrName = character.class;
+        if (classIdOrName) {
+            const cls = window.DND_DATA.classes.find(
+                (c) => c.id === classIdOrName || c.name === classIdOrName,
+            );
+            if (cls && cls.hitDie) {
+                hitDie = cls.hitDie;
+            }
+        }
+    }
+    if (!hitDie) {
+        hitDie = 8; // Default to d8 if unknown
+    }
+
+    // Get CON modifier
+    const abilities = character.abilities || character.abilityScores || {};
+    const conScore = abilities.con || 10;
+    const conMod = Math.floor((conScore - 10) / 2);
+
+    // Calculate proficiency bonus: ceil(level/4) + 1
+    const proficiencyBonus = Math.ceil(newLevel / 4) + 1;
+
+    // Calculate HP:
+    // Level 1: hitDie + CON mod (max at level 1)
+    // Each additional level: average die (hitDie/2 + 1) + CON mod
+    const baseHP = hitDie + conMod;
+    const averageDie = Math.floor(hitDie / 2) + 1;
+    const perLevel = Math.max(1, averageDie + conMod);
+    const hpMax = newLevel === 1 ? Math.max(1, baseHP) : Math.max(1, baseHP + perLevel * (newLevel - 1));
+
+    // Calculate spell slots based on class type
+    const rawClass = character.class || '';
+    const normalizedClass = rawClass.toString().trim().toLowerCase().replace(/\s+/g, '-');
+    const clampedLevel = Math.max(1, Math.min(20, newLevel));
+    
+    let spellSlots = null;
+    
+    if (normalizedClass === 'warlock') {
+        // Warlock Pact Magic: all slots at the same level
+        const pactInfo = WARLOCK_PACT_SLOTS[clampedLevel];
+        if (pactInfo && pactInfo.slots > 0) {
+            spellSlots = {};
+            spellSlots[pactInfo.level] = pactInfo.slots;
+        }
+    } else if (FULL_CASTERS.includes(normalizedClass)) {
+        spellSlots = { ...FULL_CASTER_SLOTS[clampedLevel] };
+    } else if (HALF_CASTERS.includes(normalizedClass)) {
+        const halfSlots = HALF_CASTER_SLOTS[clampedLevel];
+        if (halfSlots && Object.keys(halfSlots).length > 0) {
+            spellSlots = { ...halfSlots };
+        }
+    }
+
+    // Get spell progression for this class and level
+    let spellProgression = null;
+    const progressionTable = SPELL_PROGRESSION_BY_CLASS[normalizedClass];
+    if (progressionTable && progressionTable[clampedLevel]) {
+        spellProgression = { ...progressionTable[clampedLevel] };
+    }
+
+    // Hit dice count equals character level (for short rest healing)
+    const hitDiceMax = newLevel;
+
+    // Calculate class resources based on class and level
+    const classResources = calculateClassResources(normalizedClass, newLevel, abilities);
+
+    return {
+        proficiencyBonus,
+        hpMax,
+        hitDie,
+        hitDiceMax,
+        spellSlots,
+        spellProgression, // { cantrips, spellsKnown, maxSpellLevel } or null for non-casters
+        classResources,
+    };
+}
+
+/**
+ * Calculate class-specific resources (Ki, Rage, Sorcery Points, etc.)
+ * @param {string} className - Normalized class name (lowercase)
+ * @param {number} level - Character level
+ * @param {object} abilities - Ability scores { str, dex, con, int, wis, cha }
+ * @returns {object} - Class resources { resourceName: { current: X, max: X }, ... }
+ */
+function calculateClassResources(className, level, abilities) {
+    const resources = {};
+    const chaMod = Math.floor(((abilities?.cha || 10) - 10) / 2);
+    const wisMod = Math.floor(((abilities?.wis || 10) - 10) / 2);
+
+    switch (className) {
+        case 'monk':
+            // Ki Points = Monk level (starts at level 2)
+            if (level >= 2) {
+                resources.ki = { current: level, max: level, refresh: 'short' };
+            }
+            break;
+
+        case 'barbarian':
+            // Rage uses increase at certain levels
+            let rageMax = 2;
+            if (level >= 20) rageMax = Infinity; // Unlimited at 20
+            else if (level >= 17) rageMax = 6;
+            else if (level >= 12) rageMax = 5;
+            else if (level >= 6) rageMax = 4;
+            else if (level >= 3) rageMax = 3;
+            
+            resources.rage = { 
+                current: rageMax === Infinity ? 999 : rageMax, 
+                max: rageMax === Infinity ? 999 : rageMax, 
+                refresh: 'long',
+                unlimited: level >= 20
+            };
+            
+            // Rage damage bonus
+            let rageDamage = 2;
+            if (level >= 16) rageDamage = 4;
+            else if (level >= 9) rageDamage = 3;
+            resources.rageDamage = { value: rageDamage };
+            break;
+
+        case 'sorcerer':
+            // Sorcery Points = Sorcerer level (starts at level 2)
+            if (level >= 2) {
+                resources.sorceryPoints = { current: level, max: level, refresh: 'long' };
+            }
+            break;
+
+        case 'bard':
+            // Bardic Inspiration = CHA modifier (min 1)
+            const bardInspMax = Math.max(1, chaMod);
+            resources.bardicInspiration = { current: bardInspMax, max: bardInspMax, refresh: 'long' };
+            
+            // Die size increases with level
+            let inspDie = 'd6';
+            if (level >= 15) inspDie = 'd12';
+            else if (level >= 10) inspDie = 'd10';
+            else if (level >= 5) inspDie = 'd8';
+            resources.bardicInspirationDie = { value: inspDie };
+            break;
+
+        case 'cleric':
+            // Channel Divinity uses
+            let channelMax = 1;
+            if (level >= 18) channelMax = 3;
+            else if (level >= 6) channelMax = 2;
+            
+            if (level >= 2) {
+                resources.channelDivinity = { current: channelMax, max: channelMax, refresh: 'short' };
+            }
+            break;
+
+        case 'paladin':
+            // Lay on Hands = 5 × Paladin level
+            const layOnHandsMax = level * 5;
+            resources.layOnHands = { current: layOnHandsMax, max: layOnHandsMax, refresh: 'long' };
+            
+            // Channel Divinity (at level 3+)
+            if (level >= 3) {
+                resources.channelDivinity = { current: 1, max: 1, refresh: 'short' };
+            }
+            break;
+
+        case 'druid':
+            // Wild Shape uses (at level 2+)
+            if (level >= 2) {
+                resources.wildShape = { current: 2, max: 2, refresh: 'short' };
+            }
+            break;
+
+        case 'fighter':
+            // Second Wind (at level 1+)
+            resources.secondWind = { current: 1, max: 1, refresh: 'short' };
+            
+            // Action Surge (at level 2+)
+            if (level >= 2) {
+                const actionSurgeMax = level >= 17 ? 2 : 1;
+                resources.actionSurge = { current: actionSurgeMax, max: actionSurgeMax, refresh: 'short' };
+            }
+            
+            // Indomitable (at level 9+)
+            if (level >= 9) {
+                let indomMax = 1;
+                if (level >= 17) indomMax = 3;
+                else if (level >= 13) indomMax = 2;
+                resources.indomitable = { current: indomMax, max: indomMax, refresh: 'long' };
+            }
+            break;
+
+        case 'rogue':
+            // Sneak Attack dice (1d6 at level 1, +1d6 every odd level)
+            const sneakDice = Math.ceil(level / 2);
+            resources.sneakAttack = { value: `${sneakDice}d6` };
+            break;
+
+        case 'warlock':
+            // Note: Pact Magic slots are handled separately in spell slots
+            // Mystic Arcanum (6th+ level spells, 1/day each)
+            if (level >= 11) {
+                resources.mysticArcanum = { current: 1, max: 1, refresh: 'long', note: '6th level' };
+            }
+            break;
+
+        case 'wizard':
+            // Arcane Recovery (at level 1+)
+            const recoverySlots = Math.ceil(level / 2);
+            resources.arcaneRecovery = { current: recoverySlots, max: recoverySlots, refresh: 'long', note: 'spell slot levels' };
+            break;
+
+        case 'ranger':
+            // No major trackable resources beyond spells at basic level
+            break;
+    }
+
+    return resources;
+}
+
+/**
+ * Auto-recalculate level-dependent stats if they appear outdated.
+ * This ensures existing characters get updated spell slots, class resources, etc.
+ * @param {object} character - The character to check/update
+ * @returns {object} - The character (possibly updated)
+ */
+async function autoRecalculateLevelStats(character) {
+    if (!character || !character.class || !character.level) {
+        return character;
+    }
+
+    const level = character.level || 1;
+    const rawClass = character.class || '';
+    const normalizedClass = rawClass.toString().trim().toLowerCase().replace(/\s+/g, '-');
+    
+    // Classes that should have spell slots
+    const CASTER_CLASSES = ['wizard', 'sorcerer', 'bard', 'cleric', 'druid', 'warlock', 'paladin', 'ranger'];
+    const isCaster = CASTER_CLASSES.includes(normalizedClass);
+    
+    // Check if spell slots need recalculation
+    const currentSlots = character.spellSlots || {};
+    const currentSlotCount = Object.keys(currentSlots).length;
+    
+    // Calculate expected spell slots for this level
+    const calculatedStats = calculateStatsForLevel(character, level);
+    const expectedSlots = calculatedStats.spellSlots || {};
+    const expectedSlotCount = Object.keys(expectedSlots).length;
+    
+    // Check if class resources need calculation
+    const currentResources = character.classResources || {};
+    const expectedResources = calculatedStats.classResources || {};
+    const needsResourceUpdate = Object.keys(expectedResources).length > 0 && 
+                                Object.keys(currentResources).length === 0;
+    
+    // Check if spell slots are outdated (caster with fewer slot levels than expected)
+    const needsSlotUpdate = isCaster && expectedSlotCount > 0 && currentSlotCount < expectedSlotCount;
+    
+    // Check if proficiency bonus needs update
+    const currentProfBonus = character.proficiencyBonus || 2;
+    const expectedProfBonus = calculatedStats.proficiencyBonus;
+    const needsProfBonusUpdate = currentProfBonus !== expectedProfBonus;
+    
+    if (needsSlotUpdate || needsResourceUpdate || needsProfBonusUpdate) {
+        console.log(`📊 Auto-recalculating stats for ${character.name} (level ${level} ${normalizedClass})`);
+        
+        const updates = {};
+        
+        if (needsSlotUpdate) {
+            console.log(`  - Updating spell slots: ${currentSlotCount} levels → ${expectedSlotCount} levels`);
+            updates.spellSlots = expectedSlots;
+        }
+        
+        if (needsResourceUpdate) {
+            console.log(`  - Adding class resources:`, Object.keys(expectedResources));
+            updates.classResources = expectedResources;
+        }
+        
+        if (needsProfBonusUpdate) {
+            console.log(`  - Updating proficiency bonus: +${currentProfBonus} → +${expectedProfBonus}`);
+            updates.proficiencyBonus = expectedProfBonus;
+        }
+        
+        // Save updates to storage
+        try {
+            await CharacterStorage.update(character.id, updates);
+            
+            // Update the character object in memory
+            Object.assign(character, updates);
+            
+            // Update in AppState if present
+            if (typeof AppState !== 'undefined' && AppState && Array.isArray(AppState.characters)) {
+                const idx = AppState.characters.findIndex(c => c && String(c.id) === String(character.id));
+                if (idx !== -1) {
+                    Object.assign(AppState.characters[idx], updates);
+                }
+            }
+            
+            console.log(`  ✓ Stats updated successfully`);
+        } catch (error) {
+            console.warn('Failed to auto-update character stats:', error);
+        }
+    }
+    
+    return character;
+}
+
+// Generic alert modal using terminal modal styles
+// Optional `options.actionLabel` and `options.onAction` to show an action button
+function showAlertDialog(message, options) {
+    const existing = document.getElementById('genericAlertModal');
+    if (existing) existing.remove();
+
+    const escapedMessage = Utils.escapeHtml(message).replace(/\n/g, '<br>');
+    const actionLabel = options && options.actionLabel;
+    const actionButtonHtml = actionLabel
+        ? `<button class="terminal-btn terminal-btn-secondary" id="genericAlertAction">${Utils.escapeHtml(actionLabel)}</button>`
+        : '';
+    
+    const modalHtml = `
+      <div id="genericAlertModal" class="modal show">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title">NOTICE</h2>
+            <button class="modal-close" onclick="closeGenericAlertModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text">${escapedMessage}</p>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            ${actionButtonHtml}
+            <button class="terminal-btn terminal-btn-primary" id="genericAlertOk">OK</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('genericAlertModal');
+    const okBtn = document.getElementById('genericAlertOk');
+    const actionBtn = document.getElementById('genericAlertAction');
+
+    const close = () => {
+        if (!modal) return;
+        animateModalClose(modal, { removeOnClose: true });
+    };
+
+    okBtn.addEventListener('click', close);
+    
+    if (actionBtn && options && typeof options.onAction === 'function') {
+        actionBtn.addEventListener('click', () => {
+            close();
+            options.onAction();
+        });
+    }
+
+    if (modal) {
+        focusFirstFieldInModal(modal);
+    }
+}
+
+// ========================================
+// SESSION EXPIRED MODAL
+// ========================================
+
+// Show a modal when the session has expired proactively
+function showSessionExpiredModal() {
+    // Close any open editor modals first (e.g., level change dialog)
+    // This prevents stale modal state from persisting
+    closeAllEditorModals();
+    
+    const existing = document.getElementById('sessionExpiredModal');
+    if (existing) existing.remove();
+
+    const modalHtml = `
+      <div id="sessionExpiredModal" class="modal show">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title">[!] Your session has expired</h2>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text">Your local changes are safe, but you'll need to log in again to sync with the cloud.</p>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn terminal-btn-secondary" id="sessionExpiredDismiss">Continue offline</button>
+            <button class="terminal-btn terminal-btn-primary" id="sessionExpiredLogin">Log in</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('sessionExpiredModal');
+    const dismissBtn = document.getElementById('sessionExpiredDismiss');
+    const loginBtn = document.getElementById('sessionExpiredLogin');
+
+    const close = () => {
+        if (!modal) return;
+        animateModalClose(modal, { removeOnClose: true });
+    };
+
+    dismissBtn.addEventListener('click', () => {
+        close();
+        showNotification('Working offline - log in to sync changes');
+    });
+
+    loginBtn.addEventListener('click', () => {
+        close();
+        // Small delay to let the modal close animation finish
+        setTimeout(() => {
+            showAuthModal();
+        }, 200);
+    });
+
+    if (modal) {
+        focusFirstFieldInModal(modal);
+    }
+}
+
+// Track guest notice state per session
+let guestNoticeShownThisSession = false;
+let userHasMadeChanges = false;
+
+// Dismiss the guest notice banner (per-session only)
+function dismissGuestNotice() {
+    const guestNotice = document.getElementById('guestNotice');
+    if (guestNotice) {
+        guestNotice.classList.add('is-hidden');
+        guestNoticeShownThisSession = true;
+    }
+}
+
+// Show guest notice when user makes changes (if not logged in and not shown yet)
+function maybeShowGuestNotice() {
+    // Only show if not authenticated and hasn't been shown this session
+    if (window.AuthService && window.AuthService.isAuthenticated()) {
+        return;
+    }
+    
+    if (guestNoticeShownThisSession) {
+        return;
+    }
+    
+    const guestNotice = document.getElementById('guestNotice');
+    if (guestNotice) {
+        guestNotice.classList.remove('is-hidden');
+        guestNoticeShownThisSession = true;
+    }
+}
+
+// Mark that user has made changes (called when creating/editing characters)
+function markUserChanges() {
+    if (!userHasMadeChanges) {
+        userHasMadeChanges = true;
+        maybeShowGuestNotice();
+    }
+}
+
+// ========================================
+// SESSION IN PROGRESS NOTICE
+// ========================================
+
+const BUILDER_SESSION_KEY = 'danddy_builder_session';
+let sessionNoticeDismissed = false;
+
+// Check if there's a builder session in progress
+function hasBuilderSession() {
+    try {
+        const raw = localStorage.getItem(BUILDER_SESSION_KEY);
+        if (!raw) return false;
+        const session = JSON.parse(raw);
+        // Consider it a valid session if we have meaningful progress
+        const hasProgress = session.currentQuestionId && session.currentQuestionId !== 'intro';
+        const hasCharacterData = session.character && (
+            session.character.name ||
+            session.character.race ||
+            session.character.class
+        );
+        return hasProgress || hasCharacterData;
+    } catch {
+        return false;
+    }
+}
+
+// Get session preview for display
+function getBuilderSessionPreview() {
+    try {
+        const raw = localStorage.getItem(BUILDER_SESSION_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch {
+        return null;
+    }
+}
+
+// Format time ago string
+function formatTimeAgo(dateString) {
+    if (!dateString) return '';
+    const savedDate = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - savedDate;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return savedDate.toLocaleDateString();
+}
+
+// Show the session notice if there's a session in progress
+function maybeShowSessionNotice() {
+    if (sessionNoticeDismissed) return;
+    if (!hasBuilderSession()) return;
+    
+    const sessionNotice = document.getElementById('sessionNotice');
+    const sessionNoticeTime = document.getElementById('sessionNoticeTime');
+    
+    if (sessionNotice) {
+        const session = getBuilderSessionPreview();
+        if (session && session._savedAt) {
+            sessionNoticeTime.textContent = `· ${formatTimeAgo(session._savedAt)}`;
+        }
+        sessionNotice.classList.remove('is-hidden');
+    }
+}
+
+// Dismiss the session notice (per-session only)
+function dismissSessionNotice() {
+    const sessionNotice = document.getElementById('sessionNotice');
+    if (sessionNotice) {
+        sessionNotice.classList.add('is-hidden');
+        sessionNoticeDismissed = true;
+    }
+}
+
+// Discard the builder session entirely (clears localStorage)
+function discardBuilderSession() {
+    try {
+        localStorage.removeItem('danddy_builder_session');
+        const sessionNotice = document.getElementById('sessionNotice');
+        if (sessionNotice) {
+            sessionNotice.classList.add('is-hidden');
+        }
+    } catch (e) {
+        console.error('Failed to discard builder session:', e);
+    }
+}
+
+// ========================================
+// SPLASH SCREEN (manager uses welcome modal instead of a full-page splash)
+// ========================================
+
+// In the manager we don't actually block interaction behind a separate splash
+// screen, so keep this false to ensure global keyboard shortcuts always work.
+let splashActive = false;
+
+// Track whether the auth modal was opened from the welcome splash CTA
+// (LOG IN / CREATE ACCOUNT). When true, pressing Escape or CANCEL in the
+// auth modal should return the user to the splash screen instead of
+// leaving them on the main dashboard.
+let authOpenedFromWelcome = false;
+
+function dismissSplash(instant = false) {
+    const splash = document.getElementById('splash-content');
+    const mainContent = document.getElementById('main-content');
+    
+    if (splash && splashActive) {
+        splashActive = false;
+        
+        if (instant) {
+            // Skip animation entirely (used when returning from builder)
+            splash.classList.add('is-hidden');
+            mainContent.classList.remove('is-hidden');
+            mainContent.classList.add('fade-in');
+        } else {
+            // Fade out splash
+            splash.classList.add('fade-out');
+            
+            setTimeout(() => {
+                splash.classList.add('is-hidden');
+                mainContent.classList.remove('is-hidden');
+                
+                // Fade in main content
+                setTimeout(() => {
+                    mainContent.classList.add('fade-in');
+                }, 50);
+            }, 300);
+        }
+    }
+}
+
+// ========================================
+// MODAL ANIMATION HELPERS
+// ========================================
+
+// Duration must match CSS --modal-animation-duration (350ms)
+const MODAL_ANIMATION_DURATION = 350;
+
+const AUTH_FLOW_MODAL_IDS = ['welcomeModal', 'authModal', 'passwordResetModal'];
+
+function getModalOverlayHost() {
+    return document.querySelector('.app-root') || document.querySelector('.terminal-frame');
+}
+
+function syncAuthFlowDim() {
+    const host = getModalOverlayHost();
+    if (!host) return;
+    const anyOpen = AUTH_FLOW_MODAL_IDS.some((id) => {
+        const el = document.getElementById(id);
+        return el && (el.classList.contains('show') || el.classList.contains('closing'));
+    });
+    host.classList.toggle('auth-flow-dim', anyOpen);
+}
+
+function setAuthFlowDim(active) {
+    const host = getModalOverlayHost();
+    if (!host) return;
+    host.classList.toggle('auth-flow-dim', !!active);
+}
+
+/**
+ * Animate a modal closing with the collapse animation.
+ * @param {HTMLElement|string} modal - The modal element or its ID
+ * @returns {Promise} Resolves when the close animation completes
+ */
+function animateModalClose(modal) {
+    const el = typeof modal === 'string' ? document.getElementById(modal) : modal;
+    if (!el || !el.classList.contains('show')) {
+        return Promise.resolve();
+    }
+    
+    return new Promise((resolve) => {
+        el.classList.add('closing');
+        setTimeout(() => {
+            el.classList.remove('show', 'closing');
+            syncAuthFlowDim();
+            resolve();
+        }, MODAL_ANIMATION_DURATION);
+    });
+}
+
+/**
+ * Transition from one modal to another with smooth collapse/expand animation.
+ * The outgoing modal collapses, then the incoming modal expands.
+ * For auth-flow modals, the dim overlay is owned by `.app-root::before`
+ * so we can keep it stable through the swap.
+ * @param {HTMLElement|string} outgoingModal - The modal to close
+ * @param {HTMLElement|string} incomingModal - The modal to open
+ * @param {Function} [onOpen] - Optional callback after incoming modal starts opening
+ */
+async function animateModalTransition(outgoingModal, incomingModal, onOpen) {
+    const outgoingEl = typeof outgoingModal === 'string' 
+        ? document.getElementById(outgoingModal) 
+        : outgoingModal;
+    const incomingEl = typeof incomingModal === 'string' 
+        ? document.getElementById(incomingModal) 
+        : incomingModal;
+    
+    // Force dim on for the duration of the swap (prevents any flash)
+    setAuthFlowDim(true);
+
+    // Open incoming immediately (behind outgoing); keeps UX snappy and avoids any gap.
+    if (incomingEl && !incomingEl.classList.contains('show')) {
+        incomingEl.classList.add('show');
+        if (onOpen) onOpen(incomingEl);
+    } else if (incomingEl && onOpen) {
+        onOpen(incomingEl);
+    }
+
+    // Close outgoing with animation (if present)
+    if (outgoingEl && outgoingEl.classList.contains('show')) {
+        outgoingEl.classList.add('closing');
+        await new Promise((resolve) => setTimeout(resolve, MODAL_ANIMATION_DURATION));
+        outgoingEl.classList.remove('show', 'closing');
+    }
+
+    // Let overlay follow actual open/close state
+    syncAuthFlowDim();
+}
+
+// When the user explicitly cancels out of the auth flow (Escape, "X",
+// or CANCEL button), close the auth modal and, if it was launched from
+// the welcome splash, return to that splash screen instead of leaving
+// them on the main dashboard.
+async function cancelAuthFlow() {
+    if (authOpenedFromWelcome) {
+        // Animate transition back to welcome modal
+        await animateModalTransition('authModal', 'welcomeModal');
+        // Clear auth form fields after animation
+        document.getElementById('authError').classList.add('is-hidden');
+        document.getElementById('loginEmail').value = '';
+        const loginPassword = document.getElementById('loginPassword');
+        if (loginPassword) {
+            loginPassword.value = '';
+            loginPassword.type = 'password';
+        }
+        const registerUsername = document.getElementById('registerUsername');
+        if (registerUsername) {
+            registerUsername.value = '';
+        }
+        document.getElementById('registerEmail').value = '';
+        const registerPassword = document.getElementById('registerPassword');
+        if (registerPassword) {
+            registerPassword.value = '';
+            registerPassword.type = 'password';
+        }
+        const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
+        if (registerPasswordConfirm) {
+            registerPasswordConfirm.value = '';
+            registerPasswordConfirm.type = 'password';
+        }
+        authOpenedFromWelcome = false;
+    } else {
+        // Just close with animation
+        await closeAuthModal(true);
+    }
+}
+
+// ========================================
+// AUTHENTICATION UI HANDLERS
+// ========================================
+
+function showAuthModal() {
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        modal.classList.add('show');
+    }
+    showLoginForm();
+    syncAuthFlowDim();
+}
+
+/**
+ * Close the auth modal, optionally with animation.
+ * @param {boolean} [animate=false] - Whether to animate the close
+ * @returns {Promise|void} Returns a Promise if animated
+ */
+function closeAuthModal(animate = false) {
+    const modal = document.getElementById('authModal');
+    
+    const cleanup = () => {
+        document.getElementById('authError').classList.add('is-hidden');
+        // Clear form fields
+        document.getElementById('loginEmail').value = '';
+        const loginPassword = document.getElementById('loginPassword');
+        if (loginPassword) {
+            loginPassword.value = '';
+            loginPassword.type = 'password';
+        }
+        const registerUsername = document.getElementById('registerUsername');
+        if (registerUsername) {
+            registerUsername.value = '';
+        }
+        document.getElementById('registerEmail').value = '';
+        const registerPassword = document.getElementById('registerPassword');
+        if (registerPassword) {
+            registerPassword.value = '';
+            registerPassword.type = 'password';
+        }
+        const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
+        if (registerPasswordConfirm) {
+            registerPasswordConfirm.value = '';
+            registerPasswordConfirm.type = 'password';
+        }
+    };
+    
+    if (animate && modal) {
+        return animateModalClose(modal).then(cleanup);
+    } else {
+        if (modal) modal.classList.remove('show');
+        cleanup();
+        syncAuthFlowDim();
+    }
+}
+
+function applyAuthFormState(target) {
+    const isRegister = target === 'register';
+    document.getElementById('loginForm').classList.toggle('is-hidden', isRegister);
+    document.getElementById('registerForm').classList.toggle('is-hidden', !isRegister);
+    document.getElementById('authModalTitle').textContent = isRegister ? 'REGISTER' : 'LOG IN';
+    document.getElementById('loginBtn').classList.toggle('is-hidden', isRegister);
+    document.getElementById('registerBtn').classList.toggle('is-hidden', !isRegister);
+    document.getElementById('authError').classList.add('is-hidden');
+
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        focusFirstFieldInModal(modal);
+    }
+}
+
+function shouldAnimateAuthFormSwap() {
+    const modal = document.getElementById('authModal');
+    if (!modal) return false;
+    if (!modal.classList.contains('show')) return false;
+    if (modal.classList.contains('closing')) return false;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    return true;
+}
+
+function animateAuthFormSwap(target) {
+    const modal = document.getElementById('authModal');
+    if (!modal) {
+        applyAuthFormState(target);
+        return;
+    }
+
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const body = modal.querySelector('.modal-body');
+    if (!loginForm || !registerForm || !body) {
+        applyAuthFormState(target);
+        return;
+    }
+
+    const isRegister = target === 'register';
+    const fromEl = isRegister ? loginForm : registerForm;
+    const toEl = isRegister ? registerForm : loginForm;
+
+    // If already showing requested form, no-op
+    if (!toEl.classList.contains('is-hidden')) {
+        applyAuthFormState(target);
+        return;
+    }
+
+    // Avoid overlapping animations
+    if (modal.dataset.authSwapAnimating === '1') return;
+    modal.dataset.authSwapAnimating = '1';
+
+    const startHeight = body.offsetHeight;
+    body.style.overflow = 'hidden';
+    body.style.height = `${startHeight}px`;
+
+    // Fade out current form quickly
+    fromEl.style.transition = 'opacity 120ms ease-out';
+    fromEl.style.opacity = '0';
+
+    setTimeout(() => {
+        // Switch state (visibility, title/buttons) before measuring
+        applyAuthFormState(target);
+
+        // Ensure the new form starts hidden for fade-in
+        toEl.style.transition = 'none';
+        toEl.style.opacity = '0';
+
+        // Measure the new height
+        body.style.height = 'auto';
+        const endHeight = body.offsetHeight;
+
+        // Reset to start height so we can animate to end height
+        body.style.height = `${startHeight}px`;
+        void body.offsetHeight; // reflow
+
+        // Animate height and fade in new form
+        body.style.transition = 'height 260ms cubic-bezier(0.4, 0, 0.2, 1)';
+        body.style.height = `${endHeight}px`;
+
+        toEl.style.transition = 'opacity 180ms ease-out 80ms';
+        toEl.style.opacity = '1';
+
+        setTimeout(() => {
+            // Cleanup
+            body.style.transition = '';
+            body.style.height = '';
+            body.style.overflow = '';
+            fromEl.style.transition = '';
+            fromEl.style.opacity = '';
+            toEl.style.transition = '';
+            toEl.style.opacity = '';
+            delete modal.dataset.authSwapAnimating;
+        }, 360);
+    }, 120);
+}
+
+function showLoginForm() {
+    if (shouldAnimateAuthFormSwap()) {
+        animateAuthFormSwap('login');
+        return;
+    }
+    applyAuthFormState('login');
+}
+
+function showRegisterForm() {
+    if (shouldAnimateAuthFormSwap()) {
+        animateAuthFormSwap('register');
+        return;
+    }
+    applyAuthFormState('register');
+}
+
+function setAuthLoading(isLoading, message) {
+    const loginBtn = document.getElementById('loginBtn');
+    const registerBtn = document.getElementById('registerBtn');
+    const cancelBtn = document.getElementById('authCancelBtn');
+    const loadingLabel = message || 'CONTACTING SERVER...';
+
+    [loginBtn, registerBtn, cancelBtn].forEach((btn) => {
+        if (btn) {
+            btn.disabled = isLoading;
+        }
+    });
+
+    const cubeMarkup = 
+        '<span class="spinner-cube-scene">' +
+        '<span class="spinner-cube-tilt">' +
+        '<span class="spinner-cube">' +
+        '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
+        '</span></span></span>';
+    
+    if (loginBtn) {
+        if (isLoading) {
+            if (!loginBtn.dataset.originalLabel) {
+                loginBtn.dataset.originalLabel = loginBtn.innerHTML;
+            }
+            // Cube spacing is handled by .spinner-cube-scene margin-right,
+            // so avoid a literal leading space before the label.
+            loginBtn.innerHTML = `${cubeMarkup}${loadingLabel}`;
+        } else {
+            if (loginBtn.dataset.originalLabel) {
+                loginBtn.innerHTML = loginBtn.dataset.originalLabel;
+                delete loginBtn.dataset.originalLabel;
+            } else {
+                loginBtn.textContent = 'LOG IN';
+            }
+        }
+    }
+    if (registerBtn) {
+        if (isLoading) {
+            if (!registerBtn.dataset.originalLabel) {
+                registerBtn.dataset.originalLabel = registerBtn.innerHTML;
+            }
+            // Use the same cube markup as the login button; rely on CSS margin
+            // for spacing instead of a leading space in the string.
+            registerBtn.innerHTML = `${cubeMarkup}${loadingLabel}`;
+        } else {
+            if (registerBtn.dataset.originalLabel) {
+                registerBtn.innerHTML = registerBtn.dataset.originalLabel;
+                delete registerBtn.dataset.originalLabel;
+            } else {
+                registerBtn.textContent = 'Register';
+            }
+        }
+    }
+}
+
+async function handleLogin() {
+    const errorEl = document.getElementById('authError');
+
+    // If the login form isn't currently visible (e.g. the user has switched
+    // to the register tab), quietly abort. This prevents stray events from
+    // showing a "Please enter both email and password" message on the
+    // REGISTER screen.
+    const loginFormEl = document.getElementById('loginForm');
+    if (loginFormEl && loginFormEl.classList.contains('is-hidden')) {
+        return;
+    }
+
+    // Some password managers (and browser autofill) can populate fields
+    // slightly after the click event that triggers login. To avoid
+    // spurious "Please enter both email and password" errors when the
+    // UI *looks* filled in, give the DOM a short moment to settle
+    // before reading values.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const emailInput = document.getElementById('loginEmail');
+    const passwordInput = document.getElementById('loginPassword');
+
+    const email = emailInput ? emailInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
+
+    if (!email || !password) {
+        errorEl.textContent = 'Please enter your username/email and password';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
+    errorEl.classList.add('is-hidden');
+    setAuthLoading(true, 'LOGGING IN...');
+
+    try {
+        const result = await window.AuthService.login(email, password);
+        if (result && result.success) {
+            // Mark splash as dismissed on successful login
+            sessionStorage.setItem('welcomeSplashDismissed', 'true');
+            closeAuthModal();
+            updateAuthUI();
+            // Show username in notification if available
+            const user = window.AuthService.getCurrentUser();
+            const displayName = user?.username ? `@${user.username}` : email;
+            showNotification(`✓ Logged in as ${displayName}`);
+
+            // Start session monitoring now that user is logged in
+            if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
+                window.AuthService.startSessionMonitor();
+            }
+            
+            // Load user preferences from server
+            if (window.StorageService && StorageService.loadPreferencesFromServer) {
+                StorageService.loadPreferencesFromServer();
+            }
+            
+            // Check if should migrate user-created characters first
+            if (window.MigrationService && window.MigrationService.hasLocalCharacters()) {
+                showMigrationModal();
+            } 
+            // Then check for demo character migration (only ask once)
+            else if (shouldShowDemoMigration()) {
+                showDemoMigrationModal();
+            } else {
+                // Reload pinned characters and characters from cloud
+                await loadPinnedCharacterIds();
+                await AppState.loadCharacters();
+                
+                // Users with no characters must create one first
+                if (!AppState.characters || AppState.characters.length === 0) {
+                    window.location.href = 'builder.html?new=true&required=true';
+                    return;
+                }
+                
+                UI.render();
+            }
+            
+            // Refresh quota states now that user is authenticated (affects tooltips)
+            updateCreationQuotaState();
+            updateImageQuotaState();
+            
+            // Check for pending character shares (after a short delay to not overwhelm)
+            setTimeout(() => checkPendingShares(), 500);
+            return;
+        } else {
+            errorEl.textContent = (result && result.error) || 'Login failed';
+            errorEl.classList.remove('is-hidden');
+        }
+    } catch (error) {
+        errorEl.textContent = 'Login failed. Please try again.';
+        errorEl.classList.remove('is-hidden');
+    } finally {
+        setAuthLoading(false);
+    }
+}
+
+async function handleRegister() {
+    const errorEl = document.getElementById('authError');
+
+    // Some password managers (and browser autofill) populate fields slightly
+    // after the click event that triggers registration. To avoid spurious
+    // "Please fill in all fields" errors when the UI *looks* filled in, give
+    // the DOM a short moment to settle before reading values.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const usernameInput = document.getElementById('registerUsername');
+    const emailInput = document.getElementById('registerEmail');
+    const passwordInput = document.getElementById('registerPassword');
+    const passwordConfirmInput = document.getElementById('registerPasswordConfirm');
+
+    const username = usernameInput ? usernameInput.value.trim() : '';
+    const email = emailInput ? emailInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
+    const passwordConfirm = passwordConfirmInput ? passwordConfirmInput.value : '';
+
+    if (!username || !email || !password || !passwordConfirm) {
+        errorEl.textContent = 'Please fill in all fields';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
+    // Validate username format
+    const usernamePattern = /^[a-zA-Z0-9_]{3,30}$/;
+    if (!usernamePattern.test(username)) {
+        errorEl.textContent = 'Username must be 3-30 characters, using only letters, numbers, and underscores';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
+    if (password !== passwordConfirm) {
+        errorEl.textContent = 'Passwords do not match';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
+    // Validate password length (bcrypt limit is 72 bytes)
+    if (new Blob([password]).size > 72) {
+        errorEl.textContent = 'Password is too long (max 72 bytes)';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
+    errorEl.classList.add('is-hidden');
+    setAuthLoading(true, 'CREATING ACCOUNT...');
+
+    try {
+        const result = await window.AuthService.register(username, email, password);
+        if (result.success) {
+            // Mark splash as dismissed on successful registration
+            sessionStorage.setItem('welcomeSplashDismissed', 'true');
+            closeAuthModal();
+            updateAuthUI();
+            showNotification(`✓ Registered as @${username}`);
+
+            // Start session monitoring now that user is logged in
+            if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
+                window.AuthService.startSessionMonitor();
+            }
+            
+            // Sync current preferences to the new account
+            if (window.StorageService && StorageService.syncPreferencesToServer) {
+                StorageService.syncPreferencesToServer();
+            }
+            
+            // Check if should migrate user-created characters first
+            if (window.MigrationService.hasLocalCharacters()) {
+                showMigrationModal();
+            } 
+            // Then check for demo character migration (only ask once)
+            else if (shouldShowDemoMigration()) {
+                showDemoMigrationModal();
+            } else {
+                // Reload pinned characters and characters from cloud
+                await loadPinnedCharacterIds();
+                await AppState.loadCharacters();
+                
+                // New users with no characters - send them directly to character builder
+                if (!AppState.characters || AppState.characters.length === 0) {
+                    window.location.href = 'builder.html?new=true&required=true';
+                    return;
+                }
+                
+                UI.render();
+            }
+            
+            // Refresh quota states now that user is authenticated (affects tooltips)
+            updateCreationQuotaState();
+            updateImageQuotaState();
+            
+            // Check for pending character shares (after a short delay to not overwhelm)
+            setTimeout(() => checkPendingShares(), 500);
+        } else {
+            errorEl.textContent = result.error || 'Registration failed';
+            errorEl.classList.remove('is-hidden');
+        }
+    } catch (error) {
+        errorEl.textContent = 'Registration failed. Please try again.';
+        errorEl.classList.remove('is-hidden');
+    } finally {
+        setAuthLoading(false);
+    }
+}
+
+// ========================================
+// PASSWORD RESET UI HANDLERS
+// ========================================
+
+async function openPasswordResetFromLogin() {
+    // Animate transition from auth modal to password reset modal
+    await animateModalTransition('authModal', 'passwordResetModal', (modal) => {
+        // Reset sections and fields to initial state
+        const modalTitle = document.getElementById('passwordResetModalTitle');
+        const requestSection = document.getElementById('passwordResetRequestSection');
+        const successSection = document.getElementById('passwordResetSuccessSection');
+        const confirmSection = document.getElementById('passwordResetConfirmSection');
+        const cancelBtn = document.getElementById('passwordResetCancelBtn');
+        const closeBtn = document.getElementById('passwordResetCloseBtn');
+        const requestBtn = document.getElementById('passwordResetRequestBtn');
+        const confirmBtn = document.getElementById('passwordResetConfirmBtn');
+        const messageEl = document.getElementById('passwordResetMessage');
+        const confirmMessageEl = document.getElementById('passwordResetConfirmMessage');
+        const emailInput = document.getElementById('passwordResetEmail');
+        const tokenInput = document.getElementById('passwordResetToken');
+        const newPasswordInput = document.getElementById('passwordResetNewPassword');
+
+        if (modalTitle) modalTitle.textContent = 'RESET PASSWORD';
+        if (requestSection) requestSection.classList.remove('is-hidden');
+        if (successSection) successSection.classList.add('is-hidden');
+        if (confirmSection) confirmSection.classList.add('is-hidden');
+        if (cancelBtn) cancelBtn.classList.remove('is-hidden');
+        if (closeBtn) closeBtn.classList.add('is-hidden');
+        if (requestBtn) requestBtn.classList.remove('is-hidden');
+        if (confirmBtn) confirmBtn.classList.add('is-hidden');
+        if (messageEl) {
+            messageEl.textContent = '';
+            messageEl.classList.remove('terminal-text-error');
+            messageEl.classList.add('terminal-text-dim');
+        }
+        if (confirmMessageEl) {
+            confirmMessageEl.textContent = '';
+            confirmMessageEl.classList.remove('terminal-text-error');
+            confirmMessageEl.classList.add('terminal-text-dim');
+        }
+        if (emailInput) emailInput.value = '';
+        if (tokenInput) tokenInput.value = '';
+        if (newPasswordInput) newPasswordInput.value = '';
+        
+        if (typeof focusFirstFieldInModal === 'function') {
+            focusFirstFieldInModal(modal);
+        }
+    });
+    
+    // Clear auth form fields after transition
+    closeAuthModal(false);
+}
+
+function showPasswordResetModal() {
+    const modal = document.getElementById('passwordResetModal');
+    if (!modal) return;
+
+    // Reset sections and fields to initial state
+    const modalTitle = document.getElementById('passwordResetModalTitle');
+    const requestSection = document.getElementById('passwordResetRequestSection');
+    const successSection = document.getElementById('passwordResetSuccessSection');
+    const confirmSection = document.getElementById('passwordResetConfirmSection');
+    const cancelBtn = document.getElementById('passwordResetCancelBtn');
+    const closeBtn = document.getElementById('passwordResetCloseBtn');
+    const requestBtn = document.getElementById('passwordResetRequestBtn');
+    const confirmBtn = document.getElementById('passwordResetConfirmBtn');
+    const messageEl = document.getElementById('passwordResetMessage');
+    const confirmMessageEl = document.getElementById('passwordResetConfirmMessage');
+    const emailInput = document.getElementById('passwordResetEmail');
+    const tokenInput = document.getElementById('passwordResetToken');
+    const newPasswordInput = document.getElementById('passwordResetNewPassword');
+
+    if (modalTitle) modalTitle.textContent = 'RESET PASSWORD';
+    if (requestSection) requestSection.classList.remove('is-hidden');
+    if (successSection) successSection.classList.add('is-hidden');
+    if (confirmSection) confirmSection.classList.add('is-hidden');
+    if (cancelBtn) cancelBtn.classList.remove('is-hidden');
+    if (closeBtn) closeBtn.classList.add('is-hidden');
+    if (requestBtn) requestBtn.classList.remove('is-hidden');
+    if (confirmBtn) confirmBtn.classList.add('is-hidden');
+    if (messageEl) {
+        messageEl.textContent = '';
+        messageEl.classList.remove('terminal-text-error');
+        messageEl.classList.add('terminal-text-dim');
+    }
+    if (confirmMessageEl) {
+        confirmMessageEl.textContent = '';
+        confirmMessageEl.classList.remove('terminal-text-error');
+        confirmMessageEl.classList.add('terminal-text-dim');
+    }
+    if (emailInput) emailInput.value = '';
+    if (tokenInput) tokenInput.value = '';
+    if (newPasswordInput) newPasswordInput.value = '';
+
+    modal.classList.add('show');
+    if (typeof focusFirstFieldInModal === 'function') {
+        focusFirstFieldInModal(modal);
+    }
+    syncAuthFlowDim();
+}
+
+/**
+ * Close the password reset modal, optionally with animation.
+ * @param {boolean} [animate=true] - Whether to animate the close
+ * @returns {Promise|void} Returns a Promise if animated
+ */
+function closePasswordResetModal(animate = true) {
+    const modal = document.getElementById('passwordResetModal');
+    if (!modal) return;
+    
+    const resetState = () => {
+        const modalTitle = document.getElementById('passwordResetModalTitle');
+        const requestSection = document.getElementById('passwordResetRequestSection');
+        const successSection = document.getElementById('passwordResetSuccessSection');
+        const confirmSection = document.getElementById('passwordResetConfirmSection');
+        const cancelBtn = document.getElementById('passwordResetCancelBtn');
+        const closeBtn = document.getElementById('passwordResetCloseBtn');
+        const requestBtn = document.getElementById('passwordResetRequestBtn');
+        const confirmBtn = document.getElementById('passwordResetConfirmBtn');
+        const messageEl = document.getElementById('passwordResetMessage');
+        const confirmMessageEl = document.getElementById('passwordResetConfirmMessage');
+        const emailInput = document.getElementById('passwordResetEmail');
+        const tokenInput = document.getElementById('passwordResetToken');
+        const newPasswordInput = document.getElementById('passwordResetNewPassword');
+
+        if (modalTitle) modalTitle.textContent = 'RESET PASSWORD';
+        if (requestSection) requestSection.classList.remove('is-hidden');
+        if (successSection) successSection.classList.add('is-hidden');
+        if (confirmSection) confirmSection.classList.add('is-hidden');
+        if (cancelBtn) cancelBtn.classList.remove('is-hidden');
+        if (closeBtn) closeBtn.classList.add('is-hidden');
+        if (requestBtn) requestBtn.classList.remove('is-hidden');
+        if (confirmBtn) confirmBtn.classList.add('is-hidden');
+        if (messageEl) {
+            messageEl.textContent = '';
+            messageEl.classList.remove('terminal-text-error');
+            messageEl.classList.add('terminal-text-dim');
+        }
+        if (confirmMessageEl) {
+            confirmMessageEl.textContent = '';
+            confirmMessageEl.classList.remove('terminal-text-error');
+            confirmMessageEl.classList.add('terminal-text-dim');
+        }
+        if (emailInput) emailInput.value = '';
+        if (tokenInput) tokenInput.value = '';
+        if (newPasswordInput) newPasswordInput.value = '';
+    };
+    
+    if (animate) {
+        return animateModalClose(modal).then(resetState);
+    } else {
+        modal.classList.remove('show');
+        // Reset to initial state after a brief delay
+        setTimeout(resetState, 50);
+        syncAuthFlowDim();
+    }
+}
+
+// ========================================
+// USERNAME EDIT MODAL
+// ========================================
+
+/**
+ * Open the username edit modal.
+ */
+function openUsernameEditModal() {
+    const modal = document.getElementById('usernameEditModal');
+    const input = document.getElementById('usernameEditInput');
+    const errorEl = document.getElementById('usernameEditError');
+    
+    if (!modal) return;
+    
+    // Get current username
+    const user = window.AuthService ? window.AuthService.getCurrentUser() : null;
+    if (!user) return;
+    
+    // Pre-fill with current username (without @)
+    if (input) {
+        input.value = user.username || '';
+    }
+    
+    // Clear any previous error
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.classList.add('is-hidden');
+    }
+    
+    // Show modal
+    modal.classList.add('show');
+    syncAuthFlowDim();
+    
+    // Focus input after a brief delay for animation
+    setTimeout(() => {
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 100);
+}
+
+/**
+ * Close the username edit modal.
+ */
+function closeUsernameEditModal() {
+    const modal = document.getElementById('usernameEditModal');
+    const input = document.getElementById('usernameEditInput');
+    const errorEl = document.getElementById('usernameEditError');
+    
+    if (!modal) return;
+    
+    // Clear input and error
+    if (input) input.value = '';
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.classList.add('is-hidden');
+    }
+    
+    // Animate close
+    animateModalClose(modal);
+}
+
+// Legacy aliases for backwards compatibility
+function openAccountModal() {
+    // No-op - account info is now in overflow menu
+}
+
+function closeAccountModal() {
+    // No-op - account info is now in overflow menu
+}
+
+function cancelUsernameEdit() {
+    closeUsernameEditModal();
+}
+
+/**
+ * Save the new username.
+ */
+async function saveUsername() {
+    const input = document.getElementById('usernameEditInput');
+    const errorEl = document.getElementById('usernameEditError');
+    const saveBtn = document.getElementById('saveUsernameBtn');
+    
+    if (!input) return;
+    
+    const newUsername = input.value.trim();
+    
+    // Validate
+    if (!newUsername) {
+        showUsernameError('Username cannot be empty');
+        return;
+    }
+    
+    if (newUsername.length < 3) {
+        showUsernameError('Username must be at least 3 characters');
+        return;
+    }
+    
+    if (newUsername.length > 30) {
+        showUsernameError('Username must be 30 characters or less');
+        return;
+    }
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(newUsername)) {
+        showUsernameError('Only letters, numbers, and underscores allowed');
+        return;
+    }
+    
+    // Check if same as current
+    const user = window.AuthService ? window.AuthService.getCurrentUser() : null;
+    if (user && newUsername === user.username) {
+        showUsernameError('New username is the same as current');
+        return;
+    }
+    
+    // Disable button and show loading state
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+    }
+    
+    try {
+        const result = await window.AuthService.updateUsername(newUsername);
+        
+        if (!result.success) {
+            showUsernameError(result.error || 'Failed to update username');
+            return;
+        }
+        
+        // Success - update header and overflow menu
+        updateAuthUI();
+        
+        // Close the modal
+        closeUsernameEditModal();
+        
+        // Show success notification
+        showNotification('Username updated successfully', 'success');
+        
+    } catch (error) {
+        console.error('Failed to update username:', error);
+        showUsernameError(error.message || 'Failed to update username');
+    } finally {
+        // Re-enable button
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save';
+        }
+    }
+}
+
+/**
+ * Show an error message in the username edit section.
+ * @param {string} message - The error message to display
+ */
+function showUsernameError(message) {
+    const errorEl = document.getElementById('usernameEditError');
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.remove('is-hidden');
+    }
+}
+
+async function handlePasswordResetRequest() {
+    const emailInput = document.getElementById('passwordResetEmail');
+    const messageEl = document.getElementById('passwordResetMessage');
+    if (!emailInput || !messageEl) return;
+
+    const email = emailInput.value.trim();
+    if (!email) {
+        messageEl.textContent = 'Please enter your email address.';
+        messageEl.classList.remove('terminal-text-dim');
+        messageEl.classList.add('terminal-text-error');
+        return;
+    }
+
+    messageEl.textContent = 'Requesting password reset...';
+    messageEl.classList.remove('terminal-text-error');
+    messageEl.classList.add('terminal-text-dim');
+
+    const result = await window.AuthService.forgotPassword(email);
+
+    if (!result.success) {
+        messageEl.textContent = result.error || 'Password reset request failed. Please try again.';
+        messageEl.classList.remove('terminal-text-dim');
+        messageEl.classList.add('terminal-text-error');
+        return;
+    }
+
+    // Transform modal to success confirmation
+    const modalTitle = document.getElementById('passwordResetModalTitle');
+    const requestSection = document.getElementById('passwordResetRequestSection');
+    const successSection = document.getElementById('passwordResetSuccessSection');
+    const confirmSection = document.getElementById('passwordResetConfirmSection');
+    const cancelBtn = document.getElementById('passwordResetCancelBtn');
+    const closeBtn = document.getElementById('passwordResetCloseBtn');
+    const requestBtn = document.getElementById('passwordResetRequestBtn');
+    const confirmBtn = document.getElementById('passwordResetConfirmBtn');
+    const tokenInput = document.getElementById('passwordResetToken');
+
+    // In development, the backend may return a debug token for testing
+    if (result.debugToken && tokenInput) {
+        tokenInput.value = result.debugToken;
+        
+        // In dev mode, show the confirm section so developers can test without email
+        if (modalTitle) modalTitle.textContent = 'RESET PASSWORD';
+        if (requestSection) requestSection.classList.add('is-hidden');
+        if (successSection) successSection.classList.add('is-hidden');
+        if (confirmSection) confirmSection.classList.remove('is-hidden');
+        if (cancelBtn) cancelBtn.classList.remove('is-hidden');
+        if (closeBtn) closeBtn.classList.add('is-hidden');
+        if (requestBtn) requestBtn.classList.add('is-hidden');
+        if (confirmBtn) confirmBtn.classList.remove('is-hidden');
+        
+        const confirmMessageEl = document.getElementById('passwordResetConfirmMessage');
+        if (confirmMessageEl) {
+            confirmMessageEl.textContent = '[DEV MODE] Token auto-filled for testing. Enter your new password below.';
+            confirmMessageEl.classList.add('terminal-text-dim');
+        }
+    } else {
+        // Production mode - show success confirmation
+        if (modalTitle) modalTitle.textContent = 'SUCCESS';
+        if (requestSection) requestSection.classList.add('is-hidden');
+        if (successSection) successSection.classList.remove('is-hidden');
+        if (confirmSection) confirmSection.classList.add('is-hidden');
+        if (cancelBtn) cancelBtn.classList.add('is-hidden');
+        if (closeBtn) closeBtn.classList.remove('is-hidden');
+        if (requestBtn) requestBtn.classList.add('is-hidden');
+        if (confirmBtn) confirmBtn.classList.add('is-hidden');
+    }
+}
+
+async function handlePasswordResetConfirm() {
+    const tokenInput = document.getElementById('passwordResetToken');
+    const newPasswordInput = document.getElementById('passwordResetNewPassword');
+    const messageEl = document.getElementById('passwordResetConfirmMessage');
+    if (!tokenInput || !newPasswordInput || !messageEl) return;
+
+    const token = tokenInput.value.trim();
+    const newPassword = newPasswordInput.value;
+
+    if (!token) {
+        messageEl.textContent = 'Invalid reset link. Please request a new password reset.';
+        messageEl.classList.remove('terminal-text-dim');
+        messageEl.classList.add('terminal-text-error');
+        return;
+    }
+
+    if (!newPassword) {
+        messageEl.textContent = 'Please enter a new password.';
+        messageEl.classList.remove('terminal-text-dim');
+        messageEl.classList.add('terminal-text-error');
+        return;
+    }
+
+    messageEl.textContent = 'Resetting password...';
+    messageEl.classList.remove('terminal-text-error');
+    messageEl.classList.add('terminal-text-dim');
+
+    // Call the password reset API directly (don't use the returned token)
+    try {
+        const response = await fetch(`${window.DanddyConfig.API_BASE_URL}/auth/password/reset`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, new_password: newPassword }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || 'Password reset failed');
+        }
+
+        // Password reset successful - animate transition to login modal
+        showNotification('✓ Password updated successfully! Please log in with your new password.');
+        await animateModalTransition('passwordResetModal', 'authModal', () => {
+            showLoginForm();
+        });
+        
+    } catch (error) {
+        messageEl.textContent = error.message || 'Password reset failed. Please try again.';
+        messageEl.classList.remove('terminal-text-dim');
+        messageEl.classList.add('terminal-text-error');
+    }
+}
+
+async function handleLogout() {
+    // Close all editor modals to prevent stale state (e.g., level change dialog)
+    closeAllEditorModals();
+    
+    // Close mobile sheet modal if open (prevents showing stale cloud character)
+    if (typeof MobileView !== 'undefined' && MobileView.isMobile() && MobileView.isOpen()) {
+        MobileView.close();
+    }
+    
+    // Clear selected character before loading new list (cloud ID won't exist in demo)
+    AppState.selectedCharacterId = null;
+    
+    window.AuthService.logout();
+    updateAuthUI();
+    showNotification('✓ Logged out');
+    
+    // Reload pinned characters (now from localStorage since logged out)
+    await loadPinnedCharacterIds();
+    
+    // Reload with local/demo characters
+    await AppState.loadCharacters();
+    
+    // On mobile, select first demo character so sheet panel has valid content
+    // (prevents showing stale cloud character data in hidden sheet panel)
+    const isMobile = typeof MobileView !== 'undefined' && MobileView.isMobile();
+    if (isMobile && AppState.filteredCharacters.length > 0) {
+        const firstChar = AppState.filteredCharacters[0];
+        AppState.selectedCharacterId = firstChar.id;
+        // Render sheet but don't open modal (user stays on grid)
+        viewCharacter(firstChar.id, { openMobileModal: false, updateUrl: false });
+    }
+    
+    UI.render();
+    
+    // Clear the dismissed flag so welcome modal appears on explicit logout
+    sessionStorage.removeItem('welcomeSplashDismissed');
+    
+    // Show welcome modal (splash screen) after logout
+    const welcomeModal = document.getElementById('welcomeModal');
+    if (welcomeModal) {
+        welcomeModal.classList.add('show');
+        // Ensure shared auth-flow dim overlay is active immediately
+        syncAuthFlowDim();
+    }
+}
+
+function updateAuthUI() {
+    const authBtn = document.getElementById('authBtn');
+    const userInfoDisplay = document.getElementById('userInfoDisplay');
+    const userStatusIcon = document.getElementById('userStatusIcon');
+    const userStatusText = document.getElementById('userStatusText');
+    const guestNotice = document.getElementById('guestNotice');
+    
+    // Overflow menu elements
+    const overflowAuthIcon = document.getElementById('overflowAuthIcon');
+    const overflowAuthLabel = document.getElementById('overflowAuthLabel');
+    const overflowCreateAccountBtn = document.getElementById('overflowCreateAccountBtn');
+    const overflowAccountHeader = document.getElementById('overflowAccountHeader');
+    const overflowAccountSeparator = document.getElementById('overflowAccountSeparator');
+    const overflowUsername = document.getElementById('overflowUsername');
+    const overflowEmail = document.getElementById('overflowEmail');
+    
+    // If the header shell isn't present (e.g., in some embedded contexts),
+    // safely bail out.
+    if (!authBtn || !userInfoDisplay || !userStatusIcon || !userStatusText) {
+        return;
+    }
+    
+    if (window.AuthService && window.AuthService.isAuthenticated()) {
+        const user = window.AuthService.getCurrentUser();
+        userStatusIcon.textContent = '☁';
+        // Show username if available, fall back to email
+        const displayName = user?.username ? `@${user.username}` : (user?.email || 'Logged In');
+        userStatusText.textContent = displayName;
+        
+        authBtn.textContent = 'Log out';
+        authBtn.onclick = handleLogout;
+        
+        // Update overflow menu - show account header
+        if (overflowAccountHeader) overflowAccountHeader.classList.remove('is-hidden');
+        if (overflowAccountSeparator) overflowAccountSeparator.classList.remove('is-hidden');
+        if (overflowUsername) overflowUsername.textContent = user?.username ? `@${user.username}` : 'Not set';
+        if (overflowEmail) overflowEmail.textContent = user?.email || '';
+        if (overflowAuthIcon) overflowAuthIcon.textContent = '←';
+        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log out';
+        if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.add('is-hidden');
+
+        // Hide guest notice when logged in
+        if (guestNotice) {
+            guestNotice.classList.add('is-hidden');
+        }
+    } else {
+        userStatusIcon.textContent = '▣';
+        userStatusText.textContent = 'Guest Mode';
+        
+        authBtn.textContent = 'LOG IN';
+        authBtn.onclick = () => {
+            authOpenedFromWelcome = false;
+            showAuthModal();
+        };
+        
+        // Update overflow menu - hide account header
+        if (overflowAccountHeader) overflowAccountHeader.classList.add('is-hidden');
+        if (overflowAccountSeparator) overflowAccountSeparator.classList.add('is-hidden');
+        if (overflowAuthIcon) overflowAuthIcon.textContent = '→';
+        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log In';
+        if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.remove('is-hidden');
+
+        // Don't show guest notice by default - only when user makes changes
+        // (handled by maybeShowGuestNotice() function)
+    }
+}
+
+// ========================================
+// MIGRATION UI HANDLERS
+// ========================================
+
+function showMigrationModal() {
+    const count = window.MigrationService.getLocalCharacterCount();
+    document.getElementById('migrationCount').textContent = count;
+    const modal = document.getElementById('migrationModal');
+    if (modal) {
+        modal.classList.add('show');
+        focusFirstFieldInModal(modal);
+    }
+}
+
+function closeMigrationModal() {
+    document.getElementById('migrationModal').classList.remove('show');
+    
+    // After user-created migration, also ask about demo characters (once)
+    if (shouldShowDemoMigration()) {
+        showDemoMigrationModal();
+    } else {
+        // Reload characters after closing (whether migrated or not)
+        AppState.loadCharacters().then(() => UI.render());
+    }
+}
+
+async function startMigration() {
+    const statusEl = document.getElementById('migrationStatus');
+    statusEl.classList.remove('is-hidden');
+    // Directly start migration without auto-downloading a JSON backup.
+    statusEl.textContent = 'Migrating to cloud...';
+    
+    try {
+        // Migrate (excluding demo characters - they have their own modal)
+        const results = await window.MigrationService.migrateToCloud({ includeDemoCharacters: false });
+        
+        if (results.success > 0) {
+            // NOTE: The bundler/minifier used by this repo can strip literal spaces inside
+            // template literals (backticks). Use classic string concatenation here so the
+            // migration modal never shows "3character(s)successfully!".
+            statusEl.textContent =
+                '✓ Migrated ' + results.success + ' character(s) successfully!';
+            
+            if (results.failed > 0) {
+                statusEl.textContent +=
+                    '\n⚠️ ' +
+                    results.failed +
+                    ' character(s) failed to migrate.';
+            }
+            
+            // Clear local storage after successful migration
+            if (results.failed === 0) {
+                setTimeout(() => {
+                    window.MigrationService.clearLocalStorage();
+                    showNotification(
+                        '✓ Migrated ' + results.success + ' characters to cloud',
+                    );
+                    closeMigrationModal();
+                }, 2000);
+            } else {
+                setTimeout(() => {
+                    showNotification(
+                        '⚠️ Migration completed with ' +
+                            results.failed +
+                            ' error(s)',
+                    );
+                    closeMigrationModal();
+                }, 3000);
+            }
+        } else {
+            statusEl.textContent = 'Migration failed. Your local data is safe.';
+            setTimeout(() => closeMigrationModal(), 2000);
+        }
+    } catch (error) {
+        console.error('Migration error:', error);
+        statusEl.textContent = 'Migration failed: ' + error.message;
+        setTimeout(() => closeMigrationModal(), 3000);
+    }
+}
+
+// ========================================
+// DEMO CHARACTER MIGRATION UI HANDLERS
+// ========================================
+
+function showDemoMigrationModal() {
+    if (!window.DemoCharacters) return;
+    
+    // Mark that we've asked about demo migration
+    window.DemoCharacters.markMigrationAsked();
+    
+    const demoChars = window.DemoCharacters.getAll();
+    const count = demoChars.length;
+    
+    document.getElementById('demoMigrationCount').textContent = count;
+    
+    // Populate the demo character list
+    const listEl = document.getElementById('demoCharacterList');
+    if (listEl) {
+        listEl.innerHTML = demoChars.map(char => {
+            const raceName = char.raceData?.name || char.race || '?';
+            const className = char.classData?.name || char.class || '?';
+            // NOTE: Use `${' '}` for spaces inside template literals because our bundler/minifier
+            // can strip literal spaces inside backticks.
+            return `<li><span class="demo-char-name">${Utils.escapeHtml(
+                char.name,
+            )}</span>${' '}<span class="demo-char-info">– Level${' '}${
+                char.level
+            }${' '}${raceName}${' '}${className}</span></li>`;
+        }).join('');
+    }
+    
+    const modal = document.getElementById('demoMigrationModal');
+    if (modal) {
+        modal.classList.add('show');
+        focusFirstFieldInModal(modal);
+    }
+}
+
+function closeDemoMigrationModal(skipReload = false) {
+    const modal = document.getElementById('demoMigrationModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+    
+    if (!skipReload) {
+        // Reload characters from cloud
+        AppState.loadCharacters().then(() => UI.render());
+    }
+}
+
+async function migrateDemoCharacters() {
+    try {
+        // Get demo characters
+        const demoChars = window.DemoCharacters ? window.DemoCharacters.getAll() : [];
+        
+        if (demoChars.length === 0) {
+            closeDemoMigrationModal();
+            return;
+        }
+        
+        let successCount = 0;
+        
+        for (const demo of demoChars) {
+            try {
+                // Copy demo character to cloud (remove demo flags)
+                const charToAdd = { ...demo };
+                delete charToAdd.isDemo;
+                delete charToAdd.id;  // Let cloud assign new ID
+                
+                await window.CharacterCloudStorage.add(charToAdd);
+                successCount++;
+            } catch (error) {
+                console.error('Failed to migrate demo character:', demo.name, error);
+            }
+        }
+        
+        if (successCount > 0) {
+            showNotification(`✓ Added ${successCount} sample character(s) to your account`);
+        }
+        
+        closeDemoMigrationModal();
+    } catch (error) {
+        console.error('Demo migration error:', error);
+        showNotification('Failed to add sample characters', 'error');
+        closeDemoMigrationModal();
+    }
+}
+
+// Check if we should show demo migration prompt after registration/login
+function shouldShowDemoMigration() {
+    if (!window.DemoCharacters) return false;
+    if (window.DemoCharacters.hasMigrationBeenAsked()) return false;
+    
+    // Only show if there are demo characters
+    return window.MigrationService.hasDemoCharacters();
+}
+
+// ========================================
+// INITIALIZATION
+// ========================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // FIRST: Restore panel view state from URL BEFORE anything renders
+    // This prevents flash of wrong view (e.g., showing grid when URL has view=expanded)
+    const initialUrl = new URL(window.location.href);
+    const isRestoringExpanded = initialUrl.searchParams.get('view') === 'expanded';
+    if (isRestoringExpanded) {
+        PanelManager.setView('sheet-campaign');
+        // Add expanded class immediately to start at correct size
+        const splitLayout = document.querySelector('.split-layout');
+        if (splitLayout) {
+            splitLayout.classList.add('is-sheet-expanded', 'is-restoring-expanded');
+        }
+    }
+    
+    // Initialize modal behaviors (backdrop click, dirty checking)
+    ModalManager.init();
+    
+    // Select all text on focus for text inputs (makes editing easier)
+    document.addEventListener('focus', (e) => {
+        const el = e.target;
+        if (el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'email' || el.type === 'number' || el.type === 'search')) {
+            // Use setTimeout to ensure selection happens after focus
+            setTimeout(() => el.select(), 0);
+        }
+    }, true);
+    
+    // Initialize mobile view handling (resize transitions)
+    MobileView.init();
+    
+    // Initialize character nav bar for desktop expanded view
+    CharacterNavBar.init();
+    
+    // Initialize portrait lightbox for mobile (tap-to-zoom)
+    PortraitLightbox.init();
+    
+    // Show panel loading spinners as early as possible so the shell never feels empty
+    // while we verify auth state and fetch characters.
+    if (typeof UI !== 'undefined' && UI && typeof UI.setLoadingState === 'function') {
+        UI.setLoadingState(true);
+    }
+
+    // Apply app version to header and welcome modal from global version config.
+    try {
+        const version = window.DANDDY_VERSION || '2.0.0';
+        const headerTitleText = document.querySelector('.terminal-title-text');
+        const welcomeVersion = document.querySelector('.welcome-version');
+        if (headerTitleText) {
+            headerTitleText.textContent = `D&Dy v${version}`;
+        }
+        if (welcomeVersion) {
+            welcomeVersion.textContent = `D&Dy v${version}`;
+        }
+    } catch (e) {
+        console.warn('Version banner update failed:', e);
+    }
+
+    // Determine auth state up front (and validate token) so the UI and
+    // storage mode (cloud vs local) start in a consistent state.
+    //
+    // However, we don't want a slow or unreachable backend to block the entire
+    // UI. Wrap the async token verification in a soft timeout so the manager
+    // can still become interactive even if /auth/me is slow.
+    let isAuthenticated = false;
+    if (window.AuthService) {
+        const verify = async () => {
+            if (typeof window.AuthService.verifyToken === 'function') {
+                try {
+                    const result = await window.AuthService.verifyToken();
+                    return !!result;
+                } catch (e) {
+                    console.warn('Auth token verification failed:', e);
+                    return false;
+                }
+            } else if (typeof window.AuthService.isAuthenticated === 'function') {
+                try {
+                    return !!window.AuthService.isAuthenticated();
+                } catch (e) {
+                    console.warn('Auth isAuthenticated check failed:', e);
+                    return false;
+                }
+            }
+            return false;
+        };
+
+        const withTimeout = (promise, ms, label) => {
+            let timeoutId;
+            const timeoutPromise = new Promise((resolve) => {
+                timeoutId = setTimeout(() => {
+                    console.warn(`[Boot] ${label} timed out after ${ms}ms; continuing in guest mode.`);
+                    resolve(false);
+                }, ms);
+            });
+
+            return Promise.race([promise, timeoutPromise]).finally(() => {
+                clearTimeout(timeoutId);
+            });
+        };
+
+        isAuthenticated = await withTimeout(verify(), 5000, 'AuthService.verifyToken');
+    }
+
+    // Sync header / guest notice with actual auth state
+    updateAuthUI();
+
+    // Start session monitoring if authenticated, and listen for expiry events
+    if (isAuthenticated && window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
+        window.AuthService.startSessionMonitor();
+    }
+    
+    // Load user preferences from server on app init (if authenticated)
+    if (isAuthenticated && window.StorageService && StorageService.loadPreferencesFromServer) {
+        // Fire and forget - don't block app startup
+        StorageService.loadPreferencesFromServer();
+    }
+
+    // Listen for session expired events to show the modal
+    window.addEventListener('danddy:sessionExpired', () => {
+        showSessionExpiredModal();
+    });
+
+    // Check if user is returning from builder or has already dismissed the splash
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromBuilder = urlParams.get('from') === 'builder';
+    const splashDismissed = sessionStorage.getItem('welcomeSplashDismissed') === 'true';
+
+    // Show session notice if there's a builder session in progress
+    // (but not if returning from builder - they just left intentionally)
+    if (!fromBuilder) {
+        maybeShowSessionNotice();
+    }
+
+    // Show guest notice banner if returning from builder after saving while not logged in
+    if (fromBuilder && !isAuthenticated) {
+        const showGuestNotice = sessionStorage.getItem('showGuestNoticeOnReturn') === 'true';
+        if (showGuestNotice) {
+            sessionStorage.removeItem('showGuestNoticeOnReturn'); // Clear the flag
+            // Show the banner after a short delay to ensure DOM is ready
+            setTimeout(() => {
+                maybeShowGuestNotice();
+            }, 100);
+        }
+    }
+
+    // Show welcome modal (splash art + three choices) only when not logged in.
+    const welcomeModal = document.getElementById('welcomeModal');
+    // Wire welcome modal buttons: LOG IN, CREATE ACCOUNT, GUEST MODE
+    const welcomeLoginBtn = document.getElementById('welcomeLoginBtn');
+    if (welcomeLoginBtn) {
+        welcomeLoginBtn.addEventListener('click', async () => {
+            authOpenedFromWelcome = true;
+            // Don't set dismissed flag yet - only set it on successful login
+            // Animate transition: welcome modal collapses → auth modal expands
+            await animateModalTransition(welcomeModal, 'authModal', () => {
+                showLoginForm();
+            });
+        });
+    }
+
+    const welcomeRegisterBtn = document.getElementById('welcomeRegisterBtn');
+    if (welcomeRegisterBtn) {
+        welcomeRegisterBtn.addEventListener('click', async () => {
+            authOpenedFromWelcome = true;
+            // Don't set dismissed flag yet - only set it on successful registration
+            // Animate transition: welcome modal collapses → auth modal expands (with register form)
+            await animateModalTransition(welcomeModal, 'authModal', () => {
+                showRegisterForm();
+            });
+        });
+    }
+
+    const welcomeDemoBtn = document.getElementById('welcomeDemoBtn');
+    if (welcomeDemoBtn) {
+        welcomeDemoBtn.addEventListener('click', async () => {
+            // Mark splash as dismissed so it won't reappear when returning from builder
+            sessionStorage.setItem('welcomeSplashDismissed', 'true');
+            // Close the modal with animation
+            await animateModalClose(welcomeModal);
+            // Show guest notice to explain limits and encourage account creation
+            setTimeout(() => {
+                maybeShowGuestNotice();
+            }, 100);
+        });
+    }
+
+    // Keyboard navigation inside welcome modal (splash screen)
+    if (welcomeModal) {
+        const welcomeButtons = Array.from(
+            welcomeModal.querySelectorAll('.welcome-actions .terminal-btn'),
+        );
+        let welcomeIndex = 0;
+
+        const focusWelcomeButton = (index) => {
+            if (!welcomeButtons.length) return;
+            const clamped = (index + welcomeButtons.length) % welcomeButtons.length;
+            welcomeIndex = clamped;
+            const btn = welcomeButtons[clamped];
+            if (btn) {
+                btn.focus();
+            }
+        };
+
+        // Show welcome modal only if:
+        // 1. User is not authenticated, AND
+        // 2. User hasn't already dismissed the splash this session (e.g., by clicking DEMO MODE), AND
+        // 3. User is not returning from the builder
+        if (!isAuthenticated && !splashDismissed && !fromBuilder) {
+            welcomeModal.classList.add('show');
+            // Don't auto-focus any button - let the user choose
+            // Ensure shared auth-flow dim overlay is active immediately on first paint
+            syncAuthFlowDim();
+        }
+
+        welcomeModal.addEventListener('keydown', (e) => {
+            if (!welcomeModal.classList.contains('show')) return;
+
+            // Limit handling to arrow keys and Enter. We intentionally do NOT
+            // handle Escape here so users must make an explicit choice.
+            const navKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'];
+            if (!navKeys.includes(e.key)) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (e.key === 'Enter') {
+                const btn = document.activeElement.classList.contains('terminal-btn')
+                    ? document.activeElement
+                    : welcomeButtons[welcomeIndex] || welcomeButtons[0];
+                if (btn && typeof btn.click === 'function') {
+                    btn.click();
+                }
+                return;
+            }
+
+            if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                focusWelcomeButton(welcomeIndex - 1);
+            } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                focusWelcomeButton(welcomeIndex + 1);
+            }
+        });
+    }
+
+    // Add Enter key support for login/register forms
+    const loginUsernameInput = document.getElementById('loginUsername');
+    const loginPasswordInput = document.getElementById('loginPassword');
+    const registerEmailInput = document.getElementById('registerEmail');
+    const registerPasswordInput = document.getElementById('registerPassword');
+
+    // Add Enter key support for login form
+    if (loginUsernameInput) {
+        loginUsernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleLogin();
+            }
+        });
+    }
+
+    if (loginPasswordInput) {
+        loginPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleLogin();
+            }
+        });
+    }
+
+    // Add Enter key support for register form
+    // Email and password fields already trigger registration on Enter.
+
+    if (registerEmailInput) {
+        registerEmailInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleRegister();
+            }
+        });
+    }
+
+    if (registerPasswordInput) {
+        registerPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleRegister();
+            }
+        });
+    }
+
+    // Wire up password visibility toggles in auth + reset modals
+    const passwordToggleButtons = document.querySelectorAll('.password-toggle-btn');
+    passwordToggleButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            if (!targetId) return;
+            const input = document.getElementById(targetId);
+            if (!input) return;
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            btn.textContent = isPassword ? 'HIDE' : 'SHOW';
+            btn.setAttribute('aria-pressed', String(isPassword));
+            btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+        });
+    });
+
+    // Note: Debug listeners removed - they were interfering with button clicks
+
+    // Pre-load demo characters from API, then load ASCII art BEFORE initializing app state.
+    // This ensures demo characters have portraits ready when displayed.
+    const initApp = async () => {
+        if (window.DemoCharacters) {
+            try {
+                // First, try to fetch demo characters from the API
+                if (typeof window.DemoCharacters.fetchFromApi === 'function') {
+                    await window.DemoCharacters.fetchFromApi();
+                }
+                // Then load ASCII art for any characters that need it
+                if (typeof window.DemoCharacters.loadAsciiForAllDemoCharacters === 'function') {
+                    await window.DemoCharacters.loadAsciiForAllDemoCharacters();
+                }
+            } catch (e) {
+                console.warn('Failed to load demo characters:', e);
+            }
+        }
+        
+        // Initialize app state after demo characters are loaded
+        await AppState.init();
+        
+        // Sync sort UI after AppState.init() loads the saved sort mode preference
+        if (typeof window._updateSortUI === 'function') {
+            window._updateSortUI();
+        }
+        
+        // Authenticated users with no characters must create one first
+        if (isAuthenticated && (!AppState.characters || AppState.characters.length === 0)) {
+            window.location.href = 'builder.html?new=true&required=true';
+            return;
+        }
+        
+        // Restore expanded view state from URL if present
+        ExpandedView.restore();
+        
+        // Check for pending character shares if authenticated
+        // (delay slightly to not block the initial render)
+        if (isAuthenticated) {
+            setTimeout(() => checkPendingShares(), 500);
+        }
+    };
+    
+    initApp().catch((e) => {
+        console.error('App initialization failed:', e);
+    });
+
+    // Setup event listeners
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const sortToggleBtn = document.getElementById('sortToggleBtn');
+    const sortDropdown = document.getElementById('sortDropdown');
+
+    const updateClearSearchVisibility = () => {
+        if (!clearSearchBtn || !searchInput) return;
+        const hasValue = searchInput.value.trim().length > 0;
+        const isDisabled = searchInput.disabled;
+        clearSearchBtn.classList.toggle('is-hidden', !hasValue || isDisabled);
+    };
+
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            AppState.searchTerm = e.target.value;
+            AppState.applyFilters();
+            UI.render();
+            updateClearSearchVisibility();
+        });
+    }
+
+    if (clearSearchBtn && searchInput) {
+        // Use mousedown with preventDefault to stop iOS Safari from blurring
+        // the input before we can process the clear action
+        clearSearchBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // Prevent input blur on iOS Safari
+        });
+        clearSearchBtn.addEventListener('click', () => {
+            if (searchInput.disabled) return;
+            searchInput.value = '';
+            AppState.searchTerm = '';
+            AppState.applyFilters();
+            UI.render();
+            // On mobile, collapse the search bar and blur
+            if (MobileView.isMobile()) {
+                const searchBar = document.querySelector('.search-bar');
+                if (searchBar) searchBar.classList.remove('is-search-expanded');
+                searchInput.blur();
+            } else {
+                searchInput.focus();
+            }
+            updateClearSearchVisibility();
+        });
+        updateClearSearchVisibility();
+    }
+    
+    // Mobile search toggle button - expands search bar on mobile
+    const mobileSearchBtn = document.getElementById('mobileSearchBtn');
+    if (mobileSearchBtn && searchInput) {
+        mobileSearchBtn.addEventListener('click', () => {
+            if (searchInput.disabled) return;
+            const searchBar = document.querySelector('.search-bar');
+            if (searchBar) {
+                searchBar.classList.add('is-search-expanded');
+                // Focus the input after a brief delay to allow CSS transition
+                setTimeout(() => {
+                    searchInput.focus();
+                }, 50);
+            }
+        });
+        
+        // Collapse search bar when input loses focus (and no search term)
+        searchInput.addEventListener('blur', () => {
+            if (!MobileView.isMobile()) return;
+            // Small delay to allow click on clear button to register first
+            setTimeout(() => {
+                const searchBar = document.querySelector('.search-bar');
+                // Only collapse if search is empty
+                if (searchBar && !searchInput.value.trim()) {
+                    searchBar.classList.remove('is-search-expanded');
+                }
+            }, 150);
+        });
+    }
+
+    // Fix iOS Safari double-tap issue on header overflow button.
+    // Elements that appear via CSS transition (opacity 0→1) can fail to register
+    // the first tap properly. Using touchend ensures immediate response.
+    const headerOverflowBtn = document.getElementById('headerOverflowBtn');
+    if (headerOverflowBtn) {
+        headerOverflowBtn.addEventListener('touchend', (e) => {
+            // Only handle single-finger taps
+            if (e.changedTouches.length !== 1) return;
+            e.preventDefault(); // Prevent subsequent click/mouse events
+            CharacterSheet.toggleSelectorMenu(headerOverflowBtn);
+        });
+    }
+
+    // Update search placeholder on viewport resize (debounced)
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            UI.updateCount();
+        }, 100);
+    });
+
+    // Sort dropdown behavior - now uses standard CharacterSheet.toggleSelectorMenu()
+    if (sortToggleBtn && sortDropdown) {
+        // Size the sort trigger based on the longest option label so the
+        // button width is driven by content but stays fixed as labels change.
+        const sizeSortTrigger = () => {
+            const options = sortDropdown.querySelectorAll('.sort-option');
+            if (!options.length) return;
+
+            let maxLabelChars = 0;
+            options.forEach((opt) => {
+                const label = (opt.textContent || '').trim();
+                if (label.length > maxLabelChars) {
+                    maxLabelChars = label.length;
+                }
+            });
+
+            // Account for label length plus a little breathing room.
+            const totalChars = maxLabelChars + 2;
+            sortToggleBtn.style.minWidth = `${totalChars}ch`;
+        };
+
+        const updateSortUI = () => {
+            // Update the button label to spell out the current sort mode
+            const sortLabels = {
+                alphabetical: 'Alphabetical',
+                dateModified: 'Date modified',
+                inCampaign: 'In campaign',
+                pinned: 'Pinned',
+            };
+            const currentLabel = sortLabels[AppState.sortMode] || 'Date modified';
+            sortToggleBtn.textContent = currentLabel;
+
+            // Keep the listbox selection state in sync with the trigger label.
+            // This ensures the option marked as selected in the listbox always
+            // matches the active sort mode shown in the button.
+            const options = sortDropdown.querySelectorAll('.sort-option');
+            options.forEach((opt) => {
+                const value = opt.getAttribute('data-sort-value');
+                const isSelected = value === AppState.sortMode;
+                opt.classList.toggle('is-selected', isSelected);
+                opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+
+            // Ensure width stays sized for the longest label
+            sizeSortTrigger();
+        };
+
+        const sortOptions = Array.from(sortDropdown.querySelectorAll('.sort-option'));
+
+        sortOptions.forEach((opt) => {
+            opt.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const value = opt.getAttribute('data-sort-value');
+                if (value === 'alphabetical' || value === 'dateModified' || value === 'inCampaign' || value === 'pinned') {
+                    AppState.sortMode = value;
+                    // Persist sort mode preference
+                    if (window.StorageService && StorageService.setSortMode) {
+                        StorageService.setSortMode(value);
+                    }
+                    AppState.applyFilters();
+                    UI.render();
+                }
+                // Note: CharacterSheet.toggleSelectorMenu handles closing the menu
+                updateSortUI();
+            });
+        });
+
+        // Initialize selection state and trigger sizing
+        sizeSortTrigger();
+        updateSortUI();
+
+        // Expose updateSortUI so it can be called after AppState.init() completes
+        window._updateSortUI = updateSortUI;
+    }
+
+    // Death saves click handler (event delegation on document) - TEMPORARILY DISABLED
+    // document.addEventListener('click', async (e) => {
+    //     const box = e.target.closest('.death-save-box');
+    //     if (!box) return;
+    //
+    //     const characterId = AppState.selectedCharacterId;
+    //     if (!characterId) return;
+    //
+    //     const type = box.dataset.type; // 'successes' or 'failures'
+    //     const index = parseInt(box.dataset.index, 10);
+    //
+    //     // Get current character data
+    //     const character = AppState.characters?.find(c =>
+    //         c.id === characterId || c.cloudId === characterId
+    //     );
+    //     if (!character) return;
+    //
+    //     // Get current values
+    //     const currentSuccesses = character.death_save_successes ?? character.deathSaveSuccesses ?? 0;
+    //     const currentFailures = character.death_save_failures ?? character.deathSaveFailures ?? 0;
+    //
+    //     let newSuccesses = currentSuccesses;
+    //     let newFailures = currentFailures;
+    //
+    //     if (type === 'successes') {
+    //         // Clicking on a box toggles: if it's filled, clear from there; if empty, fill up to there
+    //         if (index < currentSuccesses) {
+    //             // Clicking a filled box - clear this and all after it
+    //             newSuccesses = index;
+    //         } else {
+    //             // Clicking an empty box - fill up to and including this one
+    //             newSuccesses = index + 1;
+    //         }
+    //     } else if (type === 'failures') {
+    //         if (index < currentFailures) {
+    //             newFailures = index;
+    //         } else {
+    //             newFailures = index + 1;
+    //         }
+    //     }
+    //
+    //     // Clamp to 0-3
+    //     newSuccesses = Math.max(0, Math.min(3, newSuccesses));
+    //     newFailures = Math.max(0, Math.min(3, newFailures));
+    //
+    //     // If character succeeds (3 successes), they stabilize - reset death saves
+    //     if (newSuccesses >= 3) {
+    //         newSuccesses = 0;
+    //         newFailures = 0;
+    //     }
+    //
+    //     // Update immediately in UI for responsiveness
+    //     const allBoxes = document.querySelectorAll(`.death-save-box[data-type="${type}"]`);
+    //     const newValue = type === 'successes' ? newSuccesses : newFailures;
+    //     allBoxes.forEach((b, i) => {
+    //         b.classList.toggle('is-filled', i < newValue);
+    //     });
+    //
+    //     // Save to backend
+    //     try {
+    //         await CharacterStorage.update(characterId, {
+    //             death_save_successes: newSuccesses,
+    //             death_save_failures: newFailures,
+    //         });
+    //
+    //         // Reload character data to stay in sync
+    //         await AppState.loadCharacters();
+    //
+    //         // Re-render sheet if character is still selected
+    //         if (AppState.selectedCharacterId === characterId) {
+    //             viewCharacter(characterId);
+    //         }
+    //     } catch (error) {
+    //         console.error('Failed to update death saves:', error);
+    //         // Revert UI on error
+    //         viewCharacter(characterId);
+    //     }
+    // });
+
+    // Wire grid inline new character button
+    const gridNewCharBtn = document.getElementById('gridNewCharacterBtn');
+    const gridNewCharTooltip = document.getElementById('gridNewCharacterTooltip');
+    if (gridNewCharBtn) {
+        gridNewCharBtn.addEventListener('click', createNewCharacter);
+        
+        // Show/hide custom tooltip on hover
+        if (gridNewCharTooltip) {
+            const showGridTooltip = () => {
+                if (!gridNewCharTooltip.textContent) return;
+                gridNewCharTooltip.classList.add('show');
+            };
+            const hideGridTooltip = () => {
+                gridNewCharTooltip.classList.remove('show');
+            };
+
+            gridNewCharBtn.addEventListener('mouseenter', showGridTooltip);
+            gridNewCharBtn.addEventListener('mouseleave', hideGridTooltip);
+            gridNewCharBtn.addEventListener('focus', showGridTooltip);
+            gridNewCharBtn.addEventListener('blur', hideGridTooltip);
+        }
+    }
+
+    // Check creation quota on load and listen for updates
+    updateCreationQuotaState();
+    
+    window.addEventListener('danddy:creationQuotaUpdate', (e) => {
+        if (e.detail && typeof e.detail.remaining === 'number') {
+            _creationQuotaRemaining = e.detail.remaining;
+            window._creationQuotaRemaining = e.detail.remaining;
+            window._creationQuotaLimit =
+                typeof e.detail.limit === 'number' ? e.detail.limit : window._creationQuotaLimit;
+            window._creationQuotaResetAt = e.detail.resetAt || window._creationQuotaResetAt;
+            const overflowBtn = document.getElementById('overflowNewCharBtn');
+            const gridBtn = document.getElementById('gridNewCharacterBtn');
+            const gridTooltip = document.getElementById('gridNewCharacterTooltip');
+            
+            let tooltipText = '';
+            [overflowBtn, gridBtn].forEach(b => {
+                if (!b) return;
+
+                if (e.detail.remaining === -1) {
+                    b.disabled = false;
+                    b.title = '';
+                    b.classList.remove('is-quota-exhausted');
+                    tooltipText = '';
+                } else if (e.detail.remaining === 0) {
+                    b.disabled = true;
+                    b.title = '';
+                    b.classList.add('is-quota-exhausted');
+                    tooltipText = 'Daily limit reached';
+                } else {
+                    b.disabled = false;
+                    b.title = '';
+                    b.classList.remove('is-quota-exhausted');
+                    tooltipText = `${e.detail.remaining}${' '}creation${e.detail.remaining === 1 ? '' : 's'}${' '}remaining`;
+                }
+            });
+            if (gridTooltip) {
+                _updateQuotaTooltipText();
+                if (!gridTooltip.textContent) {
+                    gridTooltip.textContent = tooltipText;
+                }
+            }
+        }
+    });
+
+    // Check image quota on load and listen for updates (for Customize portrait button)
+    updateImageQuotaState();
+    window.addEventListener('danddy:imageQuotaUpdate', (e) => {
+        if (e.detail && typeof e.detail.remaining === 'number') {
+            const oldRemaining = window._imageQuotaRemaining;
+            window._imageQuotaRemaining = e.detail.remaining;
+            
+            // Re-render character sheet if quota just became exhausted
+            if (e.detail.remaining === 0 && oldRemaining !== 0 && AppState.selectedCharacterId) {
+                viewCharacter(AppState.selectedCharacterId, { skipKeyboardSync: true });
+            }
+        }
+    });
+
+    const importBtn = document.getElementById('importBtn');
+    if (importBtn) {
+        importBtn.addEventListener('click', showImportModal);
+    }
+    
+    // Update filename display when file is selected
+    document.getElementById('importFile').addEventListener('change', (e) => {
+        const fileNameDisplay = document.getElementById('fileName');
+        const importButton = document.querySelector('#importModal .modal-footer .terminal-btn-primary');
+        
+        if (e.target.files.length > 0) {
+            fileNameDisplay.textContent = e.target.files[0].name;
+            // Enable import button when file is selected
+            if (importButton) {
+                importButton.disabled = false;
+            }
+        } else {
+            fileNameDisplay.textContent = '';
+            // Disable import button when no file
+            if (importButton) {
+                importButton.disabled = true;
+            }
+        }
+    });
+
+    // Close import modal on outside click
+    document.getElementById('importModal').addEventListener('click', (e) => {
+        if (e.target.id === 'importModal') {
+            closeImportModal();
+        }
+    });
+    
+    // Close duplicate modal on outside click
+    document.getElementById('duplicateModal').addEventListener('click', (e) => {
+        if (e.target.id === 'duplicateModal') {
+            closeDuplicateModal();
+        }
+    });
+    
+    // Close portrait prompt modal on outside click
+    document.getElementById('portraitPromptModal').addEventListener('click', (e) => {
+        if (e.target.id === 'portraitPromptModal') {
+            closePortraitPromptModal();
+        }
+    });
+    
+    // Close password reset modal on outside click
+    document.getElementById('passwordResetModal').addEventListener('click', (e) => {
+        if (e.target.id === 'passwordResetModal') {
+            closePasswordResetModal();
+        }
+    });
+
+    // Mobile: tap on spell tag to reveal tooltip, tap again or outside to close
+    // (shared tag excluded to avoid collision with portrait lightbox)
+    // Use event delegation for dynamically rendered content
+    document.addEventListener('click', (e) => {
+        // Guard against non-element targets (text nodes, etc.)
+        if (!e.target || typeof e.target.closest !== 'function') return;
+        
+        // Check if touch device (coarse pointer)
+        const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+        if (!isTouch) return;
+        
+        // Find spell tag that was tapped (shared tag excluded on mobile)
+        const tappedTag = e.target.closest('.sheet-spell-tag.has-tooltip');
+        const clickedTooltip = e.target.closest('.custom-tooltip');
+        const activeTag = document.querySelector('.sheet-spell-tag.tooltip-active');
+        
+        if (tappedTag) {
+            // Tapped on a tag with tooltip - toggle its tooltip
+            e.stopPropagation();
+            
+            // If there's already an active tooltip on a different tag, close it
+            if (activeTag && activeTag !== tappedTag) {
+                activeTag.classList.remove('tooltip-active');
+            }
+            
+            // Toggle the tapped tag's tooltip
+            tappedTag.classList.toggle('tooltip-active');
+            
+            // Reposition tooltip if it will be clipped
+            if (tappedTag.classList.contains('tooltip-active')) {
+                repositionTooltipIfClipped(tappedTag);
+            }
+        } else if (clickedTooltip) {
+            // Tapped directly on a tooltip - close its parent tag's tooltip
+            e.stopPropagation();
+            const parentTag = clickedTooltip.closest('.sheet-spell-tag.has-tooltip');
+            if (parentTag) {
+                parentTag.classList.remove('tooltip-active');
+            }
+        } else {
+            // Tapped outside - close any open tooltip
+            if (activeTag) {
+                activeTag.classList.remove('tooltip-active');
+            }
+        }
+    });
+
+    // Find the closest scrollable/overflow container
+    function getContainerBounds(element) {
+        let current = element.parentElement;
+        while (current && current !== document.body) {
+            const style = getComputedStyle(current);
+            const overflowX = style.overflowX;
+            const overflowY = style.overflowY;
+            // Check if this element clips its content
+            if (overflowX === 'hidden' || overflowX === 'auto' || overflowX === 'scroll' ||
+                overflowY === 'hidden' || overflowY === 'auto' || overflowY === 'scroll') {
+                return current.getBoundingClientRect();
+            }
+            current = current.parentElement;
+        }
+        // Fallback to viewport
+        return { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+    }
+
+    // Tooltip edge detection: apply inline offset to prevent clipping
+    function repositionTooltipIfClipped(parent) {
+        const tooltip = parent.querySelector('.custom-tooltip');
+        if (!tooltip) return;
+        
+        // Reset any previous inline adjustments
+        tooltip.style.setProperty('--tooltip-offset-x', '0px');
+        tooltip.classList.add('show');
+        
+        // Force reflow to ensure CSS variable change is applied before measuring
+        void tooltip.offsetWidth;
+        
+        // Now measure with fresh layout
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const containerBounds = getContainerBounds(parent);
+        const margin = 12;
+        
+        let offsetX = 0;
+        
+        // Check left clipping
+        if (tooltipRect.left < containerBounds.left + margin) {
+            offsetX = (containerBounds.left + margin) - tooltipRect.left;
+        }
+        // Check right clipping
+        else if (tooltipRect.right > containerBounds.right - margin) {
+            offsetX = (containerBounds.right - margin) - tooltipRect.right;
+        }
+        
+        // Apply horizontal offset using CSS custom property
+        tooltip.style.setProperty('--tooltip-offset-x', `${offsetX}px`);
+        
+        tooltip.classList.remove('show');
+    }
+
+    // Desktop: reposition tooltip on hover
+    document.addEventListener('mouseenter', (e) => {
+        // Guard against non-element targets (text nodes, etc.)
+        if (!e.target || typeof e.target.closest !== 'function') return;
+        
+        const parent = e.target.closest('.sheet-spell-tag.has-tooltip');
+        if (parent) {
+            repositionTooltipIfClipped(parent);
+        }
+    }, true);
+
+    // Handle password reset token from URL fragment (e.g. when coming from email link)
+    try {
+        const hash = window.location.hash || '';
+        
+        // Check for password reset modal request
+        if (hash === '#password-reset') {
+            showPasswordResetModal();
+            // Clear hash from URL
+            history.replaceState(
+                null,
+                document.title,
+                window.location.pathname + window.location.search,
+            );
+        }
+        
+        // Check for reset token in hash
+        const tokenMatch = hash.match(/reset-token=([^&]+)/);
+        if (tokenMatch && tokenMatch[1]) {
+            const token = decodeURIComponent(tokenMatch[1]);
+            showPasswordResetModal();
+            
+            // Auto-fill the token (hidden field) and switch to password input
+            const tokenInput = document.getElementById('passwordResetToken');
+            if (tokenInput) {
+                tokenInput.value = token;
+            }
+            
+            // Switch to the password reset confirmation section
+            const modalTitle = document.getElementById('passwordResetModalTitle');
+            const requestSection = document.getElementById('passwordResetRequestSection');
+            const successSection = document.getElementById('passwordResetSuccessSection');
+            const confirmSection = document.getElementById('passwordResetConfirmSection');
+            const cancelBtn = document.getElementById('passwordResetCancelBtn');
+            const closeBtn = document.getElementById('passwordResetCloseBtn');
+            const requestBtn = document.getElementById('passwordResetRequestBtn');
+            const confirmBtn = document.getElementById('passwordResetConfirmBtn');
+            
+            if (modalTitle) modalTitle.textContent = 'RESET PASSWORD';
+            if (requestSection) requestSection.classList.add('is-hidden');
+            if (successSection) successSection.classList.add('is-hidden');
+            if (confirmSection) confirmSection.classList.remove('is-hidden');
+            if (cancelBtn) cancelBtn.classList.remove('is-hidden');
+            if (closeBtn) closeBtn.classList.add('is-hidden');
+            if (requestBtn) requestBtn.classList.add('is-hidden');
+            if (confirmBtn) confirmBtn.classList.remove('is-hidden');
+            
+            // Focus on the new password input
+            setTimeout(() => {
+                document.getElementById('passwordResetNewPassword')?.focus();
+            }, 100);
+            
+            // Remove token from URL bar for a bit of shoulder-surfing protection
+            history.replaceState(
+                null,
+                document.title,
+                window.location.pathname + window.location.search,
+            );
+        }
+    } catch (e) {
+        console.warn('Failed to process reset-token from URL hash', e);
+    }
+    
+    // Hover behavior for character cards:
+    // - Adds/removes a visual `is-hovered` class
+    // - Does NOT change focus or update the character sheet
+    // - Clears keyboard focus when mouse takes over
+    const characterGrid = document.getElementById('characterGrid');
+    if (characterGrid) {
+        characterGrid.addEventListener('mouseover', (e) => {
+            // Guard against non-element targets (text nodes, etc.)
+            if (!e.target || typeof e.target.closest !== 'function') return;
+            
+            const card = e.target.closest('.character-card');
+
+            // Clear previous hover states
+            document.querySelectorAll('.character-card.is-hovered').forEach(el => {
+                if (el !== card) {
+                    el.classList.remove('is-hovered');
+                }
+            });
+
+            if (card) {
+                card.classList.add('is-hovered');
+                // Clear keyboard focus from all cards when mouse is active
+                if (typeof KeyboardNav !== 'undefined' && KeyboardNav.clearAll) {
+                    KeyboardNav.clearAll();
+                }
+            }
+        });
+
+        characterGrid.addEventListener('mouseleave', () => {
+            document.querySelectorAll('.character-card.is-hovered').forEach(el => {
+                el.classList.remove('is-hovered');
+            });
+        });
+    }
+    
+    // Keyboard navigation (only after splash is dismissed)
+    window.addEventListener('keydown', (e) => {
+        if (splashActive) return; // Don't interfere with splash screen
+
+        // If any modal is open, handle ESC and Cmd+Enter inside that modal only
+        const openModal = document.querySelector('.modal.show');
+        if (openModal) {
+            const modalId = openModal.id;
+
+            // ESC closes whichever modal is active (with dirty check for form modals)
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                
+                // Check if discard confirmation is showing - if so, close it
+                const discardOverlay = openModal.querySelector('.modal-discard-confirm.show');
+                if (discardOverlay) {
+                    discardOverlay.classList.remove('show');
+                    return;
+                }
+                
+                // Use ModalManager for universal close behavior (handles dirty check)
+                ModalManager.requestClose(modalId);
+                return;
+            }
+
+            // Cmd+Enter (mac-style) triggers the primary CTA in the active modal
+            if (e.key === 'Enter' && e.metaKey) {
+                const primaryBtn = openModal.querySelector('.modal-footer .terminal-btn-primary');
+                if (primaryBtn && !primaryBtn.disabled) {
+                    e.preventDefault();
+                    primaryBtn.click();
+                }
+                return;
+            }
+
+            // When a modal is open, don't process global shortcuts
+            return;
+        }
+
+        // Handle keyboard shortcuts when in form elements
+        const inFormElement = document.activeElement && (
+            document.activeElement.tagName === 'INPUT' ||
+            document.activeElement.tagName === 'TEXTAREA' ||
+            document.activeElement.tagName === 'SELECT'
+        );
+        
+        if (inFormElement) {
+            // Escape to return to character grid from search
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                document.activeElement.blur();
+                KeyboardNav.focusFirstCard();
+            }
+            return; // Don't process other keys when in form
+        }
+
+        // Keyboard shortcuts (when not in form elements)
+        if (e.key === '/' || (e.key === 'f' && e.ctrlKey)) {
+            // "/" or Ctrl+F to focus search
+            e.preventDefault();
+            KeyboardNav.focusSearch();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            KeyboardNav.moveUp();
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            KeyboardNav.moveDown();
+        } else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            KeyboardNav.moveLeft();
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            KeyboardNav.moveRight();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            KeyboardNav.select();
+        }
+    });
+});
+
+// ===== SPELL PICKER MODAL =====
+// State for spell picker
+let spellPickerState = {
+    isOpen: false,
+    mode: 'cantrips', // 'cantrips' or a number (1-9) for spell level
+    characterClass: null,
+    maxSpellLevel: 0,
+    selectedSpells: new Set(),
+    existingSpells: [], // Spells already on character
+    onConfirm: null, // Callback when selection is confirmed
+    maxSelections: null, // Max spells that can be selected (null = unlimited)
+};
+
+// ========================================
+// LAZY-LOADED D&D REFERENCE DATA
+// ========================================
+// Large reference data (spells, class features, racial traits, name patterns)
+// is split into `dnd-data.bundle.js` and lazy-loaded by the Manager when needed.
+function ensureDndDataBundleLoaded() {
+    // If the primary thing we need (spells) is present, treat as loaded.
+    if (window.SPELL_DATABASE) {
+        return Promise.resolve(true);
+    }
+    // Reuse an in-flight load to avoid duplicate network requests.
+    if (window.__danddyDndDataBundlePromise) {
+        return window.__danddyDndDataBundlePromise;
+    }
+
+    window.__danddyDndDataBundlePromise = new Promise((resolve, reject) => {
+        try {
+            const existing = document.querySelector('script[data-danddy-dnd-data="1"]');
+            if (existing) {
+                // If it exists but SPELL_DATABASE is still missing, wait a tick.
+                setTimeout(() => resolve(!!window.SPELL_DATABASE), 0);
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.defer = true;
+            script.dataset.danddyDndData = '1';
+
+            // Best-effort cache busting using app version; HTML may override with its own ?v=... on builder page.
+            const v = window.DANDDY_VERSION ? `?v=${encodeURIComponent(window.DANDDY_VERSION)}` : '';
+            script.src = `dnd-data.bundle.js${v}`;
+
+            script.onload = () => resolve(!!window.SPELL_DATABASE);
+            script.onerror = () => reject(new Error('Failed to load dnd-data.bundle.js'));
+            document.head.appendChild(script);
+        } catch (e) {
+            reject(e);
+        }
+    });
+
+    return window.__danddyDndDataBundlePromise;
+}
+
+/**
+ * Open the spell picker modal
+ * @param {object} options - Configuration options
+ * @param {string} options.characterClass - The class to filter spells by
+ * @param {string|number} options.level - 'cantrips' or 1-9 for spell level
+ * @param {number} options.maxSpellLevel - Maximum spell level character can cast
+ * @param {Array} options.existingSpells - Spells already selected (to exclude or mark)
+ * @param {Function} options.onConfirm - Callback with selected spells array
+ * @param {number|null} options.maxSelections - Maximum spells that can be selected (null = unlimited)
+ */
+async function openSpellPicker(options) {
+    const { characterClass, level, maxSpellLevel = 9, existingSpells = [], onConfirm, maxSelections = null } = options;
+    
+    if (!window.SPELL_DATABASE) {
+        try {
+            await ensureDndDataBundleLoaded();
+        } catch (e) {
+            console.error('Spell database failed to load', e);
+        }
+    }
+    
+    if (!window.SPELL_DATABASE) {
+        console.error('Spell database not loaded');
+        showNotification('Spell database not available', 'error');
+        return;
+    }
+    
+    // Normalize existing spells to lowercase for comparison
+    const normalizedExisting = existingSpells.map(s => (typeof s === 'string' ? s : s.name || s.id).toLowerCase());
+    
+    // Pre-select existing spells so user can manage them
+    const preSelected = new Set();
+    const spellLevel = level === 'cantrips' ? 0 : parseInt(level, 10);
+    const allSpells = window.SPELL_DATABASE.getSpellsByLevel(spellLevel) || [];
+    for (const spell of allSpells) {
+        if (normalizedExisting.includes(spell.name.toLowerCase()) || normalizedExisting.includes(spell.id)) {
+            preSelected.add(spell.id);
+        }
+    }
+    
+    spellPickerState = {
+        isOpen: true,
+        mode: level,
+        characterClass: characterClass?.toLowerCase(),
+        maxSpellLevel,
+        selectedSpells: preSelected,
+        existingSpells: normalizedExisting, // Keep for reference but don't lock
+        originalSelection: new Set(preSelected), // Track what was originally selected
+        onConfirm,
+        maxSelections,
+    };
+    
+    // Render the spell list
+    renderSpellPicker();
+    
+    // Update info text
+    const infoEl = document.getElementById('spellPickerInfo');
+    if (infoEl) {
+        const levelText = level === 'cantrips' || level === 0 ? 'Cantrips' : `Level ${level} Spells`;
+        const className = characterClass ? characterClass.charAt(0).toUpperCase() + characterClass.slice(1) : '';
+        infoEl.textContent = `Selecting ${levelText}${className ? ` for ${className}` : ''}`;
+    }
+    
+    // Show modal
+    const modal = document.getElementById('spellPickerModal');
+    if (modal) {
+        modal.classList.add('show');
+        // Focus search input
+        setTimeout(() => {
+            const searchInput = document.getElementById('spellSearchInput');
+            if (searchInput) searchInput.focus();
+        }, 100);
+    }
+    
+    updateSpellPickerCount();
+}
+
+// Track current standalone spell school filter selection
+let standaloneSpellSchoolFilter = '';
+
+/**
+ * Select a spell school from the standalone dropdown
+ */
+function selectStandaloneSpellSchool(value) {
+    standaloneSpellSchoolFilter = value;
+    
+    const trigger = document.getElementById('spellSchoolFilterTrigger');
+    const menu = document.getElementById('spellSchoolFilterMenu');
+    
+    if (trigger) {
+        const label = trigger.querySelector('.selector-trigger-label');
+        if (label) {
+            label.textContent = value || 'All Schools';
+        }
+    }
+    
+    // Update selected state on options
+    if (menu) {
+        menu.querySelectorAll('.selector-option').forEach(opt => {
+            opt.classList.toggle('is-selected', opt.dataset.value === value);
+        });
+    }
+    
+    // Menu is closed automatically by CharacterSheet global option handler
+    
+    // Re-render the spell list
+    filterSpellPicker();
+}
+
+// Make selector functions globally available
+window.selectStandaloneSpellSchool = selectStandaloneSpellSchool;
+
+/**
+ * Close the spell picker modal
+ */
+function closeSpellPicker() {
+    const modal = document.getElementById('spellPickerModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+    
+    // Clear search and reset filter
+    const searchInput = document.getElementById('spellSearchInput');
+    if (searchInput) searchInput.value = '';
+    
+    // Reset the selector to "All Schools"
+    standaloneSpellSchoolFilter = '';
+    const trigger = document.getElementById('spellSchoolFilterTrigger');
+    if (trigger) {
+        const label = trigger.querySelector('.selector-trigger-label');
+        if (label) label.textContent = 'All Schools';
+    }
+    const menu = document.getElementById('spellSchoolFilterMenu');
+    if (menu) {
+        menu.querySelectorAll('.selector-option').forEach(opt => {
+            opt.classList.toggle('is-selected', opt.dataset.value === '');
+        });
+    }
+    
+    spellPickerState.isOpen = false;
+    spellPickerState.selectedSpells.clear();
+}
+
+/**
+ * Render the spell list based on current filters
+ */
+function renderSpellPicker() {
+    const listEl = document.getElementById('spellPickerList');
+    if (!listEl || !window.SPELL_DATABASE) return;
+    
+    const searchQuery = document.getElementById('spellSearchInput')?.value || '';
+    const schoolFilter = standaloneSpellSchoolFilter;
+    
+    // Get level (0 for cantrips)
+    const level = spellPickerState.mode === 'cantrips' ? 0 : parseInt(spellPickerState.mode, 10);
+    
+    // Get spells for this level
+    let spells = window.SPELL_DATABASE.getSpellsByLevel(level) || [];
+    
+    // Filter by class if specified
+    if (spellPickerState.characterClass) {
+        spells = spells.filter(spell => 
+            spell.classes.includes(spellPickerState.characterClass)
+        );
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        spells = spells.filter(spell =>
+            spell.name.toLowerCase().includes(query) ||
+            spell.description.toLowerCase().includes(query) ||
+            spell.school.toLowerCase().includes(query)
+        );
+    }
+    
+    // Filter by school
+    if (schoolFilter) {
+        spells = spells.filter(spell => spell.school === schoolFilter);
+    }
+    
+    // Sort alphabetically
+    spells.sort((a, b) => a.name.localeCompare(b.name));
+    
+    if (spells.length === 0) {
+        listEl.innerHTML = '<div class="spell-picker-empty">No spells found matching your criteria.</div>';
+        return;
+    }
+    
+    // Render spell items
+    listEl.innerHTML = spells.map(spell => {
+        const isSelected = spellPickerState.selectedSpells.has(spell.id);
+        const wasOriginallySelected = spellPickerState.originalSelection?.has(spell.id);
+        
+        const classes = ['spell-picker-item'];
+        if (isSelected) classes.push('is-selected');
+        if (wasOriginallySelected) classes.push('is-existing'); // Visual indicator only, not locked
+        
+        return `
+            <div class="${classes.join(' ')}" data-spell-id="${Utils.escapeHtml(spell.id)}" onclick="toggleSpellSelection('${Utils.escapeHtml(spell.id)}')">
+                <input type="checkbox" class="spell-picker-checkbox" ${isSelected ? 'checked' : ''}>
+                <div class="spell-picker-item-content">
+                    <div class="spell-picker-item-header">
+                        <span class="spell-picker-item-name">${Utils.escapeHtml(spell.name)}${wasOriginallySelected ? ' <span class="spell-existing-badge">current</span>' : ''}</span>
+                        <span class="spell-picker-item-school">${Utils.escapeHtml(spell.school)}</span>
+                    </div>
+                    <div class="spell-picker-item-meta">
+                        ${Utils.escapeHtml(spell.castingTime)} · ${Utils.escapeHtml(spell.range)} · ${Utils.escapeHtml(spell.components)}
+                    </div>
+                    <div class="spell-picker-item-desc">${Utils.escapeHtml(spell.description)}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Toggle selection of a spell
+ */
+function toggleSpellSelection(spellId) {
+    if (spellPickerState.selectedSpells.has(spellId)) {
+        spellPickerState.selectedSpells.delete(spellId);
+    } else {
+        // Check if we've reached the selection limit
+        if (spellPickerState.maxSelections !== null && 
+            spellPickerState.selectedSpells.size >= spellPickerState.maxSelections) {
+            showNotification(`You can only select ${spellPickerState.maxSelections} spell${spellPickerState.maxSelections === 1 ? '' : 's'}`, 'warning');
+            return;
+        }
+        spellPickerState.selectedSpells.add(spellId);
+    }
+    
+    // Update UI
+    const item = document.querySelector(`.spell-picker-item[data-spell-id="${spellId}"]`);
+    if (item) {
+        item.classList.toggle('is-selected', spellPickerState.selectedSpells.has(spellId));
+        const checkbox = item.querySelector('.spell-picker-checkbox');
+        if (checkbox) checkbox.checked = spellPickerState.selectedSpells.has(spellId);
+    }
+    
+    updateSpellPickerCount();
+}
+
+/**
+ * Update the selected count display
+ */
+function updateSpellPickerCount() {
+    const countEl = document.getElementById('spellPickerSelectedCount');
+    if (countEl) {
+        const count = spellPickerState.selectedSpells.size;
+        if (spellPickerState.maxSelections !== null) {
+            countEl.textContent = count + ' of ' + spellPickerState.maxSelections + ' selected';
+            // Add visual indicator when at limit
+            countEl.classList.toggle('at-limit', count >= spellPickerState.maxSelections);
+        } else {
+            countEl.textContent = count + ' selected';
+            countEl.classList.remove('at-limit');
+        }
+    }
+}
+
+/**
+ * Filter spell picker based on search/filters
+ */
+function filterSpellPicker() {
+    renderSpellPicker();
+}
+
+/**
+ * Confirm spell selection and call callback
+ */
+function confirmSpellSelection() {
+    // Get full spell objects for selected spells
+    const level = spellPickerState.mode === 'cantrips' ? 0 : parseInt(spellPickerState.mode, 10);
+    const allSpells = window.SPELL_DATABASE.getSpellsByLevel(level) || [];
+    const selectedSpells = allSpells.filter(spell => 
+        spellPickerState.selectedSpells.has(spell.id)
+    );
+    
+    // Call the callback with selected spells (may be empty if user removed all)
+    if (typeof spellPickerState.onConfirm === 'function') {
+        spellPickerState.onConfirm(selectedSpells);
+    }
+    
+    closeSpellPicker();
+}
+
+// Make functions globally available
+window.openSpellPicker = openSpellPicker;
+window.closeSpellPicker = closeSpellPicker;
+window.filterSpellPicker = filterSpellPicker;
+window.toggleSpellSelection = toggleSpellSelection;
+window.confirmSpellSelection = confirmSpellSelection;
+
+// ===== SPELL EDITING IN EDIT MODAL =====
+// Track spells being edited
+let editSpellsState = {
+    cantrips: [],
+    spells: {}, // { 1: [...], 2: [...], etc. }
+    characterClass: null,
+    maxSpellLevel: 0,
+    characterLevel: 1,
+    cantripsAllowed: 0,   // Max cantrips allowed for this class/level
+    spellsAllowed: null,  // Max spells allowed (null = unlimited for prepared casters)
+};
+
+// Spellcasting classes and their types
+const SPELLCASTING_CLASSES = {
+    'bard': { type: 'full', cantrips: true },
+    'cleric': { type: 'full', cantrips: true },
+    'druid': { type: 'full', cantrips: true },
+    'sorcerer': { type: 'full', cantrips: true },
+    'wizard': { type: 'full', cantrips: true },
+    'warlock': { type: 'pact', cantrips: true },
+    'paladin': { type: 'half', cantrips: false },
+    'ranger': { type: 'half', cantrips: false },
+    // Subclass casters would need more complex handling
+};
+
+/**
+ * Validate a spell selection against the allowed limits
+ * @param {string|number} level - 'cantrips' or spell level (1-9)
+ * @param {Array} selectedSpells - Array of spell objects being selected
+ * @returns {object} - { valid: boolean, message: string, overBy: number }
+ */
+function validateSpellSelection(level, selectedSpells) {
+    const selectedCount = selectedSpells.length;
+    
+    if (level === 'cantrips') {
+        const maxCantrips = editSpellsState.cantripsAllowed;
+        if (maxCantrips > 0 && selectedCount > maxCantrips) {
+            const overBy = selectedCount - maxCantrips;
+            return {
+                valid: false,
+                message: `Too many cantrips! You have ${selectedCount} selected but your limit is ${maxCantrips}. Please remove ${overBy} cantrip${overBy > 1 ? 's' : ''}.`,
+                overBy
+            };
+        }
+    } else {
+        // For leveled spells, check against total spells allowed (if limited)
+        const maxSpells = editSpellsState.spellsAllowed;
+        if (maxSpells !== null) {
+            // Calculate total spells including this selection
+            const currentLevelNum = typeof level === 'string' ? parseInt(level, 10) : level;
+            let totalSpells = selectedCount;
+            
+            // Add spells from other levels
+            for (const [lvl, spells] of Object.entries(editSpellsState.spells)) {
+                if (parseInt(lvl, 10) !== currentLevelNum) {
+                    totalSpells += spells.length;
+                }
+            }
+            
+            if (totalSpells > maxSpells) {
+                const overBy = totalSpells - maxSpells;
+                return {
+                    valid: false,
+                    message: `Too many spells! You have ${totalSpells} total but your limit is ${maxSpells}. Please remove ${overBy} spell${overBy > 1 ? 's' : ''}.`,
+                    overBy
+                };
+            }
+        }
+    }
+    
+    return { valid: true, message: '', overBy: 0 };
+}
+
+/**
+ * Validate all current spell selections against limits
+ * @returns {object} - { valid: boolean, message: string, cantripsOver: number, spellsOver: number }
+ */
+function validateAllSpellLimits() {
+    const currentCantrips = editSpellsState.cantrips.length;
+    const maxCantrips = editSpellsState.cantripsAllowed;
+    const currentSpells = Object.values(editSpellsState.spells).flat().length;
+    const maxSpells = editSpellsState.spellsAllowed;
+    
+    const cantripsOver = maxCantrips > 0 ? Math.max(0, currentCantrips - maxCantrips) : 0;
+    const spellsOver = maxSpells !== null ? Math.max(0, currentSpells - maxSpells) : 0;
+    
+    if (cantripsOver > 0 || spellsOver > 0) {
+        const messages = [];
+        if (cantripsOver > 0) {
+            messages.push(`Remove ${cantripsOver} cantrip${cantripsOver > 1 ? 's' : ''} (${currentCantrips}/${maxCantrips})`);
+        }
+        if (spellsOver > 0) {
+            messages.push(`Remove ${spellsOver} spell${spellsOver > 1 ? 's' : ''} (${currentSpells}/${maxSpells})`);
+        }
+        return {
+            valid: false,
+            message: `You are over your spell limit.\n\n${messages.join('\n')}`,
+            cantripsOver,
+            spellsOver
+        };
+    }
+    
+    return { valid: true, message: '', cantripsOver: 0, spellsOver: 0 };
+}
+
+/**
+ * Animate opening a modal by inserting it without .show, then adding .show on next frame
+ * @param {string} modalHtml - The modal HTML string (without .show class)
+ * @param {string} modalId - The ID of the modal element
+ */
+function animateModalOpen(modalHtml, modalId) {
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        // Force browser to acknowledge the element exists before adding .show
+        // This ensures the CSS animation triggers properly
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+            });
+        });
+    }
+}
+
+/**
+ * Show a modal when user is over spell limit
+ * @param {object} validation - The validation result with overBy info
+ * @param {string|number} level - 'cantrips' or spell level
+ */
+function showSpellLimitModal(validation, level) {
+    const isCantrips = level === 'cantrips';
+    const overBy = validation.overBy || 1;
+    const spellType = isCantrips ? 'cantrip' : 'spell';
+    const spellTypePlural = isCantrips ? 'cantrips' : 'spells';
+    
+    const modalHtml = `
+        <div id="spellLimitModal" class="modal">
+            <div class="modal-content modal-content--narrow">
+                <div class="modal-header">
+                    <h2 class="modal-title">Too Many ${isCantrips ? 'Cantrips' : 'Spells'}</h2>
+                    <button class="modal-close" onclick="closeSpellLimitModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="terminal-text">
+                        You've selected more ${spellTypePlural} than allowed for your class and level.
+                    </p>
+                    <p class="terminal-text" style="margin-top: 0.75rem;">
+                        Please remove <strong>${overBy}</strong> ${overBy === 1 ? spellType : spellTypePlural} to continue.
+                    </p>
+                </div>
+                <div class="modal-footer modal-footer-end" style="gap: 0.5rem;">
+                    <button class="terminal-btn" onclick="closeSpellLimitModal()">Cancel</button>
+                    <button class="terminal-btn" onclick="closeSpellLimitModal()">Edit Spells</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    animateModalOpen(modalHtml, 'spellLimitModal');
+}
+
+/**
+ * Close the spell limit modal
+ */
+function closeSpellLimitModal() {
+    const modal = document.getElementById('spellLimitModal');
+    if (modal) {
+        animateModalClose(modal, { removeOnClose: true });
+    }
+}
+
+/**
+ * Show a modal when trying to save while over spell limit
+ * @param {object} validation - The validation result with cantripsOver and spellsOver
+ */
+function showSpellLimitSaveModal(validation) {
+    const { cantripsOver, spellsOver } = validation;
+    
+    // Build the message
+    const parts = [];
+    if (cantripsOver > 0) {
+        parts.push(`${cantripsOver} cantrip${cantripsOver > 1 ? 's' : ''}`);
+    }
+    if (spellsOver > 0) {
+        parts.push(`${spellsOver} spell${spellsOver > 1 ? 's' : ''}`);
+    }
+    const removeText = parts.join(' and ');
+    
+    const modalHtml = `
+        <div id="spellLimitSaveModal" class="modal">
+            <div class="modal-content modal-content--narrow">
+                <div class="modal-header">
+                    <h2 class="modal-title">Over Spell Limit</h2>
+                    <button class="modal-close" onclick="closeSpellLimitSaveModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="terminal-text">
+                        You have more spells than allowed for your class and level.
+                    </p>
+                    <p class="terminal-text" style="margin-top: 0.75rem;">
+                        Please remove <strong>${removeText}</strong> to save your changes.
+                    </p>
+                </div>
+                <div class="modal-footer modal-footer-end" style="gap: 0.5rem;">
+                    <button class="terminal-btn" onclick="closeSpellLimitSaveModal()">Cancel</button>
+                    <button class="terminal-btn" onclick="closeSpellLimitSaveModal()">OK</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    animateModalOpen(modalHtml, 'spellLimitSaveModal');
+}
+
+/**
+ * Close the spell limit save modal
+ */
+function closeSpellLimitSaveModal() {
+    const modal = document.getElementById('spellLimitSaveModal');
+    if (modal) {
+        animateModalClose(modal, { removeOnClose: true });
+    }
+}
+
+/**
+ * Scroll to the spell section in the edit modal
+ */
+function scrollToSpellSection() {
+    const spellSection = document.getElementById('spellEditSection');
+    if (spellSection) {
+        spellSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+window.closeSpellLimitModal = closeSpellLimitModal;
+window.closeSpellLimitSaveModal = closeSpellLimitSaveModal;
+window.scrollToSpellSection = scrollToSpellSection;
+
+/**
+ * Initialize the spell editing section based on character
+ */
+function initializeSpellEditSection(character, parsed) {
+    const spellSection = document.getElementById('spellEditSection');
+    if (!spellSection) return;
+    
+    const className = (character.class || '').toLowerCase();
+    const spellcasting = SPELLCASTING_CLASSES[className];
+    
+    // Hide section for non-casters
+    if (!spellcasting) {
+        spellSection.classList.add('is-hidden');
+        return;
+    }
+    
+    // Show section for casters
+    spellSection.classList.remove('is-hidden');
+    
+    // Calculate max spell level based on character level
+    const level = parsed.level || character.level || 1;
+    let maxSpellLevel = 0;
+    
+    if (spellcasting.type === 'full') {
+        // Full casters: level 1-2 = 1st level spells, +1 spell level per 2 levels thereafter
+        maxSpellLevel = Math.min(9, Math.ceil(level / 2));
+        if (level >= 17) maxSpellLevel = 9;
+        else if (level >= 15) maxSpellLevel = 8;
+        else if (level >= 13) maxSpellLevel = 7;
+        else if (level >= 11) maxSpellLevel = 6;
+        else if (level >= 9) maxSpellLevel = 5;
+        else if (level >= 7) maxSpellLevel = 4;
+        else if (level >= 5) maxSpellLevel = 3;
+        else if (level >= 3) maxSpellLevel = 2;
+        else maxSpellLevel = 1;
+    } else if (spellcasting.type === 'half') {
+        // Half casters: get spells at level 2, maxes at 5th level spells
+        if (level < 2) maxSpellLevel = 0;
+        else if (level < 5) maxSpellLevel = 1;
+        else if (level < 9) maxSpellLevel = 2;
+        else if (level < 13) maxSpellLevel = 3;
+        else if (level < 17) maxSpellLevel = 4;
+        else maxSpellLevel = 5;
+    } else if (spellcasting.type === 'pact') {
+        // Warlocks: unique progression
+        if (level < 3) maxSpellLevel = 1;
+        else if (level < 5) maxSpellLevel = 2;
+        else if (level < 7) maxSpellLevel = 3;
+        else if (level < 9) maxSpellLevel = 4;
+        else maxSpellLevel = 5;
+    }
+    
+    // Get spell progression for this class/level to determine limits
+    const stats = calculateStatsForLevel(character, level);
+    const spellProgression = stats.spellProgression || { cantrips: 0, spellsKnown: null, maxSpellLevel: 0 };
+    
+    // Store state
+    editSpellsState = {
+        cantrips: [...(parsed.cantrips || [])],
+        spells: {},
+        characterClass: className,
+        maxSpellLevel,
+        characterLevel: level,
+        cantripsAllowed: spellProgression.cantrips || 0,
+        spellsAllowed: spellProgression.spellsKnown, // null for prepared casters (unlimited)
+    };
+    
+    // Parse existing spells by level from spellsKnown
+    const existingSpells = parsed.spellsKnown || [];
+    for (const spellName of existingSpells) {
+        // Try to find the spell in database to get its level
+        if (window.SPELL_DATABASE) {
+            const spellInfo = window.SPELL_DATABASE.getSpellByName(spellName);
+            if (spellInfo && spellInfo.level > 0) {
+                if (!editSpellsState.spells[spellInfo.level]) {
+                    editSpellsState.spells[spellInfo.level] = [];
+                }
+                editSpellsState.spells[spellInfo.level].push(spellName);
+            }
+        }
+    }
+    
+    // Show/hide cantrips row based on class capability
+    const cantripsRow = document.getElementById('spellEditCantripsRow');
+    if (cantripsRow) {
+        cantripsRow.classList.toggle('is-hidden', !spellcasting.cantrips);
+    }
+    
+    // Show/hide spell level rows based on max spell level
+    for (let spellLevel = 1; spellLevel <= 9; spellLevel++) {
+        const row = document.getElementById(`spellEditLevel${spellLevel}Row`);
+        if (row) {
+            row.classList.toggle('is-hidden', spellLevel > maxSpellLevel || maxSpellLevel === 0);
+        }
+    }
+    
+    // Render spell tags
+    renderSpellTags();
+}
+
+/**
+ * Update the spell limits summary display in the edit modal
+ */
+function updateSpellLimitsSummary() {
+    const summaryEl = document.getElementById('spellLimitsSummary');
+    if (!summaryEl) return;
+    
+    const parts = [];
+    
+    // Cantrips count
+    const currentCantrips = editSpellsState.cantrips.length;
+    const maxCantrips = editSpellsState.cantripsAllowed;
+    const cantripsOver = maxCantrips > 0 ? Math.max(0, currentCantrips - maxCantrips) : 0;
+    
+    if (maxCantrips > 0) {
+        const prefix = cantripsOver > 0 ? '⚠ ' : '';
+        parts.push(`${prefix}Cantrips: ${currentCantrips}/${maxCantrips}`);
+    }
+    
+    // Spells count (only for known casters)
+    const currentSpells = Object.values(editSpellsState.spells).flat().length;
+    const maxSpells = editSpellsState.spellsAllowed;
+    const spellsOver = maxSpells !== null ? Math.max(0, currentSpells - maxSpells) : 0;
+    
+    if (maxSpells !== null) {
+        const prefix = spellsOver > 0 ? '⚠ ' : '';
+        parts.push(`${prefix}Spells: ${currentSpells}/${maxSpells}`);
+    } else if (editSpellsState.characterClass) {
+        // Prepared casters - show current count only
+        parts.push('Spells: ' + currentSpells + ' (no limit)');
+    }
+    
+    summaryEl.textContent = parts.join(' · ');
+    
+    // Add over-limit class if over limit
+    const overLimit = cantripsOver > 0 || spellsOver > 0;
+    const atLimit = !overLimit && ((maxCantrips > 0 && currentCantrips >= maxCantrips) || 
+                   (maxSpells !== null && currentSpells >= maxSpells));
+    summaryEl.classList.toggle('at-limit', atLimit);
+    summaryEl.classList.toggle('over-limit', overLimit);
+}
+
+/**
+ * Render spell tags in the edit modal
+ */
+function renderSpellTags() {
+    // Render cantrips
+    const cantripsContainer = document.getElementById('editCantrips');
+    if (cantripsContainer) {
+        renderSpellTagsInContainer(cantripsContainer, editSpellsState.cantrips, 'cantrips');
+    }
+    
+    // Render spells by level
+    for (let level = 1; level <= 9; level++) {
+        const container = document.getElementById(`editSpells${level}`);
+        if (container) {
+            const spells = editSpellsState.spells[level] || [];
+            renderSpellTagsInContainer(container, spells, level);
+        }
+    }
+    
+    // Update the limits summary
+    updateSpellLimitsSummary();
+}
+
+/**
+ * Render spell tags in a specific container
+ */
+function renderSpellTagsInContainer(container, spells, level) {
+    // Generate add button label
+    const addLabel = level === 'cantrips' ? '+ Add' : '+ Add';
+    const levelArg = level === 'cantrips' ? "'cantrips'" : level;
+    
+    // Build spell tags HTML
+    const spellTagsHtml = spells.map(spellName => `
+        <span class="spell-tag">
+            ${Utils.escapeHtml(spellName)}
+            <span class="spell-tag-remove" onclick="removeSpellFromEdit('${Utils.escapeHtml(spellName.replace(/'/g, "\\'"))}', '${level}')">&times;</span>
+        </span>
+    `).join('');
+    
+    // Add button is always at the end
+    const addButtonHtml = `<button type="button" class="spell-add-btn-inline" onclick="openSpellPickerForEdit(${levelArg})">${addLabel}</button>`;
+    
+    container.innerHTML = spellTagsHtml + addButtonHtml;
+}
+
+/**
+ * Remove a spell from the edit list
+ */
+function removeSpellFromEdit(spellName, level) {
+    if (level === 'cantrips') {
+        editSpellsState.cantrips = editSpellsState.cantrips.filter(s => s !== spellName);
+    } else {
+        const levelNum = parseInt(level, 10);
+        if (editSpellsState.spells[levelNum]) {
+            editSpellsState.spells[levelNum] = editSpellsState.spells[levelNum].filter(s => s !== spellName);
+        }
+    }
+    
+    renderSpellTags();
+    
+    // Mark form as dirty
+    ModalManager.markDirty('editDetailsModal');
+}
+
+// Store original edit modal content for back navigation
+let editModalOriginalContent = null;
+// Store form values before spell picker opens (since innerHTML doesn't capture input .value)
+let editModalFormValues = null;
+
+/**
+ * Capture current form values from edit modal
+ */
+function captureEditFormValues() {
+    const form = document.getElementById('editDetailsModal');
+    if (!form) return null;
+    
+    const values = {};
+    form.querySelectorAll('input, textarea, select').forEach(el => {
+        if (el.id) {
+            values[el.id] = el.value;
+        }
+    });
+    return values;
+}
+
+/**
+ * Restore form values to edit modal
+ */
+function restoreEditFormValues(values) {
+    if (!values) return;
+    
+    Object.entries(values).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = value;
+        }
+    });
+}
+
+/**
+ * Open spell picker for edit modal - transforms the edit modal into spell picker view
+ */
+function openSpellPickerForEdit(level) {
+    const editModal = document.getElementById('editDetailsModal');
+    if (!editModal) return;
+    
+    const modalContent = editModal.querySelector('.modal-content');
+    if (!modalContent) return;
+    
+    // Capture form values before storing HTML (input .value isn't in innerHTML)
+    editModalFormValues = captureEditFormValues();
+    
+    // Store original content for back navigation
+    editModalOriginalContent = modalContent.innerHTML;
+    
+    // Get existing spells for this level
+    let existingSpells;
+    if (level === 'cantrips') {
+        existingSpells = editSpellsState.cantrips;
+    } else {
+        existingSpells = editSpellsState.spells[level] || [];
+    }
+    
+    // Calculate how many more spells can be selected
+    let maxSelections = null;
+    if (level === 'cantrips') {
+        // For cantrips: limit is cantripsAllowed - current cantrips
+        if (editSpellsState.cantripsAllowed > 0) {
+            const currentCantripCount = editSpellsState.cantrips.length;
+            maxSelections = Math.max(0, editSpellsState.cantripsAllowed - currentCantripCount);
+        }
+    } else {
+        // For regular spells: limit is spellsAllowed - total current spells across all levels
+        // null means unlimited (prepared casters)
+        if (editSpellsState.spellsAllowed !== null) {
+            const totalCurrentSpells = Object.values(editSpellsState.spells).flat().length;
+            maxSelections = Math.max(0, editSpellsState.spellsAllowed - totalCurrentSpells);
+        }
+    }
+    
+    // Normalize existing spells and pre-select them
+    const normalizedExisting = existingSpells.map(s => (typeof s === 'string' ? s : s.name || s.id).toLowerCase());
+    
+    // Pre-select existing spells so user can manage them
+    const preSelected = new Set();
+    const spellLevel = level === 'cantrips' ? 0 : parseInt(level, 10);
+    const allSpells = window.SPELL_DATABASE?.getSpellsByLevel(spellLevel) || [];
+    for (const spell of allSpells) {
+        if (normalizedExisting.includes(spell.name.toLowerCase()) || normalizedExisting.includes(spell.id)) {
+            preSelected.add(spell.id);
+        }
+    }
+    
+    // Set up spell picker state
+    spellPickerState = {
+        isOpen: true,
+        mode: level,
+        characterClass: editSpellsState.characterClass?.toLowerCase(),
+        maxSpellLevel: editSpellsState.maxSpellLevel,
+        selectedSpells: preSelected,
+        existingSpells: normalizedExisting,
+        originalSelection: new Set(preSelected), // Track what was originally selected
+        onConfirm: null, // Handled inline
+        inlineMode: true,
+        targetLevel: level,
+        maxSelections: null, // Allow free management, no limit
+    };
+    
+    // Generate spell picker HTML
+    const className = editSpellsState.characterClass ? 
+        editSpellsState.characterClass.charAt(0).toUpperCase() + editSpellsState.characterClass.slice(1) : '';
+    
+    // Build title text: "Level 1 Wizard spells" or "Wizard cantrips"
+    let titleText;
+    if (level === 'cantrips' || level === 0) {
+        titleText = className ? className + ' cantrips' : 'Cantrips';
+    } else {
+        titleText = 'Level ' + level + (className ? ' ' + className : '') + ' spells';
+    }
+    
+    // Build count text (remaining slots)
+    const countText = maxSelections !== null ? maxSelections + ' remaining slot' + (maxSelections === 1 ? '' : 's') : '';
+    
+    // Reset school filter
+    currentSpellSchoolFilter = '';
+    
+    // Show loading state first (yellow cube spinner)
+    const loadingHtml = `
+        <div class="modal-header modal-header-left">
+            <h2 class="modal-title">${titleText}</h2>
+            <button class="modal-close" onclick="ModalManager.requestClose('editDetailsModal')">&times;</button>
+        </div>
+        <div class="modal-body spell-picker-loading">
+            <div class="panel-loading-cube-container">
+                <div class="panel-loading-cube">
+                    <i></i><i></i><i></i><i></i><i></i><i></i>
+                </div>
+            </div>
+            <p class="panel-loading-text">Loading spells...</p>
+        </div>
+    `;
+    
+    // Animate to loading state
+    animateModalContentSwap(modalContent, loadingHtml, () => {
+        // Generate spell list content while loading is shown
+        const spellListHtml = generateInlineSpellListHtml();
+        
+        // Build the final spell picker HTML with pre-rendered list
+        const spellPickerHtml = `
+            <div class="modal-header modal-header-left">
+                <h2 class="modal-title">${titleText}</h2>
+                <button class="modal-close" onclick="ModalManager.requestClose('editDetailsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="spell-picker-info${maxSelections === 0 ? ' at-limit' : ''}">
+                    <span class="spell-picker-info-text">Select spells</span>
+                    <span class="spell-picker-selected-count" id="inlineSpellCount">${countText}</span>
+                </div>
+                <div class="spell-picker-filters">
+                    <input type="text" id="inlineSpellSearch" class="terminal-input" placeholder="Search spells..." oninput="filterInlineSpellPicker()" data-1p-ignore>
+                    <div class="selector-shell selector-shell--listbox" id="spellSchoolSelector">
+                        <button type="button" 
+                                class="terminal-btn-small selector-trigger" 
+                                id="spellSchoolTrigger"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                onclick="CharacterSheet.toggleSelectorMenu(this)">
+                            <span class="selector-trigger-label">All Schools</span>
+                        </button>
+                        <div class="selector-menu" id="spellSchoolMenu" role="listbox">
+                            <button class="selector-option is-selected" role="option" data-value="" onclick="selectSpellSchool('')">All Schools</button>
+                            <button class="selector-option" role="option" data-value="Abjuration" onclick="selectSpellSchool('Abjuration')">Abjuration</button>
+                            <button class="selector-option" role="option" data-value="Conjuration" onclick="selectSpellSchool('Conjuration')">Conjuration</button>
+                            <button class="selector-option" role="option" data-value="Divination" onclick="selectSpellSchool('Divination')">Divination</button>
+                            <button class="selector-option" role="option" data-value="Enchantment" onclick="selectSpellSchool('Enchantment')">Enchantment</button>
+                            <button class="selector-option" role="option" data-value="Evocation" onclick="selectSpellSchool('Evocation')">Evocation</button>
+                            <button class="selector-option" role="option" data-value="Illusion" onclick="selectSpellSchool('Illusion')">Illusion</button>
+                            <button class="selector-option" role="option" data-value="Necromancy" onclick="selectSpellSchool('Necromancy')">Necromancy</button>
+                            <button class="selector-option" role="option" data-value="Transmutation" onclick="selectSpellSchool('Transmutation')">Transmutation</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="spell-picker-list" id="inlineSpellList">
+                    ${spellListHtml}
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="closeInlineSpellPicker()">← Back</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="confirmInlineSpellSelection()">Confirm</button>
+            </div>
+        `;
+        
+        // Small delay to ensure loading state is visible, then swap to populated content
+        setTimeout(() => {
+            animateModalContentSwap(modalContent, spellPickerHtml, () => {
+                // Update spell count display
+                updateInlineSpellCount();
+                
+                // Focus search input
+                setTimeout(() => {
+                    const searchInput = document.getElementById('inlineSpellSearch');
+                    if (searchInput) searchInput.focus();
+                }, 50);
+            });
+        }, 150);
+    });
+}
+
+/**
+ * Generate the spell list HTML without rendering to DOM
+ * Used to pre-generate content before transition
+ */
+function generateInlineSpellListHtml() {
+    if (!window.SPELL_DATABASE) return '<div class="spell-picker-empty">Spell database not available.</div>';
+    
+    const searchQuery = '';
+    const schoolFilter = currentSpellSchoolFilter;
+    
+    // Get level (0 for cantrips)
+    const level = spellPickerState.mode === 'cantrips' ? 0 : parseInt(spellPickerState.mode, 10);
+    
+    // Get spells for this level
+    let spells = window.SPELL_DATABASE.getSpellsByLevel(level) || [];
+    
+    // Filter by class if specified
+    if (spellPickerState.characterClass) {
+        spells = spells.filter(spell => 
+            spell.classes.includes(spellPickerState.characterClass)
+        );
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        spells = spells.filter(spell => 
+            spell.name.toLowerCase().includes(query) ||
+            spell.school.toLowerCase().includes(query) ||
+            spell.description.toLowerCase().includes(query)
+        );
+    }
+    
+    // Filter by school
+    if (schoolFilter) {
+        spells = spells.filter(spell => spell.school === schoolFilter);
+    }
+    
+    // Sort alphabetically
+    spells.sort((a, b) => a.name.localeCompare(b.name));
+    
+    if (spells.length === 0) {
+        return '<div class="spell-picker-empty">No spells found matching your criteria.</div>';
+    }
+    
+    // Generate HTML for each spell
+    return spells.map(spell => {
+        const isSelected = spellPickerState.selectedSpells.has(spell.id);
+        const wasOriginallySelected = spellPickerState.originalSelection?.has(spell.id);
+        
+        const classes = ['spell-picker-item'];
+        if (isSelected) classes.push('is-selected');
+        if (wasOriginallySelected) classes.push('is-existing');
+        
+        return `
+            <div class="${classes.join(' ')}" data-spell-id="${Utils.escapeHtml(spell.id)}" onclick="toggleInlineSpellSelection('${Utils.escapeHtml(spell.id)}')">
+                <input type="checkbox" class="spell-picker-checkbox" ${isSelected ? 'checked' : ''}>
+                <div class="spell-picker-item-content">
+                    <div class="spell-picker-item-header">
+                        <span class="spell-picker-item-name">${Utils.escapeHtml(spell.name)}${wasOriginallySelected ? ' <span class="spell-existing-badge">current</span>' : ''}</span>
+                        <span class="spell-picker-item-school">${Utils.escapeHtml(spell.school)}</span>
+                    </div>
+                    <div class="spell-picker-item-meta">
+                        ${Utils.escapeHtml(spell.castingTime)} · ${Utils.escapeHtml(spell.range)} · ${Utils.escapeHtml(spell.components)}
+                    </div>
+                    <div class="spell-picker-item-desc">${Utils.escapeHtml(spell.description)}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Track current spell school filter selection
+let currentSpellSchoolFilter = '';
+
+/**
+ * Select a spell school from the dropdown
+ */
+function selectSpellSchool(value) {
+    currentSpellSchoolFilter = value;
+    
+    const trigger = document.getElementById('spellSchoolTrigger');
+    const menu = document.getElementById('spellSchoolMenu');
+    
+    if (trigger) {
+        const label = trigger.querySelector('.selector-trigger-label');
+        if (label) {
+            label.textContent = value || 'All Schools';
+        }
+    }
+    
+    // Update selected state on options
+    if (menu) {
+        menu.querySelectorAll('.selector-option').forEach(opt => {
+            opt.classList.toggle('is-selected', opt.dataset.value === value);
+        });
+    }
+    
+    // Menu is closed automatically by CharacterSheet global option handler
+    
+    // Re-render the spell list
+    filterInlineSpellPicker();
+}
+
+// Make selector functions globally available
+window.selectSpellSchool = selectSpellSchool;
+
+/**
+ * Render the inline spell picker list
+ */
+function renderInlineSpellPicker() {
+    const listEl = document.getElementById('inlineSpellList');
+    if (!listEl || !window.SPELL_DATABASE) return;
+    
+    const searchQuery = document.getElementById('inlineSpellSearch')?.value || '';
+    const schoolFilter = currentSpellSchoolFilter;
+    
+    // Get level (0 for cantrips)
+    const level = spellPickerState.mode === 'cantrips' ? 0 : parseInt(spellPickerState.mode, 10);
+    
+    // Get spells for this level
+    let spells = window.SPELL_DATABASE.getSpellsByLevel(level) || [];
+    
+    // Filter by class if specified
+    if (spellPickerState.characterClass) {
+        spells = spells.filter(spell => 
+            spell.classes.includes(spellPickerState.characterClass)
+        );
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        spells = spells.filter(spell =>
+            spell.name.toLowerCase().includes(query) ||
+            spell.description.toLowerCase().includes(query) ||
+            spell.school.toLowerCase().includes(query)
+        );
+    }
+    
+    // Filter by school
+    if (schoolFilter) {
+        spells = spells.filter(spell => spell.school === schoolFilter);
+    }
+    
+    // Sort alphabetically
+    spells.sort((a, b) => a.name.localeCompare(b.name));
+    
+    if (spells.length === 0) {
+        listEl.innerHTML = '<div class="spell-picker-empty">No spells found matching your criteria.</div>';
+        return;
+    }
+    
+    // Render spell items
+    listEl.innerHTML = spells.map(spell => {
+        const isSelected = spellPickerState.selectedSpells.has(spell.id);
+        const wasOriginallySelected = spellPickerState.originalSelection?.has(spell.id);
+        
+        const classes = ['spell-picker-item'];
+        if (isSelected) classes.push('is-selected');
+        if (wasOriginallySelected) classes.push('is-existing');
+        
+        return `
+            <div class="${classes.join(' ')}" data-spell-id="${Utils.escapeHtml(spell.id)}" onclick="toggleInlineSpellSelection('${Utils.escapeHtml(spell.id)}')">
+                <input type="checkbox" class="spell-picker-checkbox" ${isSelected ? 'checked' : ''}>
+                <div class="spell-picker-item-content">
+                    <div class="spell-picker-item-header">
+                        <span class="spell-picker-item-name">${Utils.escapeHtml(spell.name)}${wasOriginallySelected ? ' <span class="spell-existing-badge">current</span>' : ''}</span>
+                        <span class="spell-picker-item-school">${Utils.escapeHtml(spell.school)}</span>
+                    </div>
+                    <div class="spell-picker-item-meta">
+                        ${Utils.escapeHtml(spell.castingTime)} · ${Utils.escapeHtml(spell.range)} · ${Utils.escapeHtml(spell.components)}
+                    </div>
+                    <div class="spell-picker-item-desc">${Utils.escapeHtml(spell.description)}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Filter inline spell picker
+ */
+function filterInlineSpellPicker() {
+    renderInlineSpellPicker();
+}
+
+/**
+ * Toggle spell selection in inline picker
+ */
+function toggleInlineSpellSelection(spellId) {
+    if (spellPickerState.selectedSpells.has(spellId)) {
+        spellPickerState.selectedSpells.delete(spellId);
+    } else {
+        // Check if we've reached the selection limit
+        if (spellPickerState.maxSelections !== null && 
+            spellPickerState.selectedSpells.size >= spellPickerState.maxSelections) {
+            showNotification(`You can only select ${spellPickerState.maxSelections} spell${spellPickerState.maxSelections === 1 ? '' : 's'}`, 'warning');
+            return;
+        }
+        spellPickerState.selectedSpells.add(spellId);
+    }
+    
+    // Update UI
+    const item = document.querySelector(`.spell-picker-item[data-spell-id="${spellId}"]`);
+    if (item) {
+        item.classList.toggle('is-selected', spellPickerState.selectedSpells.has(spellId));
+        const checkbox = item.querySelector('.spell-picker-checkbox');
+        if (checkbox) checkbox.checked = spellPickerState.selectedSpells.has(spellId);
+    }
+    
+    updateInlineSpellCount();
+}
+
+/**
+ * Update inline spell picker count
+ */
+function updateInlineSpellCount() {
+    const countEl = document.getElementById('inlineSpellCount');
+    const infoEl = document.querySelector('.spell-picker-info');
+    if (!countEl) return;
+    
+    const count = spellPickerState.selectedSpells.size;
+    const level = spellPickerState.targetLevel;
+    
+    // Calculate limit based on level type
+    let maxAllowed = null;
+    let currentTotal = count;
+    
+    if (level === 'cantrips') {
+        maxAllowed = editSpellsState.cantripsAllowed;
+    } else {
+        // For leveled spells, count includes other levels too
+        maxAllowed = editSpellsState.spellsAllowed;
+        if (maxAllowed !== null) {
+            const currentLevelNum = typeof level === 'string' ? parseInt(level, 10) : level;
+            currentTotal = count;
+            // Add spells from other levels
+            for (const [lvl, spells] of Object.entries(editSpellsState.spells)) {
+                if (parseInt(lvl, 10) !== currentLevelNum) {
+                    currentTotal += spells.length;
+                }
+            }
+        }
+    }
+    
+    if (maxAllowed !== null && maxAllowed > 0) {
+        const remaining = maxAllowed - currentTotal;
+        const isOver = remaining < 0;
+        const isAtLimit = remaining === 0;
+        
+        // Simple display: x/y with warning glyph if over
+        const prefix = isOver ? '⚠ ' : '';
+        countEl.textContent = `${prefix}${currentTotal}/${maxAllowed}`;
+        
+        countEl.classList.toggle('at-limit', isAtLimit);
+        countEl.classList.toggle('over-limit', isOver);
+        if (infoEl) {
+            infoEl.classList.toggle('at-limit', isAtLimit);
+            infoEl.classList.toggle('over-limit', isOver);
+        }
+    } else {
+        countEl.textContent = `${count} selected`;
+        countEl.classList.remove('at-limit', 'over-limit');
+        if (infoEl) {
+            infoEl.classList.remove('at-limit', 'over-limit');
+        }
+    }
+}
+
+/**
+ * Close inline spell picker and return to edit form
+ */
+function closeInlineSpellPicker() {
+    const editModal = document.getElementById('editDetailsModal');
+    if (!editModal || !editModalOriginalContent) return;
+    
+    const modalContent = editModal.querySelector('.modal-content');
+    if (!modalContent) return;
+    
+    // Animate back to original content
+    animateModalContentSwap(modalContent, editModalOriginalContent, () => {
+        // Restore form values (input .value isn't preserved in innerHTML)
+        restoreEditFormValues(editModalFormValues);
+        
+        // Re-render spell tags to reflect any previous changes
+        renderSpellTags();
+        
+        // Update spell limits summary
+        updateSpellLimitsSummary();
+        
+        // Clear state
+        spellPickerState.isOpen = false;
+        spellPickerState.selectedSpells.clear();
+        editModalOriginalContent = null;
+        editModalFormValues = null;
+    });
+}
+
+/**
+ * Confirm inline spell selection and return to edit form
+ */
+function confirmInlineSpellSelection() {
+    const level = spellPickerState.targetLevel;
+    
+    // Get full spell objects for selected spells
+    const spellLevel = level === 'cantrips' ? 0 : parseInt(level, 10);
+    const allSpells = window.SPELL_DATABASE.getSpellsByLevel(spellLevel) || [];
+    const selectedSpells = allSpells.filter(spell => 
+        spellPickerState.selectedSpells.has(spell.id)
+    );
+    
+    // Check if over limit - show modal if so
+    const validation = validateSpellSelection(level, selectedSpells);
+    if (!validation.valid) {
+        showSpellLimitModal(validation, level);
+        return;
+    }
+    
+    // Replace spells for this level entirely (allows removal as well as addition)
+    if (level === 'cantrips') {
+        editSpellsState.cantrips = selectedSpells.map(s => s.name);
+    } else {
+        const levelNum = typeof level === 'string' ? parseInt(level, 10) : level;
+        editSpellsState.spells[levelNum] = selectedSpells.map(s => s.name);
+    }
+    
+    // Mark form as dirty
+    ModalManager.markDirty('editDetailsModal');
+    
+    // Animate back to original content
+    const editModal = document.getElementById('editDetailsModal');
+    if (!editModal || !editModalOriginalContent) return;
+    
+    const modalContent = editModal.querySelector('.modal-content');
+    if (!modalContent) return;
+    
+    animateModalContentSwap(modalContent, editModalOriginalContent, () => {
+        // Restore form values (input .value isn't preserved in innerHTML)
+        restoreEditFormValues(editModalFormValues);
+        
+        // Re-render spell tags to show newly added spells
+        renderSpellTags();
+        
+        // Update spell limits summary
+        updateSpellLimitsSummary();
+        
+        // Scroll to Spellcasting section
+        const spellSection = document.getElementById('spellEditSection');
+        if (spellSection) {
+            spellSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        showNotification(`Added ${selectedSpells.length} spell${selectedSpells.length > 1 ? 's' : ''}!`);
+        
+        // Clear state
+        spellPickerState.isOpen = false;
+        spellPickerState.selectedSpells.clear();
+        editModalOriginalContent = null;
+        editModalFormValues = null;
+    });
+}
+
+/**
+ * Get the current spell selections from edit state
+ */
+function getEditSpells() {
+    return {
+        cantrips: [...editSpellsState.cantrips],
+        spellsKnown: Object.values(editSpellsState.spells).flat(),
+        spellsByLevel: { ...editSpellsState.spells },
+    };
+}
+
+/**
+ * Check if a character needs to select new spells after leveling up,
+ * or remove excess spells after leveling down
+ * @param {object} character - The character object
+ * @param {number} oldLevel - Previous level
+ * @param {number} newLevel - New level
+ */
+async function checkAndPromptForNewSpells(character, oldLevel, newLevel) {
+    const className = (character.class || '').toLowerCase();
+    const spellcasting = SPELLCASTING_CLASSES[className];
+    
+    // Only prompt for spellcasting classes
+    if (!spellcasting) return;
+    
+    // Calculate what spells the character should have at each level
+    const stats = calculateStatsForLevel(character, newLevel);
+    if (!stats.spellProgression) return;
+    
+    const { cantrips: cantripsKnown, spellsKnown, maxSpellLevel } = stats.spellProgression;
+    
+    // Get current spell counts
+    const currentCantrips = character.cantrips || [];
+    const currentSpells = character.spellsKnown || [];
+    
+    // Calculate deficits (need more spells)
+    const cantripDeficit = Math.max(0, cantripsKnown - currentCantrips.length);
+    const spellDeficit = Math.max(0, (spellsKnown || 0) - currentSpells.length);
+    
+    // Calculate surpluses (have too many spells) - only for "known" casters, not prepared
+    const cantripSurplus = Math.max(0, currentCantrips.length - cantripsKnown);
+    const spellSurplus = spellsKnown !== null ? Math.max(0, currentSpells.length - spellsKnown) : 0;
+    
+    // Check for spells that are too high level for current max
+    const tooHighLevelSpells = [];
+    if (window.SPELL_DATABASE && maxSpellLevel > 0) {
+        for (const spellName of currentSpells) {
+            const spellInfo = window.SPELL_DATABASE.getSpellByName(spellName);
+            if (spellInfo && spellInfo.level > maxSpellLevel) {
+                tooHighLevelSpells.push({ name: spellName, level: spellInfo.level });
+            }
+        }
+    }
+    
+    // If character has excess spells or spells too high level, prompt for removal
+    if (cantripSurplus > 0 || spellSurplus > 0 || tooHighLevelSpells.length > 0) {
+        showSpellRemovalPrompt(character, {
+            cantripSurplus,
+            spellSurplus,
+            cantripsKnown,
+            spellsKnown,
+            maxSpellLevel,
+            currentCantrips,
+            currentSpells,
+            tooHighLevelSpells,
+        });
+    }
+    // If character needs more cantrips or spells, prompt them
+    else if (cantripDeficit > 0 || spellDeficit > 0) {
+        showSpellLevelUpPrompt(character, {
+            cantripDeficit,
+            spellDeficit,
+            cantripsKnown,
+            spellsKnown,
+            maxSpellLevel,
+            currentCantrips,
+            currentSpells,
+        });
+    }
+}
+
+/**
+ * Show a prompt for selecting new spells after level up
+ */
+function showSpellLevelUpPrompt(character, spellInfo) {
+    const { cantripDeficit, spellDeficit, cantripsKnown, spellsKnown, maxSpellLevel, currentCantrips, currentSpells } = spellInfo;
+    const className = (character.class || '').toLowerCase();
+    
+    // Build prompt message
+    // Note: Use ${' '} to preserve spaces after interpolations (rjsmin strips them)
+    let message = `As a Level ${character.level}${' '}${character.class}, you can know:\n`;
+    if (cantripsKnown > 0) {
+        message += `• ${cantripsKnown}${' '}cantrips (you have ${currentCantrips.length})\n`;
+    }
+    if (spellsKnown > 0) {
+        message += `• ${spellsKnown}${' '}spells (you have ${currentSpells.length})\n`;
+    }
+    
+    if (cantripDeficit > 0 || spellDeficit > 0) {
+        message += '\n';
+        if (cantripDeficit > 0) {
+            message += `You can select ${cantripDeficit}${' '}more cantrip${cantripDeficit > 1 ? 's' : ''}.\n`;
+        }
+        if (spellDeficit > 0) {
+            message += `You can select ${spellDeficit}${' '}more spell${spellDeficit > 1 ? 's' : ''}.`;
+        }
+    }
+    
+    // Create a simple alert with action options
+    const modalHost = getManagerModalHost();
+    const existingModal = document.getElementById('spellLevelUpModal');
+    if (existingModal) existingModal.remove();
+    
+    const modalHtml = `
+        <div id="spellLevelUpModal" class="modal show">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">NEW SPELLS AVAILABLE</h2>
+                    <button class="modal-close" onclick="closeSpellLevelUpPrompt()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="terminal-text" style="white-space: pre-line;">${Utils.escapeHtml(message)}</p>
+                </div>
+                <div class="modal-footer" style="gap: 0.5rem;">
+                    <button class="terminal-btn terminal-btn-secondary" onclick="closeSpellLevelUpPrompt()">Later</button>
+                    <button class="terminal-btn terminal-btn-secondary" onclick="closeSpellLevelUpPrompt(); openSpellEditModal('${character.id}')">Select spells</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modalHost.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+/**
+ * Close the spell level up prompt
+ */
+function closeSpellLevelUpPrompt() {
+    const modal = document.getElementById('spellLevelUpModal');
+    if (modal) {
+        animateModalClose(modal, { removeOnClose: true });
+    }
+}
+
+// ========================================
+// DEDICATED SPELL EDIT MODAL
+// ========================================
+
+// Track state for the dedicated spell edit modal
+let spellEditModalState = {
+    characterId: null,
+    cantrips: [],
+    spells: {},
+    characterClass: null,
+    maxSpellLevel: 0,
+    characterLevel: 1,
+    cantripsAllowed: 0,
+    spellsAllowed: null,
+};
+
+// Store original content for spell picker back navigation
+let spellEditModalOriginalContent = null;
+let spellEditModalFormValues = null;
+// Cache the base modal markup so we can always restore it (e.g. if the user
+// closes the modal while in the spell picker view, which replaces innerHTML).
+let _spellEditModalBaseContent = null;
+
+function _ensureSpellEditModalBaseContentRestored() {
+    const modal = document.getElementById('spellEditModal');
+    if (!modal) return;
+    const modalContent = modal.querySelector('.modal-content');
+    if (!modalContent) return;
+
+    // Capture base content once (the original DOM from index.html)
+    if (!_spellEditModalBaseContent) {
+        _spellEditModalBaseContent = modalContent.innerHTML;
+    }
+
+    const hasMainIds =
+        !!modalContent.querySelector('#spellEditModalSection') &&
+        !!modalContent.querySelector('#spellEditLoading') &&
+        !!modalContent.querySelector('#spellEditModalLimitsSummary');
+
+    if (!hasMainIds) {
+        modalContent.innerHTML = _spellEditModalBaseContent;
+    }
+
+    // Clear any stale picker-back content; we only want it when actively in picker
+    spellEditModalOriginalContent = null;
+}
+
+function _getCachedCharacterById(characterId) {
+    const idStr = String(characterId);
+    if (typeof AppState !== 'undefined' && AppState) {
+        if (Array.isArray(AppState.filteredCharacters)) {
+            const c = AppState.filteredCharacters.find(ch => ch && String(ch.id) === idStr);
+            if (c) return c;
+        }
+        if (Array.isArray(AppState.characters)) {
+            const c = AppState.characters.find(ch => ch && String(ch.id) === idStr);
+            if (c) return c;
+        }
+    }
+    return null;
+}
+
+/**
+ * Open the dedicated spell edit modal
+ */
+async function openSpellEditModal(characterId) {
+    // Ensure the modal DOM is in its canonical "edit spells" layout.
+    // The picker view swaps innerHTML; closing from that view previously left the
+    // modal in a broken state on the next open.
+    _ensureSpellEditModalBaseContentRestored();
+
+    const modal = document.getElementById('spellEditModal');
+    if (modal) {
+        modal.classList.add('show');
+    }
+
+    // Show a loading overlay immediately so "fresh load" clicks feel responsive,
+    // even if cloud storage / parsing is slow.
+    const loadingOverlay = document.getElementById('spellEditLoading');
+    if (loadingOverlay) {
+        const label = loadingOverlay.querySelector('.panel-loading-text');
+        if (label) label.textContent = 'Loading...';
+        loadingOverlay.classList.add('is-visible');
+    }
+
+    // Ensure spell database is available (lazy-loaded in Manager).
+    if (!window.SPELL_DATABASE) {
+        try {
+            await ensureDndDataBundleLoaded();
+        } catch (e) {
+            console.error('Spell database failed to load', e);
+        }
+    }
+
+    // Prefer cached characters to avoid a slow cloud getById() fetch.
+    // NOTE: If the cache only contains lite records (from /characters/lite),
+    // we MUST fetch the full character for spell editing.
+    let character = _getCachedCharacterById(characterId);
+    if (character && character._isLite) {
+        character = null;
+    }
+    if (!character) {
+        try {
+            character = await CharacterStorage.getById(characterId);
+        } catch (error) {
+            if (error && error.message && error.message.toLowerCase().includes('session has expired')) {
+                if (typeof showSessionExpiredModal === 'function') {
+                    showSessionExpiredModal();
+                }
+            } else {
+                console.warn('Failed to load character for spell edit modal:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('Failed to load character', 'error');
+                }
+            }
+            if (loadingOverlay) loadingOverlay.classList.remove('is-visible');
+            // If we opened the modal, keep it open so user sees feedback; otherwise just return.
+            return;
+        }
+    }
+
+    if (!character) {
+        if (loadingOverlay) loadingOverlay.classList.remove('is-visible');
+        return;
+    }
+    
+    const className = (character.class || '').toLowerCase();
+    const spellcasting = SPELLCASTING_CLASSES[className];
+    
+    // Only allow for spellcasting classes
+    if (!spellcasting) {
+        showNotification('This character is not a spellcaster', 'error');
+        return;
+    }
+    
+    // Parse character data
+    const parsed = CharacterSheet._parseCharacterData(character);
+    const level = parsed.level || character.level || 1;
+    
+    // Calculate max spell level based on character level
+    let maxSpellLevel = 0;
+    if (spellcasting.type === 'full') {
+        if (level >= 17) maxSpellLevel = 9;
+        else if (level >= 15) maxSpellLevel = 8;
+        else if (level >= 13) maxSpellLevel = 7;
+        else if (level >= 11) maxSpellLevel = 6;
+        else if (level >= 9) maxSpellLevel = 5;
+        else if (level >= 7) maxSpellLevel = 4;
+        else if (level >= 5) maxSpellLevel = 3;
+        else if (level >= 3) maxSpellLevel = 2;
+        else maxSpellLevel = 1;
+    } else if (spellcasting.type === 'half') {
+        if (level < 2) maxSpellLevel = 0;
+        else if (level < 5) maxSpellLevel = 1;
+        else if (level < 9) maxSpellLevel = 2;
+        else if (level < 13) maxSpellLevel = 3;
+        else if (level < 17) maxSpellLevel = 4;
+        else maxSpellLevel = 5;
+    } else if (spellcasting.type === 'pact') {
+        if (level < 3) maxSpellLevel = 1;
+        else if (level < 5) maxSpellLevel = 2;
+        else if (level < 7) maxSpellLevel = 3;
+        else if (level < 9) maxSpellLevel = 4;
+        else maxSpellLevel = 5;
+    }
+    
+    // Get spell progression for this class/level
+    const stats = calculateStatsForLevel(character, level);
+    const spellProgression = stats.spellProgression || { cantrips: 0, spellsKnown: null, maxSpellLevel: 0 };
+    
+    // Initialize state
+    spellEditModalState = {
+        characterId,
+        cantrips: [...(parsed.cantrips || [])],
+        spells: {},
+        characterClass: className,
+        maxSpellLevel,
+        characterLevel: level,
+        cantripsAllowed: spellProgression.cantrips || 0,
+        spellsAllowed: spellProgression.spellsKnown,
+    };
+    
+    // Parse existing spells by level
+    const existingSpells = parsed.spellsKnown || [];
+    for (const spellName of existingSpells) {
+        if (window.SPELL_DATABASE) {
+            const spellInfo = window.SPELL_DATABASE.getSpellByName(spellName);
+            if (spellInfo && spellInfo.level > 0) {
+                if (!spellEditModalState.spells[spellInfo.level]) {
+                    spellEditModalState.spells[spellInfo.level] = [];
+                }
+                spellEditModalState.spells[spellInfo.level].push(spellName);
+            }
+        }
+    }
+    
+    // Show/hide cantrips row
+    const cantripsRow = document.getElementById('spellEditModalCantripsRow');
+    if (cantripsRow) {
+        cantripsRow.classList.toggle('is-hidden', !spellcasting.cantrips);
+    }
+    
+    // Show/hide spell level rows
+    for (let spellLevel = 1; spellLevel <= 9; spellLevel++) {
+        const row = document.getElementById(`spellEditModalLevel${spellLevel}Row`);
+        if (row) {
+            row.classList.toggle('is-hidden', spellLevel > maxSpellLevel || maxSpellLevel === 0);
+        }
+    }
+    
+    // Render spell tags
+    renderSpellEditModalTags();
+
+    // Hide loading overlay now that content is ready
+    if (loadingOverlay) {
+        loadingOverlay.classList.remove('is-visible');
+    }
+
+    // Snapshot after first paint
+    if (modal) {
+        setTimeout(() => ModalManager.snapshotForm('spellEditModal'), 50);
+    }
+}
+
+/**
+ * Close the spell edit modal
+ */
+function closeSpellEditModal() {
+    const modal = document.getElementById('spellEditModal');
+    if (!modal) {
+        spellEditModalState.characterId = null;
+        return;
+    }
+    
+    // Hide loading overlay
+    const loadingOverlay = document.getElementById('spellEditLoading');
+    if (loadingOverlay) {
+        loadingOverlay.classList.remove('is-visible');
+    }
+    
+    animateModalClose(modal, {
+        removeOnClose: false,
+        onClosed: () => {
+            spellEditModalState.characterId = null;
+            // Always restore base modal content in case we were closed from the picker view.
+            _ensureSpellEditModalBaseContentRestored();
+        },
+    });
+}
+
+/**
+ * Save spells from the dedicated spell edit modal
+ */
+async function saveSpellEditModal() {
+    if (!spellEditModalState.characterId) {
+        closeSpellEditModal();
+        return;
+    }
+    
+    const character = await CharacterStorage.getById(spellEditModalState.characterId);
+    if (!character) {
+        closeSpellEditModal();
+        return;
+    }
+    
+    // Validate spell limits
+    const validation = validateSpellEditModalLimits();
+    if (!validation.valid) {
+        showSpellLimitSaveModal(validation);
+        return;
+    }
+    
+    // Show loading overlay
+    const loadingOverlay = document.getElementById('spellEditLoading');
+    if (loadingOverlay) {
+        const label = loadingOverlay.querySelector('.panel-loading-text');
+        if (label) label.textContent = 'Saving...';
+        loadingOverlay.classList.add('is-visible');
+    }
+    
+    // Build updates
+    const updates = {
+        cantrips: [...spellEditModalState.cantrips],
+        spellsKnown: Object.values(spellEditModalState.spells).flat(),
+    };
+    
+    try {
+        await CharacterStorage.update(spellEditModalState.characterId, updates);
+        markUserChanges();
+        await AppState.loadCharacters();
+        UI.render();
+        viewCharacter(spellEditModalState.characterId);
+        showNotification('Spells updated');
+        closeSpellEditModal();
+    } catch (error) {
+        console.error('Failed to save spells:', error);
+        showNotification('Failed to save spells', 'error');
+    } finally {
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('is-visible');
+        }
+    }
+}
+
+/**
+ * Validate spell limits for the dedicated spell edit modal
+ */
+function validateSpellEditModalLimits() {
+    const currentCantrips = spellEditModalState.cantrips.length;
+    const maxCantrips = spellEditModalState.cantripsAllowed;
+    const currentSpells = Object.values(spellEditModalState.spells).flat().length;
+    const maxSpells = spellEditModalState.spellsAllowed;
+    
+    const issues = [];
+    
+    if (maxCantrips > 0 && currentCantrips > maxCantrips) {
+        issues.push(`You have ${currentCantrips} cantrips but can only know ${maxCantrips}.`);
+    }
+    
+    if (maxSpells !== null && currentSpells > maxSpells) {
+        issues.push(`You have ${currentSpells} spells but can only know ${maxSpells}.`);
+    }
+    
+    return {
+        valid: issues.length === 0,
+        issues,
+        cantripsOver: maxCantrips > 0 ? Math.max(0, currentCantrips - maxCantrips) : 0,
+        spellsOver: maxSpells !== null ? Math.max(0, currentSpells - maxSpells) : 0,
+    };
+}
+
+/**
+ * Update the spell limits summary in the dedicated spell edit modal
+ */
+function updateSpellEditModalLimitsSummary() {
+    const summaryEl = document.getElementById('spellEditModalLimitsSummary');
+    if (!summaryEl) return;
+    
+    const parts = [];
+    
+    const currentCantrips = spellEditModalState.cantrips.length;
+    const maxCantrips = spellEditModalState.cantripsAllowed;
+    const cantripsOver = maxCantrips > 0 ? Math.max(0, currentCantrips - maxCantrips) : 0;
+    
+    if (maxCantrips > 0) {
+        const prefix = cantripsOver > 0 ? '⚠ ' : '';
+        parts.push(`${prefix}Cantrips: ${currentCantrips}/${maxCantrips}`);
+    }
+    
+    const currentSpells = Object.values(spellEditModalState.spells).flat().length;
+    const maxSpells = spellEditModalState.spellsAllowed;
+    const spellsOver = maxSpells !== null ? Math.max(0, currentSpells - maxSpells) : 0;
+    
+    if (maxSpells !== null) {
+        const prefix = spellsOver > 0 ? '⚠ ' : '';
+        parts.push(`${prefix}Spells: ${currentSpells}/${maxSpells}`);
+    } else if (spellEditModalState.characterClass) {
+        parts.push('Spells: ' + currentSpells + ' (no limit)');
+    }
+    
+    summaryEl.textContent = parts.join(' · ');
+    
+    const overLimit = cantripsOver > 0 || spellsOver > 0;
+    const atLimit = !overLimit && ((maxCantrips > 0 && currentCantrips >= maxCantrips) || 
+                   (maxSpells !== null && currentSpells >= maxSpells));
+    summaryEl.classList.toggle('at-limit', atLimit);
+    summaryEl.classList.toggle('over-limit', overLimit);
+}
+
+/**
+ * Render spell tags in the dedicated spell edit modal
+ */
+function renderSpellEditModalTags() {
+    // Render cantrips
+    const cantripsContainer = document.getElementById('spellEditModalCantrips');
+    if (cantripsContainer) {
+        renderSpellEditModalTagsInContainer(cantripsContainer, spellEditModalState.cantrips, 'cantrips');
+    }
+    
+    // Render spells by level
+    for (let level = 1; level <= 9; level++) {
+        const container = document.getElementById(`spellEditModalSpells${level}`);
+        if (container) {
+            const spells = spellEditModalState.spells[level] || [];
+            renderSpellEditModalTagsInContainer(container, spells, level);
+        }
+    }
+    
+    updateSpellEditModalLimitsSummary();
+}
+
+/**
+ * Render spell tags in a container for the dedicated spell edit modal
+ */
+function renderSpellEditModalTagsInContainer(container, spells, level) {
+    const levelArg = level === 'cantrips' ? "'cantrips'" : level;
+    
+    const spellTagsHtml = spells.map(spellName => {
+        // Try to get spell description for tooltip
+        let description = '';
+        if (window.SPELL_DATABASE) {
+            const spellInfo = window.SPELL_DATABASE.getSpellByName(spellName);
+            if (spellInfo && spellInfo.description) {
+                description = spellInfo.description;
+            }
+        }
+        const escapedDesc = description ? Utils.escapeHtml(description) : '';
+        const tooltipClass = escapedDesc ? ' has-tooltip' : '';
+        const tooltipHtml = escapedDesc ? `<span class="custom-tooltip" data-position="top">${escapedDesc}</span>` : '';
+        
+        return `<span class="sheet-spell-tag spell-edit-tag${tooltipClass}">${Utils.escapeHtml(spellName)}${tooltipHtml}</span>`;
+    }).join('');
+    
+    const editButtonHtml = `<button type="button" class="spell-add-btn-inline" onclick="openSpellPickerForSpellEditModal(${levelArg})">Edit</button>`;
+    
+    container.innerHTML = spellTagsHtml + editButtonHtml;
+}
+
+/**
+ * Remove a spell from the dedicated spell edit modal
+ */
+function removeSpellFromSpellEditModal(spellName, level) {
+    if (level === 'cantrips') {
+        spellEditModalState.cantrips = spellEditModalState.cantrips.filter(s => s !== spellName);
+    } else {
+        const levelNum = parseInt(level, 10);
+        if (spellEditModalState.spells[levelNum]) {
+            spellEditModalState.spells[levelNum] = spellEditModalState.spells[levelNum].filter(s => s !== spellName);
+        }
+    }
+    
+    renderSpellEditModalTags();
+    ModalManager.markDirty('spellEditModal');
+}
+
+/**
+ * Open spell picker for the dedicated spell edit modal
+ */
+// Temporary state for spell picker selections (before save)
+let spellPickerTempState = {
+    level: null,
+    originalSelections: [],
+    currentSelections: [],
+    maxAllowed: null,
+    schoolFilter: '',
+};
+
+function openSpellPickerForSpellEditModal(level) {
+    const modal = document.getElementById('spellEditModal');
+    if (!modal) return;
+    
+    const modalContent = modal.querySelector('.modal-content');
+    if (!modalContent) return;
+    
+    // Store original content
+    spellEditModalOriginalContent = modalContent.innerHTML;
+    
+    // Get current selections for this level
+    const currentSelections = level === 'cantrips' 
+        ? [...spellEditModalState.cantrips]
+        : [...(spellEditModalState.spells[level] || [])];
+    
+    // Calculate max allowed
+    let maxAllowed = null;
+    if (level === 'cantrips') {
+        maxAllowed = spellEditModalState.cantripsAllowed > 0 ? spellEditModalState.cantripsAllowed : null;
+    } else {
+        maxAllowed = spellEditModalState.spellsAllowed;
+    }
+    
+    // Initialize temp state
+    spellPickerTempState = {
+        level,
+        originalSelections: [...currentSelections],
+        currentSelections: [...currentSelections],
+        maxAllowed,
+        schoolFilter: '',
+    };
+    
+    // Determine title
+    const levelLabel = level === 'cantrips' ? 'CANTRIPS' : 
+        `${level === 1 ? '1ST' : level === 2 ? '2ND' : level === 3 ? '3RD' : level + 'TH'} LEVEL SPELLS`;
+    const titleText = `SELECT ${levelLabel}`;
+    
+    // Show loading overlay on current content
+    const currentInner = modalContent.querySelector('.modal-content-inner');
+    if (currentInner) {
+        // Add loading overlay to current content
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'spell-picker-transition-loader';
+        loadingOverlay.innerHTML = `
+            <div class="panel-loading-cube-container">
+                <div class="panel-loading-cube">
+                    <i></i><i></i><i></i><i></i><i></i><i></i>
+                </div>
+            </div>
+        `;
+        currentInner.appendChild(loadingOverlay);
+        
+        // Small delay to show loader, then load spells
+        setTimeout(() => {
+            loadingOverlay.classList.add('is-visible');
+        }, 10);
+    }
+    
+    // Load spells in background (allow UI to show loader)
+    setTimeout(() => {
+        const spells = getSpellsForPicker(spellEditModalState.characterClass, level);
+        
+        // Build the full content HTML
+        const spellPickerHtml = `
+            <div class="modal-content-inner slide-in-right">
+                <div class="modal-header modal-header-left">
+                    <h2 class="modal-title">${titleText}</h2>
+                    <button class="modal-close" onclick="ModalManager.requestClose('spellEditModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="spell-picker-info" id="spellPickerInfoText">
+                        ${getSpellPickerInfoText()}
+                    </div>
+                    <div class="spell-picker-filters">
+                        <input type="text" id="spellEditModalSearchInput" class="terminal-input" placeholder="Search spells..." oninput="filterSpellEditModalPicker()" data-1p-ignore>
+                        <div class="selector-shell selector-shell--listbox" id="spellEditSchoolSelector">
+                            <button type="button" 
+                                    class="terminal-btn-small selector-trigger" 
+                                    id="spellEditSchoolTrigger"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="false"
+                                    onclick="CharacterSheet.toggleSelectorMenu(this)">
+                                <span class="selector-trigger-label">All Schools</span>
+                            </button>
+                            <div class="selector-menu" id="spellEditSchoolMenu" role="listbox">
+                                <button class="selector-option is-selected" role="option" data-value="" onclick="selectSpellEditSchool('')">All Schools</button>
+                                <button class="selector-option" role="option" data-value="Abjuration" onclick="selectSpellEditSchool('Abjuration')">Abjuration</button>
+                                <button class="selector-option" role="option" data-value="Conjuration" onclick="selectSpellEditSchool('Conjuration')">Conjuration</button>
+                                <button class="selector-option" role="option" data-value="Divination" onclick="selectSpellEditSchool('Divination')">Divination</button>
+                                <button class="selector-option" role="option" data-value="Enchantment" onclick="selectSpellEditSchool('Enchantment')">Enchantment</button>
+                                <button class="selector-option" role="option" data-value="Evocation" onclick="selectSpellEditSchool('Evocation')">Evocation</button>
+                                <button class="selector-option" role="option" data-value="Illusion" onclick="selectSpellEditSchool('Illusion')">Illusion</button>
+                                <button class="selector-option" role="option" data-value="Necromancy" onclick="selectSpellEditSchool('Necromancy')">Necromancy</button>
+                                <button class="selector-option" role="option" data-value="Transmutation" onclick="selectSpellEditSchool('Transmutation')">Transmutation</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="spell-picker-list" id="spellEditModalPickerList">
+                        ${renderSpellPickerListWithState(spells, level)}
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-end">
+                    <button class="terminal-btn" onclick="cancelSpellEditModalPicker()">Cancel</button>
+                    <button id="spellPickerSaveBtn" class="terminal-btn terminal-btn-primary" onclick="saveSpellEditModalPicker()">Done</button>
+                </div>
+            </div>
+        `;
+        
+        // Now animate out and swap content
+        if (currentInner) {
+            currentInner.classList.add('slide-out-left');
+        }
+        
+        // After collapse, show new content
+        setTimeout(() => {
+            modalContent.innerHTML = spellPickerHtml;
+            
+            // Focus search input after animation completes
+            setTimeout(() => {
+                const searchInput = document.getElementById('spellEditModalSearchInput');
+                if (searchInput) searchInput.focus();
+            }, 350);
+        }, currentInner ? 150 : 0);
+    }, 50);
+}
+
+/**
+ * Get the info text for spell picker (with x/y counter)
+ */
+function getSpellPickerInfoText() {
+    const { currentSelections, maxAllowed } = spellPickerTempState;
+    const current = currentSelections.length;
+    
+    if (maxAllowed === null) {
+        return `Select spells for your character. <span class="spell-picker-count">${current} selected</span>`;
+    }
+    
+    const remaining = maxAllowed - current;
+    const isOver = remaining < 0;
+    const countClass = isOver ? 'spell-picker-count over-limit' : 'spell-picker-count';
+    const warningIcon = isOver ? '⚠ ' : '';
+    const countText = `${warningIcon}${current}/${maxAllowed}`;
+    
+    if (isOver) {
+        const removeCount = Math.abs(remaining);
+        return `<span class="spell-picker-warning">Remove ${removeCount} spell${removeCount !== 1 ? 's' : ''} to continue.</span> <span class="${countClass}">${countText}</span>`;
+    } else if (remaining === 0) {
+        return `Selection complete. <span class="${countClass}">${countText}</span>`;
+    } else {
+        return `You can select ${remaining} more spell${remaining !== 1 ? 's' : ''}. <span class="${countClass}">${countText}</span>`;
+    }
+}
+
+/**
+ * Update the spell picker info text
+ */
+function updateSpellPickerInfo() {
+    const infoEl = document.getElementById('spellPickerInfoText');
+    if (infoEl) {
+        infoEl.innerHTML = getSpellPickerInfoText();
+        
+        // Update class based on limit status
+        const { currentSelections, maxAllowed } = spellPickerTempState;
+        const isOver = maxAllowed !== null && currentSelections.length > maxAllowed;
+        const atLimit = maxAllowed !== null && currentSelections.length === maxAllowed;
+        infoEl.classList.toggle('over-limit', isOver);
+        infoEl.classList.toggle('at-limit', atLimit && !isOver);
+    }
+    
+    // Update save button disabled state
+    const saveBtn = document.getElementById('spellPickerSaveBtn');
+    if (saveBtn) {
+        const { currentSelections, maxAllowed } = spellPickerTempState;
+        const isOver = maxAllowed !== null && currentSelections.length > maxAllowed;
+        saveBtn.disabled = isOver;
+    }
+}
+
+/**
+ * Render spell picker list with current temp state
+ */
+function renderSpellPickerListWithState(spells, level) {
+    if (!spells || spells.length === 0) {
+        return '<div class="spell-picker-empty">No spells available at this level for this class.</div>';
+    }
+    
+    const { originalSelections, currentSelections } = spellPickerTempState;
+    const originalSet = new Set(originalSelections.map(s => s.toLowerCase()));
+    const selectedSet = new Set(currentSelections.map(s => s.toLowerCase()));
+    
+    return spells.map(spell => {
+        const spellNameLower = spell.name.toLowerCase();
+        const isSelected = selectedSet.has(spellNameLower);
+        const wasOriginallySelected = originalSet.has(spellNameLower);
+        const escapedName = Utils.escapeHtml(spell.name);
+        const escapedDesc = Utils.escapeHtml(spell.description || '');
+        
+        // Classes for styling
+        const classes = ['spell-picker-item'];
+        if (isSelected) classes.push('is-selected');
+        if (wasOriginallySelected) classes.push('is-existing');
+        
+        return `
+            <div class="${classes.join(' ')}" 
+                 data-spell-name="${escapedName.toLowerCase()}"
+                 data-spell-school="${spell.school || ''}"
+                 onclick="toggleSpellInSpellEditModal('${escapedName.replace(/'/g, "\\'")}', '${level}', this)">
+                <div class="spell-picker-item-header">
+                    <span class="spell-picker-item-name">${escapedName}</span>
+                    <span class="spell-picker-item-school">${spell.school || ''}</span>
+                </div>
+                <div class="spell-picker-item-desc">${escapedDesc}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Get spells for picker based on class and level
+ */
+function getSpellsForPicker(className, level) {
+    if (!window.SPELL_DATABASE) return [];
+    
+    const spellLevel = level === 'cantrips' ? 0 : level;
+    const classSpells = window.SPELL_DATABASE.getSpellsByClassAndLevel(className, spellLevel);
+    
+    return classSpells || [];
+}
+
+/**
+ * Toggle spell selection in the dedicated spell edit modal (updates temp state)
+ */
+function toggleSpellInSpellEditModal(spellName, level, element) {
+    const isSelected = element.classList.contains('is-selected');
+    
+    if (isSelected) {
+        // Remove from temp state
+        spellPickerTempState.currentSelections = spellPickerTempState.currentSelections.filter(s => s !== spellName);
+        element.classList.remove('is-selected');
+    } else {
+        // Add to temp state (allow going over limit - user will see warning)
+        spellPickerTempState.currentSelections.push(spellName);
+        element.classList.add('is-selected');
+    }
+    
+    // Update info text with new counts
+    updateSpellPickerInfo();
+}
+
+/**
+ * Save spell picker selections and return to spell edit modal
+ */
+function saveSpellEditModalPicker() {
+    const { level, currentSelections, maxAllowed } = spellPickerTempState;
+    
+    // Check if over limit
+    if (maxAllowed !== null && currentSelections.length > maxAllowed) {
+        const removeCount = currentSelections.length - maxAllowed;
+        showNotification(`Remove ${removeCount} spell${removeCount !== 1 ? 's' : ''} before saving`, 'error');
+        return;
+    }
+    
+    // Commit selections to main state
+    if (level === 'cantrips') {
+        spellEditModalState.cantrips = [...currentSelections];
+    } else {
+        const levelNum = parseInt(level, 10);
+        spellEditModalState.spells[levelNum] = [...currentSelections];
+    }
+    
+    // Mark the modal as dirty
+    ModalManager.markDirty('spellEditModal');
+    
+    // Return to main spell edit screen
+    returnToSpellEditScreen();
+}
+
+/**
+ * Cancel spell picker and return to spell edit modal without saving
+ */
+function cancelSpellEditModalPicker() {
+    // Just return without committing changes
+    returnToSpellEditScreen();
+}
+
+/**
+ * Return to the main spell edit screen (shared by save and cancel)
+ */
+function returnToSpellEditScreen() {
+    const modal = document.getElementById('spellEditModal');
+    if (!modal || !spellEditModalOriginalContent) return;
+    
+    const modalContent = modal.querySelector('.modal-content');
+    if (!modalContent) return;
+    
+    // Animate out current content
+    const currentInner = modalContent.querySelector('.modal-content-inner');
+    if (currentInner) {
+        currentInner.classList.add('slide-out-right');
+    }
+    
+    // After animation, restore original content
+    setTimeout(() => {
+        // Restore exactly what we captured (it already contains the loading overlay + inner wrapper).
+        modalContent.innerHTML = spellEditModalOriginalContent;
+        spellEditModalOriginalContent = null;
+
+        // Add animation class to the restored inner wrapper (if present)
+        const restoredInner = modalContent.querySelector('.modal-content-inner');
+        if (restoredInner) {
+            restoredInner.classList.add('slide-in-left');
+        }
+        
+        // Clear temp state
+        spellPickerTempState = { level: null, originalSelections: [], currentSelections: [], maxAllowed: null };
+        
+        // Re-render tags with updated selections
+        renderSpellEditModalTags();
+        
+        // Re-setup visibility for cantrips and spell level rows
+        const className = spellEditModalState.characterClass;
+        const spellcasting = SPELLCASTING_CLASSES[className];
+        
+        const cantripsRow = document.getElementById('spellEditModalCantripsRow');
+        if (cantripsRow && spellcasting) {
+            cantripsRow.classList.toggle('is-hidden', !spellcasting.cantrips);
+        }
+        
+        for (let spellLevel = 1; spellLevel <= 9; spellLevel++) {
+            const row = document.getElementById(`spellEditModalLevel${spellLevel}Row`);
+            if (row) {
+                row.classList.toggle('is-hidden', spellLevel > spellEditModalState.maxSpellLevel || spellEditModalState.maxSpellLevel === 0);
+            }
+        }
+    }, currentInner ? 150 : 0);
+}
+
+/**
+ * Select a spell school filter in the spell edit modal picker
+ */
+function selectSpellEditSchool(value) {
+    spellPickerTempState.schoolFilter = value;
+    
+    const trigger = document.getElementById('spellEditSchoolTrigger');
+    const menu = document.getElementById('spellEditSchoolMenu');
+    
+    if (trigger) {
+        const label = trigger.querySelector('.selector-trigger-label');
+        if (label) {
+            label.textContent = value || 'All Schools';
+        }
+    }
+    
+    // Update selected state on options
+    if (menu) {
+        menu.querySelectorAll('.selector-option').forEach(opt => {
+            opt.classList.toggle('is-selected', opt.dataset.value === value);
+        });
+    }
+    
+    // Menu is closed automatically by CharacterSheet global option handler
+    
+    // Re-filter the spell list
+    filterSpellEditModalPicker();
+}
+
+/**
+ * Filter spell picker in the dedicated spell edit modal
+ */
+function filterSpellEditModalPicker() {
+    const searchInput = document.getElementById('spellEditModalSearchInput');
+    const list = document.getElementById('spellEditModalPickerList');
+    if (!searchInput || !list) return;
+    
+    const query = searchInput.value.toLowerCase().trim();
+    const schoolFilter = spellPickerTempState.schoolFilter;
+    const items = list.querySelectorAll('.spell-picker-item');
+    
+    items.forEach(item => {
+        const spellName = item.getAttribute('data-spell-name') || '';
+        const spellSchool = item.getAttribute('data-spell-school') || '';
+        
+        const matchesSearch = !query || spellName.includes(query);
+        const matchesSchool = !schoolFilter || spellSchool === schoolFilter;
+        
+        item.style.display = (matchesSearch && matchesSchool) ? '' : 'none';
+    });
+}
+
+// Expose spell edit modal functions globally
+window.openSpellEditModal = openSpellEditModal;
+window.closeSpellEditModal = closeSpellEditModal;
+window.saveSpellEditModal = saveSpellEditModal;
+window.removeSpellFromSpellEditModal = removeSpellFromSpellEditModal;
+window.openSpellPickerForSpellEditModal = openSpellPickerForSpellEditModal;
+window.toggleSpellInSpellEditModal = toggleSpellInSpellEditModal;
+window.filterSpellEditModalPicker = filterSpellEditModalPicker;
+window.selectSpellEditSchool = selectSpellEditSchool;
+window.saveSpellEditModalPicker = saveSpellEditModalPicker;
+window.cancelSpellEditModalPicker = cancelSpellEditModalPicker;
+
+// Track state for spell removal modal
+let spellRemovalState = {
+    characterId: null,
+    selectedCantrips: new Set(),
+    selectedSpells: new Set(),
+    requiredCantripRemovals: 0,
+    requiredSpellRemovals: 0,
+    forcedSpellRemovals: [], // Spells that MUST be removed (too high level)
+};
+
+/**
+ * Show a prompt for removing excess spells after level down
+ */
+function showSpellRemovalPrompt(character, spellInfo) {
+    const { cantripSurplus, spellSurplus, cantripsKnown, spellsKnown, maxSpellLevel, currentCantrips, currentSpells, tooHighLevelSpells } = spellInfo;
+    
+    // Initialize removal state
+    spellRemovalState = {
+        characterId: character.id,
+        selectedCantrips: new Set(),
+        selectedSpells: new Set(),
+        requiredCantripRemovals: cantripSurplus,
+        requiredSpellRemovals: spellSurplus,
+        forcedSpellRemovals: tooHighLevelSpells.map(s => s.name),
+    };
+    
+    // Pre-select forced removals
+    tooHighLevelSpells.forEach(s => spellRemovalState.selectedSpells.add(s.name));
+    
+    // Build prompt message
+    let message = `As a Level ${character.level}${' '}${character.class}, you can know:\n`;
+    if (cantripsKnown > 0) {
+        message += `• ${cantripsKnown}${' '}cantrips (you have ${currentCantrips.length})\n`;
+    }
+    if (spellsKnown !== null && spellsKnown > 0) {
+        message += `• ${spellsKnown}${' '}spells (you have ${currentSpells.length})\n`;
+    }
+    
+    message += '\n';
+    if (cantripSurplus > 0) {
+        message += `You must remove ${cantripSurplus}${' '}cantrip${cantripSurplus > 1 ? 's' : ''}.\n`;
+    }
+    if (spellSurplus > 0) {
+        message += `You must remove ${spellSurplus}${' '}spell${spellSurplus > 1 ? 's' : ''}.\n`;
+    }
+    if (tooHighLevelSpells.length > 0) {
+        message += `\n${tooHighLevelSpells.length}${' '}spell${tooHighLevelSpells.length > 1 ? 's are' : ' is'} above your max spell level (${maxSpellLevel}) and must be removed.`;
+    }
+    
+    // Build cantrip checkboxes
+    let cantripCheckboxes = '';
+    if (cantripSurplus > 0 && currentCantrips.length > 0) {
+        cantripCheckboxes = `
+            <div class="spell-removal-section">
+                <h4 class="spell-removal-header">Cantrips (remove ${cantripSurplus})</h4>
+                <div class="spell-removal-list">
+                    ${currentCantrips.map(cantrip => `
+                        <label class="spell-removal-item">
+                            <input type="checkbox" 
+                                   onchange="toggleSpellRemoval('cantrip', '${Utils.escapeHtml(cantrip.replace(/'/g, "\\'"))}')"
+                                   ${spellRemovalState.selectedCantrips.has(cantrip) ? 'checked' : ''}>
+                            <span>${Utils.escapeHtml(cantrip)}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Build spell checkboxes (grouped by level if possible)
+    let spellCheckboxes = '';
+    if ((spellSurplus > 0 || tooHighLevelSpells.length > 0) && currentSpells.length > 0) {
+        // Group spells by level
+        const spellsByLevel = {};
+        for (const spellName of currentSpells) {
+            let level = 1;
+            if (window.SPELL_DATABASE) {
+                const info = window.SPELL_DATABASE.getSpellByName(spellName);
+                if (info) level = info.level;
+            }
+            if (!spellsByLevel[level]) spellsByLevel[level] = [];
+            spellsByLevel[level].push(spellName);
+        }
+        
+        const totalToRemove = spellSurplus + tooHighLevelSpells.length;
+        spellCheckboxes = `
+            <div class="spell-removal-section">
+                <h4 class="spell-removal-header">Spells (remove ${totalToRemove})</h4>
+                <div class="spell-removal-list">
+                    ${Object.entries(spellsByLevel)
+                        .sort(([a], [b]) => Number(a) - Number(b))
+                        .map(([level, spells]) => spells.map(spell => {
+                            const isForced = spellRemovalState.forcedSpellRemovals.includes(spell);
+                            const isTooHigh = tooHighLevelSpells.some(s => s.name === spell);
+                            return `
+                                <label class="spell-removal-item${isForced ? ' forced' : ''}">
+                                    <input type="checkbox" 
+                                           onchange="toggleSpellRemoval('spell', '${Utils.escapeHtml(spell.replace(/'/g, "\\'"))}')"
+                                           ${spellRemovalState.selectedSpells.has(spell) ? 'checked' : ''}
+                                           ${isForced ? 'disabled checked' : ''}>
+                                    <span>${Utils.escapeHtml(spell)}${' '}(${level === '0' ? 'cantrip' : `lvl ${level}`})${isTooHigh ? ' ⚠️ too high' : ''}</span>
+                                </label>
+                            `;
+                        }).join('')).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    const modalHost = getManagerModalHost();
+    const existingModal = document.getElementById('spellRemovalModal');
+    if (existingModal) existingModal.remove();
+    
+    const modalHtml = `
+        <div id="spellRemovalModal" class="modal show">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">REMOVE EXCESS SPELLS</h2>
+                    <button class="modal-close" onclick="closeSpellRemovalPrompt()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="terminal-text" style="white-space: pre-line;">${Utils.escapeHtml(message)}</p>
+                    ${cantripCheckboxes}
+                    ${spellCheckboxes}
+                    <p id="spellRemovalStatus" class="terminal-text-small terminal-text-dim" style="margin-top: 1rem;"></p>
+                </div>
+                <div class="modal-footer" style="gap: 0.5rem;">
+                    <button class="terminal-btn terminal-btn-secondary" onclick="closeSpellRemovalPrompt()">Later</button>
+                    <button id="confirmSpellRemovalBtn" class="terminal-btn" onclick="confirmSpellRemoval()">Remove selected</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modalHost.insertAdjacentHTML('beforeend', modalHtml);
+    updateSpellRemovalStatus();
+}
+
+/**
+ * Toggle a spell/cantrip selection for removal
+ */
+function toggleSpellRemoval(type, name) {
+    if (type === 'cantrip') {
+        if (spellRemovalState.selectedCantrips.has(name)) {
+            spellRemovalState.selectedCantrips.delete(name);
+        } else {
+            spellRemovalState.selectedCantrips.add(name);
+        }
+    } else {
+        // Don't allow deselecting forced removals
+        if (spellRemovalState.forcedSpellRemovals.includes(name)) return;
+        
+        if (spellRemovalState.selectedSpells.has(name)) {
+            spellRemovalState.selectedSpells.delete(name);
+        } else {
+            spellRemovalState.selectedSpells.add(name);
+        }
+    }
+    updateSpellRemovalStatus();
+}
+
+/**
+ * Update the status text and button state
+ */
+function updateSpellRemovalStatus() {
+    const statusEl = document.getElementById('spellRemovalStatus');
+    const btn = document.getElementById('confirmSpellRemovalBtn');
+    if (!statusEl || !btn) return;
+    
+    const cantripSelected = spellRemovalState.selectedCantrips.size;
+    const spellSelected = spellRemovalState.selectedSpells.size;
+    const cantripNeeded = spellRemovalState.requiredCantripRemovals;
+    const spellNeeded = spellRemovalState.requiredSpellRemovals + spellRemovalState.forcedSpellRemovals.length;
+    
+    const cantripOk = cantripSelected >= cantripNeeded;
+    const spellOk = spellSelected >= spellNeeded;
+    
+    let status = '';
+    if (!cantripOk) {
+        status += `Select ${cantripNeeded - cantripSelected}${' '}more cantrip${cantripNeeded - cantripSelected > 1 ? 's' : ''} to remove. `;
+    }
+    if (!spellOk) {
+        status += `Select ${spellNeeded - spellSelected}${' '}more spell${spellNeeded - spellSelected > 1 ? 's' : ''} to remove.`;
+    }
+    if (cantripOk && spellOk) {
+        status = 'Ready to remove selected spells.';
+    }
+    
+    statusEl.textContent = status;
+    btn.disabled = !(cantripOk && spellOk);
+}
+
+/**
+ * Confirm and apply spell removals
+ */
+async function confirmSpellRemoval() {
+    const character = await CharacterStorage.getById(spellRemovalState.characterId);
+    if (!character) return;
+    
+    // Remove selected cantrips
+    const newCantrips = (character.cantrips || []).filter(c => !spellRemovalState.selectedCantrips.has(c));
+    
+    // Remove selected spells
+    const newSpells = (character.spellsKnown || []).filter(s => !spellRemovalState.selectedSpells.has(s));
+    
+    // Save updates
+    const updates = {
+        cantrips: newCantrips,
+        spellsKnown: newSpells,
+    };
+    
+    await CharacterStorage.update(spellRemovalState.characterId, updates);
+    
+    // Close modal and refresh
+    closeSpellRemovalPrompt();
+    showNotification(`Removed ${spellRemovalState.selectedCantrips.size + spellRemovalState.selectedSpells.size}${' '}spell${spellRemovalState.selectedCantrips.size + spellRemovalState.selectedSpells.size > 1 ? 's' : ''}`, 'success');
+    
+    // Refresh character display
+    await CharacterManager.refreshCharacterList();
+    await CharacterManager.selectCharacter(spellRemovalState.characterId);
+}
+
+/**
+ * Close the spell removal prompt
+ */
+function closeSpellRemovalPrompt() {
+    const modal = document.getElementById('spellRemovalModal');
+    if (modal) {
+        animateModalClose(modal, { removeOnClose: true });
+    }
+}
+
+/**
+ * Open spell picker for level-up spell selection
+ */
+async function openSpellLevelUpPicker(characterId, level, currentCount) {
+    const character = await CharacterStorage.getById(characterId);
+    if (!character) return;
+    
+    const className = (character.class || '').toLowerCase();
+    const charLevel = character.level || 1;
+    
+    // Get spell progression to calculate limits
+    const stats = calculateStatsForLevel(character, charLevel);
+    const spellProgression = stats.spellProgression || { cantrips: 0, spellsKnown: null, maxSpellLevel: 0 };
+    
+    // Get existing spells for this level
+    let existingSpells;
+    let maxSelections = null;
+    
+    if (level === 'cantrips') {
+        existingSpells = character.cantrips || [];
+        // Calculate remaining cantrip slots
+        if (spellProgression.cantrips > 0) {
+            maxSelections = Math.max(0, spellProgression.cantrips - existingSpells.length);
+        }
+    } else {
+        // For regular spells, we need to check which ones are at this level
+        existingSpells = character.spellsKnown || [];
+        // Calculate remaining spell slots (null = unlimited for prepared casters)
+        if (spellProgression.spellsKnown !== null) {
+            maxSelections = Math.max(0, spellProgression.spellsKnown - existingSpells.length);
+        }
+    }
+    
+    openSpellPicker({
+        characterClass: className,
+        level: level,
+        maxSpellLevel: 9, // Allow picking from all available levels
+        existingSpells: existingSpells,
+        maxSelections: maxSelections,
+        onConfirm: async (selectedSpells) => {
+            // Add selected spells to character
+            const updates = {};
+            
+            if (level === 'cantrips') {
+                const currentCantrips = character.cantrips || [];
+                updates.cantrips = [...currentCantrips, ...selectedSpells.map(s => s.name)];
+            } else {
+                const currentSpells = character.spellsKnown || [];
+                updates.spellsKnown = [...currentSpells, ...selectedSpells.map(s => s.name)];
+            }
+            
+            try {
+                await CharacterStorage.update(characterId, updates);
+                await AppState.loadCharacters();
+                UI.render();
+                viewCharacter(characterId);
+                showNotification(`Added ${selectedSpells.length} spell${selectedSpells.length > 1 ? 's' : ''}!`);
+            } catch (error) {
+                console.error('Failed to add spells:', error);
+                showNotification('Failed to add spells', 'error');
+            }
+        }
+    });
+}
+
+// Make functions globally available
+window.initializeSpellEditSection = initializeSpellEditSection;
+window.removeSpellFromEdit = removeSpellFromEdit;
+window.openSpellPickerForEdit = openSpellPickerForEdit;
+window.getEditSpells = getEditSpells;
+window.checkAndPromptForNewSpells = checkAndPromptForNewSpells;
+window.closeSpellLevelUpPrompt = closeSpellLevelUpPrompt;
+window.openSpellLevelUpPicker = openSpellLevelUpPicker;
+// Spell removal (level down) functions
+window.closeSpellRemovalPrompt = closeSpellRemovalPrompt;
+window.toggleSpellRemoval = toggleSpellRemoval;
+window.confirmSpellRemoval = confirmSpellRemoval;
+// Inline spell picker functions (used within edit modal flow)
+window.filterInlineSpellPicker = filterInlineSpellPicker;
+window.toggleInlineSpellSelection = toggleInlineSpellSelection;
+window.closeInlineSpellPicker = closeInlineSpellPicker;
+window.confirmInlineSpellSelection = confirmInlineSpellSelection;

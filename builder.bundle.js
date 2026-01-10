@@ -1,1 +1,9253 @@
-window.SPELL_DATA={spellcastingClasses:{wizard:{ability:"int",cantripsKnown:3,spellsKnown:6,preparedSpells:"INT + level",spellSlots:{1:2}},sorcerer:{ability:"cha",cantripsKnown:4,spellsKnown:2,spellSlots:{1:2}},warlock:{ability:"cha",cantripsKnown:2,spellsKnown:2,spellSlots:{1:1}},bard:{ability:"cha",cantripsKnown:2,spellsKnown:4,spellSlots:{1:2}},cleric:{ability:"wis",cantripsKnown:3,preparedSpells:"WIS + level",spellSlots:{1:2}},druid:{ability:"wis",cantripsKnown:2,preparedSpells:"WIS + level",spellSlots:{1:2}}},cantrips:{wizard:[{id:"fire-bolt",name:"Fire Bolt",school:"Evocation",description:"Hurl a mote of fire at a creature or object. 1d10 fire damage.",tags:["damage","fire","offense"]},{id:"mage-hand",name:"Mage Hand",school:"Conjuration",description:"Create a spectral hand that can manipulate objects at range.",tags:["utility","manipulation"]},{id:"light",name:"Light",school:"Evocation",description:"Touch an object to make it shed bright light for 1 hour.",tags:["utility","light"]},{id:"ray-of-frost",name:"Ray of Frost",school:"Evocation",description:"Frigid beam dealing 1d8 cold damage and reducing speed.",tags:["damage","cold","offense","control"]},{id:"shocking-grasp",name:"Shocking Grasp",school:"Evocation",description:"Lightning damage on touch (1d8) and target cannot take reactions.",tags:["damage","lightning","offense"]},{id:"prestidigitation",name:"Prestidigitation",school:"Transmutation",description:"Minor magical trick: light a candle, clean clothes, flavor food.",tags:["utility","social"]},{id:"minor-illusion",name:"Minor Illusion",school:"Illusion",description:"Create a sound or image of an object within range.",tags:["utility","illusion","deception"]}],sorcerer:[{id:"fire-bolt",name:"Fire Bolt",school:"Evocation",description:"Hurl a mote of fire at a creature or object. 1d10 fire damage.",tags:["damage","fire","offense"]},{id:"ray-of-frost",name:"Ray of Frost",school:"Evocation",description:"Frigid beam dealing 1d8 cold damage and reducing speed.",tags:["damage","cold","offense","control"]},{id:"shocking-grasp",name:"Shocking Grasp",school:"Evocation",description:"Lightning damage on touch (1d8) and target cannot take reactions.",tags:["damage","lightning","offense"]},{id:"light",name:"Light",school:"Evocation",description:"Touch an object to make it shed bright light for 1 hour.",tags:["utility","light"]},{id:"mage-hand",name:"Mage Hand",school:"Conjuration",description:"Create a spectral hand that can manipulate objects at range.",tags:["utility","manipulation"]},{id:"prestidigitation",name:"Prestidigitation",school:"Transmutation",description:"Minor magical trick: light a candle, clean clothes, flavor food.",tags:["utility","social"]},{id:"minor-illusion",name:"Minor Illusion",school:"Illusion",description:"Create a sound or image of an object within range.",tags:["utility","illusion","deception"]}],warlock:[{id:"eldritch-blast",name:"Eldritch Blast",school:"Evocation",description:"Beam of crackling energy dealing 1d10 force damage.",tags:["damage","force","offense"]},{id:"mage-hand",name:"Mage Hand",school:"Conjuration",description:"Create a spectral hand that can manipulate objects at range.",tags:["utility","manipulation"]},{id:"minor-illusion",name:"Minor Illusion",school:"Illusion",description:"Create a sound or image of an object within range.",tags:["utility","illusion","deception"]},{id:"prestidigitation",name:"Prestidigitation",school:"Transmutation",description:"Minor magical trick: light a candle, clean clothes, flavor food.",tags:["utility","social"]},{id:"chill-touch",name:"Chill Touch",school:"Necromancy",description:"Ghostly hand dealing 1d8 necrotic damage and preventing healing.",tags:["damage","necrotic","offense"]}],bard:[{id:"vicious-mockery",name:"Vicious Mockery",school:"Enchantment",description:"Insult dealing 1d4 psychic damage and imposing disadvantage.",tags:["damage","psychic","debuff","social"]},{id:"light",name:"Light",school:"Evocation",description:"Touch an object to make it shed bright light for 1 hour.",tags:["utility","light"]},{id:"mage-hand",name:"Mage Hand",school:"Conjuration",description:"Create a spectral hand that can manipulate objects at range.",tags:["utility","manipulation"]},{id:"prestidigitation",name:"Prestidigitation",school:"Transmutation",description:"Minor magical trick: light a candle, clean clothes, flavor food.",tags:["utility","social"]},{id:"minor-illusion",name:"Minor Illusion",school:"Illusion",description:"Create a sound or image of an object within range.",tags:["utility","illusion","deception"]}],cleric:[{id:"sacred-flame",name:"Sacred Flame",school:"Evocation",description:"Flame-like radiance dealing 1d8 radiant damage (Dex save).",tags:["damage","radiant","offense"]},{id:"light",name:"Light",school:"Evocation",description:"Touch an object to make it shed bright light for 1 hour.",tags:["utility","light"]},{id:"guidance",name:"Guidance",school:"Divination",description:"Touch a creature to grant +1d4 to one ability check.",tags:["buff","support"]},{id:"spare-the-dying",name:"Spare the Dying",school:"Necromancy",description:"Touch a dying creature to stabilize it.",tags:["healing","support"]},{id:"thaumaturgy",name:"Thaumaturgy",school:"Transmutation",description:"Minor wonder: amplify voice, flicker flames, open doors.",tags:["utility","social"]}],druid:[{id:"produce-flame",name:"Produce Flame",school:"Conjuration",description:"Flickering flame for light or to throw (1d8 fire damage).",tags:["damage","fire","utility","light"]},{id:"guidance",name:"Guidance",school:"Divination",description:"Touch a creature to grant +1d4 to one ability check.",tags:["buff","support"]},{id:"shillelagh",name:"Shillelagh",school:"Transmutation",description:"Imbue a club or staff to use Wisdom for attacks (1d8 damage).",tags:["buff","combat"]},{id:"druidcraft",name:"Druidcraft",school:"Transmutation",description:"Minor druidic effects: predict weather, bloom flowers, light fires.",tags:["utility","nature"]}]},firstLevel:{wizard:[{id:"magic-missile",name:"Magic Missile",school:"Evocation",description:"Three darts of force, each dealing 1d4+1 damage (auto-hit).",tags:["damage","force","offense","reliable"]},{id:"shield",name:"Shield",school:"Abjuration",description:"Reaction: +5 AC until start of your next turn.",tags:["defense","protection","reaction"]},{id:"mage-armor",name:"Mage Armor",school:"Abjuration",description:"Set AC to 13 + Dex modifier for 8 hours.",tags:["defense","protection","buff"]},{id:"detect-magic",name:"Detect Magic",school:"Divination",description:"Sense magic within 30 feet for 10 minutes (concentration).",tags:["utility","detection","exploration"]},{id:"identify",name:"Identify",school:"Divination",description:"Learn properties of a magical object or spell affecting a creature.",tags:["utility","knowledge","exploration"]},{id:"sleep",name:"Sleep",school:"Enchantment",description:"Put 5d8 HP worth of creatures to sleep.",tags:["control","debuff","crowd-control"]},{id:"burning-hands",name:"Burning Hands",school:"Evocation",description:"Cone of fire dealing 3d6 fire damage (Dex save for half).",tags:["damage","fire","aoe","offense"]},{id:"disguise-self",name:"Disguise Self",school:"Illusion",description:"Make yourself look different for 1 hour.",tags:["utility","illusion","social","deception"]},{id:"feather-fall",name:"Feather Fall",school:"Transmutation",description:"Reaction: Up to 5 creatures fall slowly, taking no damage.",tags:["utility","protection","reaction"]},{id:"grease",name:"Grease",school:"Conjuration",description:"Slick grease covers a 10-foot square (Dex save or fall prone).",tags:["control","terrain","debuff"]}],sorcerer:[{id:"magic-missile",name:"Magic Missile",school:"Evocation",description:"Three darts of force, each dealing 1d4+1 damage (auto-hit).",tags:["damage","force","offense","reliable"]},{id:"shield",name:"Shield",school:"Abjuration",description:"Reaction: +5 AC until start of your next turn.",tags:["defense","protection","reaction"]},{id:"mage-armor",name:"Mage Armor",school:"Abjuration",description:"Set AC to 13 + Dex modifier for 8 hours.",tags:["defense","protection","buff"]},{id:"burning-hands",name:"Burning Hands",school:"Evocation",description:"Cone of fire dealing 3d6 fire damage (Dex save for half).",tags:["damage","fire","aoe","offense"]},{id:"chromatic-orb",name:"Chromatic Orb",school:"Evocation",description:"Hurl a 4-inch sphere dealing 3d8 damage (choose: acid, cold, fire, lightning, poison, thunder).",tags:["damage","versatile","offense"]},{id:"disguise-self",name:"Disguise Self",school:"Illusion",description:"Make yourself look different for 1 hour.",tags:["utility","illusion","social","deception"]},{id:"sleep",name:"Sleep",school:"Enchantment",description:"Put 5d8 HP worth of creatures to sleep.",tags:["control","debuff","crowd-control"]}],warlock:[{id:"hex",name:"Hex",school:"Enchantment",description:"Curse a creature to take +1d6 necrotic damage and disadvantage on checks (1 hour, concentration).",tags:["damage","debuff","curse"]},{id:"armor-of-agathys",name:"Armor of Agathys",school:"Abjuration",description:"Gain 5 temp HP; attackers take 5 cold damage when they hit you (1 hour).",tags:["defense","protection","retaliation"]},{id:"arms-of-hadar",name:"Arms of Hadar",school:"Conjuration",description:"Tendrils deal 2d6 necrotic damage in 10-foot radius (Str save for half).",tags:["damage","necrotic","aoe","offense"]},{id:"charm-person",name:"Charm Person",school:"Enchantment",description:"Charm a humanoid (Wis save) for 1 hour.",tags:["control","social","charm"]},{id:"hellish-rebuke",name:"Hellish Rebuke",school:"Evocation",description:"Reaction: Attacker takes 2d10 fire damage (Dex save for half).",tags:["damage","fire","reaction","retaliation"]}],bard:[{id:"healing-word",name:"Healing Word",school:"Evocation",description:"Bonus action: Heal a creature for 1d4 + spellcasting modifier.",tags:["healing","support","bonus-action"]},{id:"cure-wounds",name:"Cure Wounds",school:"Evocation",description:"Touch to heal 1d8 + spellcasting modifier HP.",tags:["healing","support"]},{id:"charm-person",name:"Charm Person",school:"Enchantment",description:"Charm a humanoid (Wis save) for 1 hour.",tags:["control","social","charm"]},{id:"disguise-self",name:"Disguise Self",school:"Illusion",description:"Make yourself look different for 1 hour.",tags:["utility","illusion","social","deception"]},{id:"faerie-fire",name:"Faerie Fire",school:"Evocation",description:"Outline creatures in light, granting advantage on attacks against them (1 minute, concentration).",tags:["buff","support","debuff"]},{id:"sleep",name:"Sleep",school:"Enchantment",description:"Put 5d8 HP worth of creatures to sleep.",tags:["control","debuff","crowd-control"]},{id:"thunderwave",name:"Thunderwave",school:"Evocation",description:"15-foot cube of thunderous force dealing 2d8 thunder damage and pushing creatures (Con save for half).",tags:["damage","thunder","aoe","control"]}],cleric:[{id:"cure-wounds",name:"Cure Wounds",school:"Evocation",description:"Touch to heal 1d8 + spellcasting modifier HP.",tags:["healing","support"]},{id:"healing-word",name:"Healing Word",school:"Evocation",description:"Bonus action: Heal a creature for 1d4 + spellcasting modifier.",tags:["healing","support","bonus-action"]},{id:"bless",name:"Bless",school:"Enchantment",description:"Up to 3 creatures add 1d4 to attacks and saves (1 minute, concentration).",tags:["buff","support","team"]},{id:"shield-of-faith",name:"Shield of Faith",school:"Abjuration",description:"Grant +2 AC to a creature (10 minutes, concentration).",tags:["buff","defense","support"]},{id:"guiding-bolt",name:"Guiding Bolt",school:"Evocation",description:"Ranged attack dealing 4d6 radiant damage; next attack against target has advantage.",tags:["damage","radiant","offense","buff"]},{id:"inflict-wounds",name:"Inflict Wounds",school:"Necromancy",description:"Melee attack dealing 3d10 necrotic damage.",tags:["damage","necrotic","offense"]},{id:"sanctuary",name:"Sanctuary",school:"Abjuration",description:"Attackers must make Wis save or choose another target (1 minute).",tags:["defense","protection","support"]}],druid:[{id:"cure-wounds",name:"Cure Wounds",school:"Evocation",description:"Touch to heal 1d8 + spellcasting modifier HP.",tags:["healing","support"]},{id:"healing-word",name:"Healing Word",school:"Evocation",description:"Bonus action: Heal a creature for 1d4 + spellcasting modifier.",tags:["healing","support","bonus-action"]},{id:"entangle",name:"Entangle",school:"Conjuration",description:"Grasping vines restrain creatures in 20-foot square (Str save, 1 minute, concentration).",tags:["control","terrain","debuff"]},{id:"faerie-fire",name:"Faerie Fire",school:"Evocation",description:"Outline creatures in light, granting advantage on attacks against them (1 minute, concentration).",tags:["buff","support","debuff"]},{id:"goodberry",name:"Goodberry",school:"Transmutation",description:"Create 10 berries that each restore 1 HP and provide nourishment (24 hours).",tags:["healing","utility","support"]},{id:"thunderwave",name:"Thunderwave",school:"Evocation",description:"15-foot cube of thunderous force dealing 2d8 thunder damage and pushing creatures (Con save for half).",tags:["damage","thunder","aoe","control"]},{id:"speak-with-animals",name:"Speak with Animals",school:"Divination",description:"Communicate with beasts for 10 minutes.",tags:["utility","social","nature"]}]},getCantripsForClass(t){return this.cantrips[t]||[]},getFirstLevelSpellsForClass(t){return this.firstLevel[t]||[]},getSpellcastingConfig(t){return this.spellcastingClasses[t]||null},isSpellcaster(t){return!!this.spellcastingClasses[t]},getQuickModeSpells(t){if(!this.getSpellcastingConfig(t))return null;const e=this.getCantripsForClass(t),a=this.getFirstLevelSpellsForClass(t),r={cantrips:[],firstLevel:[]};switch(t){case"wizard":r.cantrips=[e[0],e[1],e[2]],r.firstLevel=[a[0],a[1],a[2],a[3],a[4],a[5]];break;case"sorcerer":r.cantrips=[e[0],e[1],e[4],e[5]],r.firstLevel=[a[0],a[1]];break;case"warlock":r.cantrips=[e[0],e[1]],r.firstLevel=[a[0],a[1]];break;case"bard":r.cantrips=[e[0],e[4]],r.firstLevel=[a[0],a[1],a[2],a[3]];break;case"cleric":r.cantrips=[e[0],e[2],e[3]],r.firstLevel=[a[0],a[1],a[2]];break;case"druid":r.cantrips=[e[0],e[1]],r.firstLevel=[a[0],a[2],a[3]]}return r},getGuidedSpells(t,e){const a=this.getSpellcastingConfig(t);if(!a)return null;const r=this.getCantripsForClass(t),i=this.getFirstLevelSpellsForClass(t),o=(t,e,a)=>{const r=t.map(t=>{const a=t.tags.filter(t=>e.includes(t)).length;return{spell:t,matchCount:a}});return r.sort((t,e)=>e.matchCount-t.matchCount),r.slice(0,a).map(t=>t.spell)},n=[];"offense"===e.style&&n.push("damage","offense"),"defense"===e.style&&n.push("defense","protection","healing","support"),"control"===e.style&&n.push("control","debuff","crowd-control"),"utility"===e.style&&n.push("utility","social","exploration"),e.element&&n.push(e.element);const s={cantrips:o(r,n,a.cantripsKnown),firstLevel:[]};return a.spellsKnown?s.firstLevel=o(i,n,a.spellsKnown):a.preparedSpells&&(s.firstLevel=o(i,n,3)),s}};const AuthUI=window.AuthUI={_underlayPrevHidden:null,_hideUnderlay(){const t={};["splash-content","main-content"].forEach(e=>{const a=document.getElementById(e);a&&(t[e]=a.classList.contains("is-hidden"),a.classList.add("is-hidden"))}),this._underlayPrevHidden=t},_restoreUnderlay(){const t=this._underlayPrevHidden;t&&(Object.keys(t).forEach(e=>{const a=document.getElementById(e);a&&(t[e]?a.classList.add("is-hidden"):a.classList.remove("is-hidden"))}),this._underlayPrevHidden=null)},showLogin(t,e,a){const r=document.querySelector(".app-root")||document.querySelector(".terminal-container");if(!r)return;this._hideUnderlay();const i=document.createElement("div");i.id="auth-screen",i.className="auth-screen",i.innerHTML='\n      <div class="auth-container">\n        <div class="auth-header">\n          <div class="auth-title">\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557</div>\n          <div class="auth-title">\u2551     D&D CHARACTER BUILDER LOGIN       \u2551</div>\n          <div class="auth-title">\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d</div>\n        </div>\n        \n        <div class="auth-form">\n          <div class="form-group">\n            <label class="form-label">[ USERNAME OR EMAIL ]</label>\n            <input type="text" id="login-email" class="terminal-input" placeholder="username or email" autocomplete="username" autocapitalize="off" />\n          </div>\n          \n          <div class="form-group">\n            <label class="form-label">[ PASSWORD ]</label>\n            <div class="password-input-wrapper">\n              <input type="password" id="login-password" class="terminal-input" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" autocomplete="current-password" />\n              <button type="button" class="password-toggle-btn" data-target="login-password" aria-label="Show password">Show</button>\n            </div>\n          </div>\n          \n          <div class="auth-footer" style="margin-bottom: 1rem;">\n            <span class="auth-link" id="forgot-password-link" style="cursor: pointer;">\n              Forgot your password? <span class="link-highlight">Reset here</span>\n            </span>\n          </div>\n          \n          <div id="login-error" class="error-message is-hidden"></div>\n          \n          <div class="button-group">\n            <button id="login-submit" class="button-primary">\n              <span class="button-icon">\u25b6</span> Log in\n            </button>\n            <button id="login-guest" class="button-secondary">\n              <span class="button-icon">\ud83d\udc64</span> Continue as guest\n            </button>\n          </div>\n          \n          <div id="demo-mode-info" class="demo-mode-notice is-hidden">\n            <div class="demo-notice-content">\n              <span class="demo-notice-icon">\u2139</span>\n              <span>Guest mode: Create up to 3 characters and generate up to 10 custom portraits per day. Create an account to save characters in the cloud and get higher limits!</span>\n            </div>\n          </div>\n          \n          <div class="auth-footer">\n            <span class="auth-link" id="switch-to-register">\n              Don\'t have an account? <span class="link-highlight">Register here</span>\n            </span>\n          </div>\n        </div>\n      </div>\n    ',r.appendChild(i);const o=document.getElementById("login-email"),n=document.getElementById("login-password"),s=i.querySelector('.password-toggle-btn[data-target="login-password"]'),l=document.getElementById("login-submit"),c=document.getElementById("login-guest"),d=document.getElementById("switch-to-register"),u=document.getElementById("forgot-password-link"),h=document.getElementById("login-error"),p=async()=>{await new Promise(t=>setTimeout(t,50));const e=o.value.trim(),a=n.value;if(e&&a){try{const t=window.DanddyConfig||{};!!t.DEBUG&&console.log("[AuthUI] Login submit clicked",{email:e,apiBaseUrl:t.API_BASE_URL})}catch(t){}this.showLoading(l,!0,"AUTHENTICATING..."),h.classList.add("is-hidden");try{const r=await AuthService.login(e,a);this.showLoading(l,!1),r&&r.success?(this.removeAuthScreen(),t&&t(r.user)):this.showError(h,r&&r.error||"Login failed. Please try again.")}catch(t){this.showLoading(l,!1),this.showError(h,t.message||"Login failed. Please try again.")}}else this.showError(h,"Please enter your username/email and password")};l.addEventListener("click",p),s&&n&&s.addEventListener("click",()=>{const t="password"===n.type;n.type=t?"text":"password",s.textContent=t?"HIDE":"SHOW",s.setAttribute("aria-pressed",String(t)),s.setAttribute("aria-label",t?"Hide password":"Show password")}),n.addEventListener("keypress",t=>{"Enter"===t.key&&p()}),c.addEventListener("click",()=>{const t=document.getElementById("demo-mode-info");t?(t.classList.remove("is-hidden"),setTimeout(()=>{this.removeAuthScreen(),a&&a()},1500)):(this.removeAuthScreen(),a&&a())}),d.addEventListener("click",()=>{this.removeAuthScreen(),e&&e()}),u&&u.addEventListener("click",()=>{window.location.href="index.html#password-reset"}),o.focus()},showRegister(t,e){const a=document.querySelector(".app-root")||document.querySelector(".terminal-container");if(!a)return;this._hideUnderlay();const r=document.createElement("div");r.id="auth-screen",r.className="auth-screen",r.innerHTML='\n      <div class="auth-container">\n        <div class="auth-header">\n          <div class="auth-title">\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557</div>\n          <div class="auth-title">\u2551   D&D CHARACTER BUILDER REGISTER      \u2551</div>\n          <div class="auth-title">\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d</div>\n        </div>\n        \n        <div class="auth-form">\n          <div class="form-group">\n            <label class="form-label">[ EMAIL ]</label>\n            <input type="email" id="register-email" class="terminal-input" placeholder="adventurer@tavern.com" autocomplete="email" autocapitalize="off" />\n          </div>\n          \n          <div class="form-group">\n            <label class="form-label">[ PASSWORD ]</label>\n            <div class="password-input-wrapper">\n              <input type="password" id="register-password" class="terminal-input" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" autocomplete="new-password" />\n              <button type="button" class="password-toggle-btn" data-target="register-password" aria-label="Show password">Show</button>\n            </div>\n          </div>\n          \n          <div class="form-group">\n            <label class="form-label">[ CONFIRM PASSWORD ]</label>\n            <div class="password-input-wrapper">\n              <input type="password" id="register-password-confirm" class="terminal-input" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" autocomplete="new-password" />\n              <button type="button" class="password-toggle-btn" data-target="register-password-confirm" aria-label="Show password">Show</button>\n            </div>\n          </div>\n          \n          <div class="form-group">\n            <label class="form-label">[ ROLE ]</label>\n            <select id="register-role" class="terminal-select">\n              <option value="player">Player</option>\n              <option value="dm">Dungeon Master</option>\n            </select>\n          </div>\n          \n          <div id="register-error" class="error-message is-hidden"></div>\n          \n          <div class="button-group">\n            <button id="register-submit" class="button-primary">\n              <span class="button-icon">\u25b6</span> Create account\n            </button>\n            <button id="register-cancel" class="button-secondary">\n              <span class="button-icon">\u25c0</span> Back to login\n            </button>\n          </div>\n        </div>\n      </div>\n    ',a.appendChild(r);const i=document.getElementById("register-email"),o=document.getElementById("register-password"),n=document.getElementById("register-password-confirm"),s=r.querySelector('.password-toggle-btn[data-target="register-password"]'),l=r.querySelector('.password-toggle-btn[data-target="register-password-confirm"]'),c=document.getElementById("register-role"),d=document.getElementById("register-submit"),u=document.getElementById("register-cancel"),h=document.getElementById("register-error"),p=async()=>{const e=i.value.trim(),a=o.value,r=n.value,s=c.value;if(e&&a&&r)if(a.length<6)this.showError(h,"Password must be at least 6 characters");else if(a===r){this.showLoading(d,!0,"CREATING ACCOUNT..."),h.classList.add("is-hidden");try{const r=await AuthService.register(e,a,s);this.showLoading(d,!1),r&&r.success?(this.removeAuthScreen(),t&&t(r.user)):this.showError(h,r&&r.error||"Registration failed. Please try again.")}catch(t){this.showLoading(d,!1),this.showError(h,t.message||"Registration failed. Please try again.")}}else this.showError(h,"Passwords do not match");else this.showError(h,"Please fill in all fields")};d.addEventListener("click",p),s&&o&&s.addEventListener("click",()=>{const t="password"===o.type;o.type=t?"text":"password",s.textContent=t?"HIDE":"SHOW",s.setAttribute("aria-pressed",String(t)),s.setAttribute("aria-label",t?"Hide password":"Show password")}),l&&n&&l.addEventListener("click",()=>{const t="password"===n.type;n.type=t?"text":"password",l.textContent=t?"HIDE":"SHOW",l.setAttribute("aria-pressed",String(t)),l.setAttribute("aria-label",t?"Hide password":"Show password")}),n.addEventListener("keypress",t=>{"Enter"===t.key&&p()}),u.addEventListener("click",()=>{this.removeAuthScreen(),e&&e()}),i.focus()},showError(t,e){t.textContent=`\u26a0 ERROR: ${e}`,t.classList.remove("is-hidden")},showLoading(t,e,a){if(t)if(e){t.dataset.originalLabel||(t.dataset.originalLabel=t.innerHTML),t.disabled=!0;const e=a||"WORKING...",r='<span class="spinner-cube-scene"><span class="spinner-cube-tilt"><span class="spinner-cube"><span class="spinner-cube-face spinner-cube-face-front"></span><span class="spinner-cube-face spinner-cube-face-back"></span><span class="spinner-cube-face spinner-cube-face-right"></span><span class="spinner-cube-face spinner-cube-face-left"></span><span class="spinner-cube-face spinner-cube-face-top"></span><span class="spinner-cube-face spinner-cube-face-bottom"></span></span></span></span>';t.innerHTML=`${r} ${e}`}else t.disabled=!1,t.dataset.originalLabel&&(t.innerHTML=t.dataset.originalLabel,delete t.dataset.originalLabel)},removeAuthScreen(){const t=document.getElementById("auth-screen");t&&t.remove(),this._restoreUnderlay()},updateHeaderWithUser(t){const e=document.getElementById("userStatusText"),a=document.getElementById("userStatusIcon"),r=document.getElementById("authBtn");if(e&&t){const r=t?.username?`@${t.username}`:t?.email||"Logged In";e.textContent=r,a&&(a.textContent="\u2601"),e.style.cursor="pointer",e.onclick="function"==typeof openAccountModal?openAccountModal:null,e.title="Manage account"}r&&(r.textContent="Log out",r.onclick=()=>{try{window.AuthService?.logout?.()}catch(t){}"function"==typeof window.updateAuthUI&&window.updateAuthUI(),window.App?.showNotification?.("\u2713 Logged out","success")});const i=document.getElementById("overflowAuthIcon"),o=document.getElementById("overflowAuthLabel");i&&(i.textContent="\u2190"),o&&(o.textContent="Log Out");const n=document.getElementById("overflowAccountBtn");n&&n.classList.remove("is-hidden");const s=document.getElementById("overflowCreateAccountBtn");s&&s.classList.add("is-hidden")},showGuestBanner(){const t=document.getElementById("userStatusText"),e=document.getElementById("userStatusIcon"),a=document.getElementById("authBtn");t&&(t.textContent="Guest Mode",e&&(e.textContent="\u25a3"),t.style.cursor="default",t.onclick=null,t.title=""),a&&(a.textContent="Log in",a.onclick=()=>{"function"!=typeof window.showAuthModal?window.App&&"function"==typeof window.App.showAuthScreen?window.App.showAuthScreen():window.AuthUI&&"function"==typeof window.AuthUI.showLogin&&window.AuthUI.showLogin(()=>window.location.reload(),()=>{},()=>{}):window.showAuthModal()});const r=document.getElementById("overflowAuthIcon"),i=document.getElementById("overflowAuthLabel");r&&(r.textContent="\u2192"),i&&(i.textContent="Log In");const o=document.getElementById("overflowAccountBtn");o&&o.classList.add("is-hidden");const n=document.getElementById("overflowCreateAccountBtn");n&&n.classList.remove("is-hidden")}};function initBuilderHeaderAuth(){"function"==typeof window.updateAuthUI&&window.updateAuthUI(),window.AuthService&&window.AuthService.isAuthenticated()&&"function"==typeof window.AuthService.startSessionMonitor&&window.AuthService.startSessionMonitor()}window.updateAuthUI=async function(){try{if(!window.AuthService||!window.AuthUI)return;if(window.AuthService.isAuthenticated()){let t=window.AuthService.getCurrentUser();t||"function"!=typeof window.AuthService.fetchProfile||(t=await window.AuthService.fetchProfile(),t&&window.AuthService.setCurrentUser(t)),t?window.AuthUI.updateHeaderWithUser(t):window.AuthUI.updateHeaderWithUser({email:"Logged In",role:"player"})}else window.AuthUI.showGuestBanner()}catch(t){console.warn("[Builder] updateAuthUI failed:",t)}},"loading"===document.readyState?document.addEventListener("DOMContentLoaded",initBuilderHeaderAuth):initBuilderHeaderAuth();const CharacterAPI=window.CharacterAPI={arrayToDict:t=>t&&Array.isArray(t)?t.map(t=>"object"==typeof t&&null!==t?t:"string"==typeof t?{name:t}:{value:t}):[],spellsToStringArray:t=>t&&Array.isArray(t)?t.map(t=>"object"==typeof t&&null!==t&&t.name?t.name:"string"==typeof t?t:String(t)):[],async request(t,e,a=null){const r=AuthService.getToken(),i={"Content-Type":"application/json"};r&&(i.Authorization=`Bearer ${r}`);const o={method:t,headers:i};a&&(o.body=JSON.stringify(a));try{const t=await fetch(`${CONFIG.BACKEND_URL}${e}`,o);if(401===t.status)throw AuthService.handleUnexpectedLogout?.("builder_api_401"),new Error("Session expired. Please log in again.");if(!t.ok){const e=await t.json();throw new Error(e.detail||`API error: ${t.status}`)}return 204===t.status?null:await t.json()}catch(a){throw console.error(`API request failed [${t} ${e}]:`,a),a}},toBackendFormat:t=>window.DanddyCharacterMapper.fromBuilderToBackend(t),toFrontendFormat:t=>window.DanddyCharacterMapper.fromBackendToBuilder(t),mapAlignment(t){if(!t)return null;return{"Lawful Good":"lawful_good","Neutral Good":"neutral_good","Chaotic Good":"chaotic_good","Lawful Neutral":"lawful_neutral","True Neutral":"true_neutral","Chaotic Neutral":"chaotic_neutral","Lawful Evil":"lawful_evil","Neutral Evil":"neutral_evil","Chaotic Evil":"chaotic_evil"}[t]||null},calculateAC:t=>10+(t.abilities?.dex?Math.floor((t.abilities.dex-10)/2):0),calculateInitiative:t=>t.abilities?.dex?Math.floor((t.abilities.dex-10)/2):0,getSpeed:t=>({dwarf:25,halfling:25,gnome:25,elf:30,human:30,"half-elf":30,"half-orc":30,tiefling:30,dragonborn:30}[t.race?.toLowerCase()]||30),async createCharacter(t){const e=this.toBackendFormat(t),a=await this.request("POST","/api/characters",e);return this.toFrontendFormat(a)},async getCharacters(){return(await this.request("GET","/api/characters")).map(t=>this.toFrontendFormat(t))},async getCharacter(t){const e=await this.request("GET",`/api/characters/${t}`);return this.toFrontendFormat(e)},async updateCharacter(t,e){const a=e.id?this.toBackendFormat(e):e,r=await this.request("PUT",`/api/characters/${t}`,a);return this.toFrontendFormat(r)},async deleteCharacter(t){return await this.request("DELETE",`/api/characters/${t}`),!0},async getCampaigns(){return await this.request("GET","/api/campaigns")},async createCampaign(t,e){return await this.request("POST","/api/campaigns",{name:t,description:e})},async assignToCampaign(t,e){return await this.request("PUT",`/api/characters/${t}`,{campaign_id:e})},async duplicateCharacter(t,e){const a=await this.request("POST",`/api/characters/${t}/duplicate?new_name=${encodeURIComponent(e||"")}`);return this.toFrontendFormat(a)},async exportCharacter(t){return await this.request("GET",`/api/characters/${t}/export`)},async importCharacter(t){const e=this.toBackendFormat(t),a=await this.request("POST","/api/characters/import",e);return this.toFrontendFormat(a)}},SESSION_STORAGE_KEY="danddy_builder_session",OptionVariationsCache=window.OptionVariationsCache={cache:{},async get(t,e){if(["race-choice","class-choice","background-choice","alignment-choice"].includes(t))return e.options;if(this.cache[t])return this.cache[t];const a=await AIService.generateOptionVariations(e.text,e.options),r=e.options.map((t,e)=>({...t,text:a[e]}));return this.cache[t]=r,r},reset(){this.cache={}}},CharacterState=window.CharacterState={current:{id:null,step:0,abilityMethod:null,answers:{},currentQuestionId:null,character:{characterUid:null,name:"",race:"",class:"",background:"",alignment:"",sex:null,baseAbilities:null,abilities:{str:10,dex:10,con:10,int:10,wis:10,cha:10},level:1,hitPoints:0,personalityTrait:"",backstory:"",skillProficiencies:[],toolProficiencies:[],languages:[],equipment:[],backgroundFeature:null,spellcastingAbility:null,cantrips:[],spellsKnown:[],spellsPrepared:[],spellSlots:{}}},listeners:[],_restoring:!1,get(){return this.current},set(t){this.current={...this.current,...t},this.notify()},updateCharacter(t){this.current.character={...this.current.character,...t},this.notify()},setCurrentQuestion(t){this.current.currentQuestionId=t,this._saveSession()},subscribe(t){this.listeners.push(t)},notify(){this.listeners.forEach(t=>t(this.current)),this._restoring||this._saveSession()},_getCurrentUserId(){if("undefined"!=typeof AuthService&&AuthService.getCurrentUser){const t=AuthService.getCurrentUser();return t&&(t.id||t.email)||null}return null},hasSession(){try{const t=localStorage.getItem(SESSION_STORAGE_KEY);if(!t)return!1;const e=JSON.parse(t),a=this._getCurrentUserId();if(a!==(void 0!==e._userId?e._userId:null))return!1;const r=e.currentQuestionId&&"intro"!==e.currentQuestionId,i=e.character&&(e.character.name||e.character.race||e.character.class);return r||i}catch{return!1}},getSessionPreview(){try{const t=localStorage.getItem(SESSION_STORAGE_KEY);if(!t)return null;const e=JSON.parse(t),a=this._getCurrentUserId();return a!==(void 0!==e._userId?e._userId:null)?null:{characterName:e.character?.name||null,race:e.character?.race||null,class:e.character?.class||null,currentQuestionId:e.currentQuestionId,savedAt:e._savedAt||null}}catch{return null}},_saveSession(){try{if(!this.current.answers||!this.current.answers["entry-mode"])return;const t={...this.current,_savedAt:(new Date).toISOString(),_userId:this._getCurrentUserId()};localStorage.setItem(SESSION_STORAGE_KEY,JSON.stringify(t))}catch(t){console.warn("[CharacterState] Failed to save session:",t)}},restoreSession(){try{const t=localStorage.getItem(SESSION_STORAGE_KEY);if(!t)return!1;const e=JSON.parse(t);return this._restoring=!0,this.current={id:e.id||Date.now().toString(),step:e.step||0,abilityMethod:e.abilityMethod||null,answers:e.answers||{},currentQuestionId:e.currentQuestionId||null,character:{characterUid:e.character?.characterUid||`danddy_${Date.now()}_${Math.random().toString(36).substr(2,9)}`,name:e.character?.name||"",race:e.character?.race||"",class:e.character?.class||"",background:e.character?.background||"",alignment:e.character?.alignment||"",baseAbilities:e.character?.baseAbilities||null,abilities:e.character?.abilities||{str:10,dex:10,con:10,int:10,wis:10,cha:10},level:e.character?.level||1,hitPoints:e.character?.hitPoints||0,personalityTrait:e.character?.personalityTrait||"",backstory:e.character?.backstory||"",skillProficiencies:e.character?.skillProficiencies||[],toolProficiencies:e.character?.toolProficiencies||[],languages:e.character?.languages||[],equipment:e.character?.equipment||[],backgroundFeature:e.character?.backgroundFeature||null,spellcastingAbility:e.character?.spellcastingAbility||null,cantrips:e.character?.cantrips||[],spellsKnown:e.character?.spellsKnown||[],spellsPrepared:e.character?.spellsPrepared||[],spellSlots:e.character?.spellSlots||{},customPortraitAscii:e.character?.customPortraitAscii||null,originalPortraitUrl:e.character?.originalPortraitUrl||null,customPortraitCount:e.character?.customPortraitCount||0,portraitMetadata:e.character?.portraitMetadata||null,asciiPortrait:e.character?.asciiPortrait||null,asciiPortraitKey:e.character?.asciiPortraitKey||null}},this._restoring=!1,this.notify(),e.currentQuestionId||"intro"}catch(t){return console.warn("[CharacterState] Failed to restore session:",t),this._restoring=!1,!1}},clearSession(){try{localStorage.removeItem(SESSION_STORAGE_KEY)}catch(t){console.warn("[CharacterState] Failed to clear session:",t)}},reset(){this.current={id:Date.now().toString(),step:0,abilityMethod:null,answers:{},currentQuestionId:null,character:{characterUid:`danddy_${Date.now()}_${Math.random().toString(36).substr(2,9)}`,name:"",race:"",class:"",background:"",alignment:"",sex:null,baseAbilities:null,abilities:{str:10,dex:10,con:10,int:10,wis:10,cha:10},level:1,hitPoints:0,personalityTrait:"",backstory:"",skillProficiencies:[],toolProficiencies:[],languages:[],equipment:[],backgroundFeature:null,spellcastingAbility:null,cantrips:[],spellsKnown:[],spellsPrepared:[],spellSlots:{}}},this.clearSession(),this.notify()}},QUESTIONS=window.QUESTIONS=[{id:"intro",type:"message",text:">  SYSTEM INITIALIZED...\n>  LOADING CHARACTER CREATION PROTOCOL...\n>  \n>  Ah. Another soul seeking adventure. Or at least, trying to.\n>  \n>  Look, I've done this a thousand times. You'll make choices. I'll pretend they matter. We'll both get through this.\n>  \n>  Let's start with something easy...",next:"entry-mode"},{id:"entry-mode",type:"choice",text:"How would you like to create your character?",options:[{text:"Co-create with the narrator (guided mode)",value:"guided"},{text:"Quick create (let the system roll everything)",value:"quick"}],next:"motivation"},{id:"motivation",type:"choice",text:"What draws you to the adventuring life?",options:[{text:"Glory and heroism",value:"glory",trait:"heroic"},{text:"Gold and treasure",value:"gold",trait:"greedy"},{text:"Escaping my past",value:"escape",trait:"mysterious"},{text:"Just bored, honestly",value:"bored",trait:"casual"}],aiPromptContext:"player motivation for adventuring",next:"playstyle"},{id:"playstyle",type:"choice",text:"What kind of playstyle sounds most fun to you?",options:[{text:"Sneaky and tactical",value:"sneaky"},{text:"Tanky and hard to kill",value:"tanky"},{text:"Social and talkative",value:"social"},{text:"Blasting things from the back line",value:"blaster"}],aiPromptContext:"player preferred combat and roleplay playstyle",next:"sex-choice"},{id:"sex-choice",type:"choice",text:"And this character of yours \u2014 what form do they take?",options:[{text:"Male",value:"male"},{text:"Female",value:"female"}],saveTo:"sex",aiPromptContext:"character biological sex",next:"physicality"},{id:"physicality",type:"choice",text:"And physically, how would you describe yourself?",options:[{text:"Strong and imposing",value:"strong",suggests:["fighter","barbarian","paladin"]},{text:"Quick and nimble",value:"nimble",suggests:["rogue","ranger","monk"]},{text:"Mystically gifted",value:"mystical",suggests:["wizard","sorcerer","warlock"]},{text:"Unremarkable, honestly",value:"average",suggests:["bard","cleric","druid"]}],aiPromptContext:"player physical description",next:"social"},{id:"social",type:"choice",text:"In social situations, you tend to be...",options:[{text:"Charismatic and charming",value:"charismatic",suggests:["bard","paladin","sorcerer","warlock"]},{text:"Observant and quiet",value:"observant",suggests:["rogue","ranger","druid"]},{text:"Intimidating",value:"intimidating",suggests:["barbarian","fighter"]},{text:"Awkward but well-meaning",value:"awkward",suggests:["wizard","cleric","monk"]}],aiPromptContext:"player social tendencies",next:"race-suggest"},{id:"race-suggest",type:"suggestion",text:"Analyzing your responses... ( ._. )",getSuggestion:t=>{const e=t.answers,a=[];"strong"===e.physicality&&a.push("dwarf","half-orc","dragonborn"),"nimble"===e.physicality&&a.push("elf","halfling","half-elf"),"mystical"===e.physicality&&a.push("tiefling","elf","gnome"),"average"===e.physicality&&a.push("human","half-elf","halfling"),"charismatic"===e.social&&a.push("human","half-elf","tiefling"),"observant"===e.social&&a.push("elf","gnome"),"intimidating"===e.social&&a.push("half-orc","dragonborn","dwarf"),"awkward"===e.social&&a.push("gnome","halfling","tiefling");const r={};a.forEach(t=>{r[t]=(r[t]||0)+1});const i=Object.entries(r).sort((t,e)=>e[1]-t[1]).slice(0,3).map(([t])=>t);return{message:"Based on your answers, you seem like the type who would be... let me think...",suggestions:3===i.length?i:["human","elf","dwarf"]}},next:"race-choice"},{id:"race-choice",type:"list-choice",text:"Choose your race:",options:DND_DATA.races.map(t=>({text:`${t.name} - ${t.description}`,value:t.id})),saveTo:"race",next:"class-suggest"},{id:"class-suggest",type:"suggestion",text:"Interesting choice. Now for your class...",getSuggestion:t=>{const e=t.answers,a=[];"strong"===e.physicality&&a.push("fighter","barbarian","paladin"),"nimble"===e.physicality&&a.push("rogue","ranger","monk"),"mystical"===e.physicality&&a.push("wizard","sorcerer","warlock"),"charismatic"===e.social&&a.push("bard","paladin","warlock"),"sneaky"===e.playstyle&&a.push("rogue","ranger","monk"),"tanky"===e.playstyle&&a.push("barbarian","fighter","paladin"),"social"===e.playstyle&&a.push("bard","paladin","warlock"),"blaster"===e.playstyle&&a.push("wizard","sorcerer","warlock");const r={};a.forEach(t=>{r[t]=(r[t]||0)+1});const i=Object.entries(r).sort((t,e)=>e[1]-t[1]).map(([t])=>t);return{message:"Given your choices, might I suggest...",suggestions:i.length>0?i.slice(0,3):["fighter","wizard","rogue"]}},next:"class-choice"},{id:"class-choice",type:"list-choice",text:"Choose your class:",options:DND_DATA.classes.map(t=>({text:`${t.name} - ${t.description}`,value:t.id})),saveTo:"class",next:"abilities"},{id:"abilities",type:"abilities",text:"Time to roll your ability scores. Choose your method:",options:[{text:"Standard Array (15, 14, 13, 12, 10, 8)",value:"standard"},{text:"Roll 4d6 (drop lowest)",value:"roll"}],next:"background-choice"},{id:"spell-style-intro",type:"message",text:">  Ah, right. You're a spellcaster.\n>  \n>  *sighs*\n>  \n>  I suppose we should talk about your magical abilities. Because what's an adventure without someone hurling fireballs or dramatically shouting healing incantations?\n>  \n>  Let's figure out your spell preferences...",next:"spell-style"},{id:"spell-style",type:"choice",text:"What draws you to magic?",options:[{text:"Blasting things into oblivion",value:"offense",trait:"aggressive"},{text:"Protecting myself and allies",value:"defense",trait:"protective"},{text:"Controlling the battlefield",value:"control",trait:"tactical"},{text:"Practical utility and tricks",value:"utility",trait:"clever"}],saveTo:"spellStyle",next:"spell-element"},{id:"spell-element",type:"choice",text:"And if you had to pick a magical specialty...",options:[{text:"Fire and flames",value:"fire"},{text:"Ice and cold",value:"cold"},{text:"Lightning and storms",value:"lightning"},{text:"Shadows and darkness",value:"necrotic"},{text:"Light and radiance",value:"radiant"},{text:"Whatever's most effective",value:"versatile"}],saveTo:"spellElement",next:"spell-selection-guided"},{id:"spell-selection-guided",type:"spell-selection",mode:"guided",text:"Based on your preferences, here are your recommended spells...",next:"background-choice"},{id:"spell-quick-mode",type:"spell-selection",mode:"quick",text:"Auto-selecting balanced starter spells...",next:"background-choice"},{id:"background-choice",type:"list-choice",text:"What was your life before adventuring?",options:DND_DATA.backgrounds.map(t=>({text:`${t.name} - ${t.description}`,value:t.id})),saveTo:"background",next:"alignment-choice"},{id:"alignment-choice",type:"list-choice",text:"And your moral compass points toward...",options:DND_DATA.alignments.map(t=>({text:`${t.name} - ${t.description}`,value:t.id})),saveTo:"alignment",next:"name-choice"},{id:"name-choice",type:"name",text:"Finally, what shall we call you?",next:"backstory"},{id:"backstory",type:"backstory",text:"Generating your backstory...",next:"complete"},{id:"complete",type:"complete",text:"Well. That's done. Your character is ready. Try not to die immediately."}],KeyboardNav=window.KeyboardNav={currentFocusIndex:0,isActive:!1,retryCount:0,activate(){this.isActive=!0;const t=this.getActiveButtons();if(t.length>0){const e=document.querySelectorAll(".question-card"),a=e[e.length-1],r=t.filter(t=>a.contains(t));r.length>0?this.currentFocusIndex=t.indexOf(r[0]):this.currentFocusIndex=0}else this.currentFocusIndex=0;this.retryCount=0,this.tryActivate()},calculateArmorClassForClass(t,e,a=null,r=!1){const i=Utils.abilityModifier(e.dex),o=Utils.abilityModifier(e.con),n=Utils.abilityModifier(e.wis);if("barbarian"===t&&!a)return 10+i+o;if("monk"===t&&!a)return 10+i+n;let s;switch(a){case"light":s=11+i;break;case"medium":s=14+Math.min(i,2);break;case"heavy":s=16;break;default:s=10+i}return r&&(s+=2),s},inferArmorLoadoutForClass(t){const e=DND_DATA.classes.find(e=>e.id===t);if(!e||!Array.isArray(e.equipment))return{armorCategory:null,hasShield:!1};const a=e.equipment.join(" ").toLowerCase();let r=null;a.includes("leather armor")||a.includes("light armor")?r="light":a.includes("medium armor")?r="medium":a.includes("heavy armor")&&(r="heavy");return{armorCategory:r,hasShield:a.includes("shield")||a.includes("wooden shield")}},getStartingArmorItems(t,e,a){const r=[];return"light"===e?r.push("Leather Armor"):"medium"===e?"barbarian"===t?r.push("Hide Armor"):r.push("Scale Mail"):"heavy"===e&&r.push("Chain Mail"),a&&("druid"===t||"cleric"===t?r.push("Wooden Shield"):r.push("Shield")),r},tryActivate(){setTimeout(()=>{this.getActiveButtons().length>0?this.updateFocus():this.retryCount<10&&(this.retryCount++,this.tryActivate())},100)},deactivate(){this.isActive=!1,this.clearFocus()},getActiveButtons(){const t=document.querySelectorAll(".question-card");if(0===t.length)return[];const e=[];return t.forEach(t=>{Array.from(t.querySelectorAll(".button-primary")).forEach(t=>{t.hasAttribute("disabled")||e.push(t)})}),e},updateFocus(){const t=this.getActiveButtons();if(0!==t.length&&(t.forEach(t=>t.classList.remove("is-focused")),t[this.currentFocusIndex])){const e=t[this.currentFocusIndex];e.classList.add("is-focused"),e.scrollIntoView({behavior:"smooth",block:"nearest",inline:"nearest"})}},clearFocus(){this.getActiveButtons().forEach(t=>t.classList.remove("is-focused"))},moveUp(){if(!this.isActive)return;0!==this.getActiveButtons().length&&(this.currentFocusIndex=Math.max(0,this.currentFocusIndex-1),this.updateFocus())},moveDown(){if(!this.isActive)return;const t=this.getActiveButtons();0!==t.length&&(this.currentFocusIndex=Math.min(t.length-1,this.currentFocusIndex+1),this.updateFocus())},moveLeft(){this.moveUp()},moveRight(){this.moveDown()},select(){if(!this.isActive)return;const t=this.getActiveButtons();if(0===t.length)return;const e=t[this.currentFocusIndex];e&&(e.click(),this.deactivate())}};let currentBuilderPortraitStyle=null;function formatStyleLabelBuilder(t){if(!t)return"";let e=String(t).replace(/^Custom:\s*/i,"");return e=e.replace(/\s*\(default\)\s*$/i,""),e=e.replace(/[-_]/g," "),e.length>0&&(e=e.split(" ").map(t=>t.charAt(0).toUpperCase()+t.slice(1).toLowerCase()).join(" ")),e}async function populateBuilderPortraitStyleDropdown(t){const e=document.getElementById("builderPortraitStyleMenu"),a=document.getElementById("builderPortraitStyleLabel");if(!e)return null;if(e.innerHTML="",window.PortraitPrompt&&"function"==typeof PortraitPrompt.syncFromAPI)try{await PortraitPrompt.syncFromAPI()}catch(t){console.warn("populateBuilderPortraitStyleDropdown: API sync failed",t)}let r=[],i="cinematic-inks";try{window.PortraitPrompt&&("function"==typeof PortraitPrompt.getThemes&&(r=PortraitPrompt.getThemes()||[]),"function"==typeof PortraitPrompt.getDefaultThemeId&&(i=PortraitPrompt.getDefaultThemeId()||i))}catch(t){console.warn("populateBuilderPortraitStyleDropdown: Error getting themes",t)}r.length||(r=[{id:"cinematic-inks",label:"Cinematic Inks (default)"}]),r=r.slice().sort((t,e)=>{const a=(t.id||"").toLowerCase(),r=(e.id||"").toLowerCase();return a.localeCompare(r)});const o=t||i;let n=formatStyleLabelBuilder(i);return r.forEach(t=>{const a=formatStyleLabelBuilder(t.id),r=t.id===o;r&&(n=a);const i=document.createElement("button");i.type="button",i.className="selector-option"+(r?" is-selected":""),i.setAttribute("role","option"),i.setAttribute("data-value",t.id),i.setAttribute("aria-selected",r?"true":"false"),i.innerHTML=`<span class="selector-option-label">${a}</span>`,e.appendChild(i)}),a&&(a.textContent=n),currentBuilderPortraitStyle=o,initBuilderPortraitStyleSelector(),o}function initBuilderPortraitStyleSelector(){const t=document.getElementById("builderPortraitStyleMenu"),e=document.getElementById("builderPortraitStyleLabel"),a=document.getElementById("builderPortraitStyleTrigger");if(!t)return;const r=t.querySelectorAll(".selector-option");r.forEach(t=>{t.addEventListener("click",i=>{i.stopPropagation();const o=t.getAttribute("data-value"),n=t.querySelector(".selector-option-label");o&&n&&(e&&(e.textContent=n.textContent.trim()),currentBuilderPortraitStyle=o,r.forEach(t=>{const e=t.getAttribute("data-value")===o;t.classList.toggle("is-selected",e),t.setAttribute("aria-selected",e?"true":"false")}),a&&window.CharacterSheet&&"function"==typeof CharacterSheet.toggleSelectorMenu&&CharacterSheet.toggleSelectorMenu(a))})})}const App=window.App={currentQuestion:null,_lastRenderedCharacter:null,_PORTRAIT_HISTORY_MAX_VERSIONS:5,_suppressNextPortraitAnimation:!1,async init(){console.log("Initializing Character Builder..."),CharacterState.subscribe(t=>{this.updateCharacterPanel(t.character)});const t=new URLSearchParams(window.location.search),e="true"===t.get("resume"),a="true"===t.get("new");if("true"===t.get("required")){const t=document.getElementById("exitBuilderBtn");t&&t.remove()}if(!a&&CharacterState.hasSession()){const t=CharacterState.getSessionPreview();return e?void await this._resumeSession():void await this._showResumePrompt(t)}await this._startNewCharacter()},async _resumeSession(){console.log("Resuming character builder session...");const t=CharacterState.restoreSession();OptionVariationsCache.reset(),this._lastPortraitArt=null;const e=CharacterState.get().character;this.updateCharacterPanel(e);const a=document.getElementById("narrator-panel");a.insertAdjacentHTML("beforeend",Components.renderNarratorMessage(""));const r=a.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(r,"> SESSION RESTORED. Let's continue where we left off..."),Utils.scrollToBottom(!0),await Utils.sleep(1e3);e.name&&e.race&&e.class&&e.background&&e.alignment?await this.showQuestion("complete"):await this.showQuestion(t||"intro")},async _startNewCharacter(){CharacterState.reset(),OptionVariationsCache.reset(),this._lastPortraitArt=null,await this.showQuestion("intro")},async _showResumePrompt(t){const e=document.getElementById("sessionResumeModal"),a=document.getElementById("sessionTimeStamp"),r=document.getElementById("sessionResumeBtn"),i=document.getElementById("sessionDiscardBtn");let o="";if(t.savedAt){const e=new Date(t.savedAt),a=new Date-e,r=Math.floor(a/6e4),i=Math.floor(a/36e5);o=r<1?"saved moments ago":r<60?`saved ${r}m ago`:i<24?`saved ${i}h ago`:`saved ${e.toLocaleDateString()}`}return a.textContent=o,e.classList.add("show"),new Promise(t=>{const a=async()=>{n(),e.classList.remove("show"),await this._resumeSession(),t()},o=async()=>{n(),e.classList.remove("show"),CharacterState.clearSession(),await this._startNewCharacter(),t()},n=()=>{r.removeEventListener("click",a),i.removeEventListener("click",o)};r.addEventListener("click",a),i.addEventListener("click",o)})},showProgressiveThinking(t){if(!t)return;this._thinkingInterval&&clearInterval(this._thinkingInterval);let e=0;const a=t=>`<span class="narrator-spinner-shell"><span class="spinner-cube-scene"><span class="spinner-cube-tilt"><span class="spinner-cube"><span class="spinner-cube-face spinner-cube-face-front"></span><span class="spinner-cube-face spinner-cube-face-back"></span><span class="spinner-cube-face spinner-cube-face-right"></span><span class="spinner-cube-face spinner-cube-face-left"></span><span class="spinner-cube-face spinner-cube-face-top"></span><span class="spinner-cube-face spinner-cube-face-bottom"></span></span></span></span> ${t}</span>`;t.innerHTML=a("rolling the dice..."),this._thinkingInterval=setInterval(()=>{e++,t.innerHTML=a(e<3?"rolling the dice...":e<6?"still rolling...":"server waking up... hang tight!")},1e3)},stopProgressiveThinking(){this._thinkingInterval&&(clearInterval(this._thinkingInterval),this._thinkingInterval=null)},async showQuestion(t){const e=QUESTIONS.find(e=>e.id===t);if(!e)return void console.error("Question not found:",t);this.currentQuestion=e,CharacterState.setCurrentQuestion(t);document.getElementById("narrator-panel");switch(e.type){case"message":await this.showMessage(e);break;case"choice":await this.showChoice(e);break;case"list-choice":await this.showListChoice(e);break;case"suggestion":await this.showSuggestion(e);break;case"abilities":await this.showAbilities(e);break;case"name":await this.showNameChoice(e);break;case"backstory":await this.showBackstory(e);break;case"complete":await this.showComplete(e);break;case"spell-selection":await this.showSpellSelection(e)}},async showMessage(t){const e=document.getElementById("narrator-panel");e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);let a=t.text;if("intro"===t.id){const t=StorageService.getNarratorId();a=getNarrator(t).introText}const r=e.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(r,a),Utils.scrollToBottom(!0),t.next&&(r.classList.add("is-waiting"),await Utils.sleep(1500),r.classList.remove("is-waiting"),await this.showQuestion(t.next))},async showChoice(t){const e=document.getElementById("narrator-panel");if("entry-mode"===t.id){let t=null;try{t=await AIService.getCreationQuotaStatus()}catch(t){console.warn("Creation quota check failed:",t)}this._creationQuotaInfo=t}e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const a=e.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(a,t.text);const r=await OptionVariationsCache.get(t.id,t),i={...t,options:r};if(e.insertAdjacentHTML("beforeend",Components.renderQuestion(i)),"entry-mode"===t.id&&this._creationQuotaInfo){const a=this._creationQuotaInfo,r=e.querySelector(`.question-card[data-question-id="${t.id}"]`),i=r?.querySelector(".options-container");if(-1!==a.remaining&&i){const t=document.createElement("div");if(t.className="creation-quota-info",0===a.remaining){let e="Resets tomorrow";if(a.resetAt)try{const t=new Date(a.resetAt),r=new Date,i=Math.ceil((t-r)/36e5);i<=1?e="Resets in about an hour":i<24&&(e=`Resets in about ${i} hours`)}catch(t){}t.textContent=`You've reached today's limit. ${e}.`,t.classList.add("is-exhausted");r.querySelectorAll(".button-primary").forEach(t=>{t.disabled=!0,t.title="Daily character creation limit reached",t.classList.add("is-quota-disabled")}),i.insertAdjacentHTML("beforeend",'<button class="button-primary" onclick="exitToManager()" style="margin-top: var(--spacing-md);">\n              Back to Character Manager\n            </button>')}else{let e="";if(a.resetAt)try{const t=new Date(a.resetAt),r=new Date,i=Math.max(0,Math.ceil((t-r)/36e5));i<=1?e=" (resets in ~1 hour)":i<24&&(e=" (resets in ~"+i+" hours)")}catch(t){}t.textContent=a.remaining+" character creation"+(1===a.remaining?"":"s")+" remaining today"+e,t.classList.add("is-blinking")}i.insertBefore(t,i.firstChild)}}KeyboardNav.activate(),await Utils.sleep(150);try{const e=document.querySelector(`.question-card[data-question-id="${t.id}"] .ability-method-roll`);if(e&&void 0!==KeyboardNav&&"function"==typeof KeyboardNav.getActiveButtons){const t=KeyboardNav.getActiveButtons().indexOf(e);-1!==t&&(KeyboardNav.currentFocusIndex=t,KeyboardNav.updateFocus())}}catch(t){console.error("Ability method keyboard focus override failed",t)}Utils.scrollToBottom(!0)},async showListChoice(t){const e=document.getElementById("narrator-panel");e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const a=e.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(a,t.text);const r=await OptionVariationsCache.get(t.id,t),i=CharacterState.get(),o=i.recommendations?.[t.id]||[],n=[],s=[];if(r.forEach((t,e)=>{o.includes(t.value)?n.push({opt:t,originalIndex:e}):s.push({opt:t,originalIndex:e})}),o.length>0&&n.length>1){const t=t=>{const e=o.indexOf(t);return-1===e?Number.MAX_SAFE_INTEGER:e};n.sort((e,a)=>t(e.opt.value)-t(a.opt.value))}const l=[...n,...s];this._optionIndexMapping||(this._optionIndexMapping={}),this._optionIndexMapping[t.id]=l.map(t=>t.originalIndex);let c="",d=0;n.length>0&&(c+='<div class="recommendations-header">RECOMMENDED</div>',c+=n.map(({opt:e,originalIndex:a})=>{const r=d++;return`\n              <button class="button-primary" onclick="App.handleListAnswer('${t.id}', ${r})">\u2605\xa0${e.text}</button>\n            `}).join(""),s.length>0&&(c+='<hr class="recommendations-divider">')),c+=s.map(({opt:e,originalIndex:a})=>{const r=d++;return`\n            <button class="button-primary" onclick="App.handleListAnswer('${t.id}', ${r})">\n              ${e.text}\n            </button>\n          `}).join(""),e.insertAdjacentHTML("beforeend",`\n      <div class="question-card" data-question-id="${t.id}">\n        <div class="options-container">\n          ${c}\n        </div>\n      </div>`),KeyboardNav.activate(),await Utils.sleep(150),Utils.scrollToBottom(!0)},async showSuggestion(t){const e=document.getElementById("narrator-panel"),a=CharacterState.get();e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const r=e.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(r,t.text),Utils.scrollToBottom(!0);const i=t.getSuggestion(a);a.recommendations||(a.recommendations={}),a.recommendations[t.next]=i.suggestions,e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const o=e.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(o,i.message),Utils.scrollToBottom(!0);const n=i.suggestions.map(t=>{const e=DND_DATA.races.find(e=>e.id===t)||DND_DATA.classes.find(e=>e.id===t);return e?`\u2022 ${e.name}`:`\u2022 ${t}`}).join("\n");e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage(n)),await Utils.sleep(100),Utils.scrollToBottom(!0);const s=e.lastElementChild.querySelector(".narrator-text");s.classList.add("is-waiting"),await Utils.sleep(2e3),s.classList.remove("is-waiting"),await this.showQuestion(t.next)},async showAbilities(t){const e=document.getElementById("narrator-panel");e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const a=e.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(a,t.text);const r=(t,e)=>t.length>e?t.substring(0,e-3)+"...":t,i=t.options||[],o=(i.map((t,e)=>`\n          <option value="${t.value}" ${0===e?"selected":""}>${r(t.text,45)}</option>\n        `).join(""),i.map((t,e)=>`\n          <button\n            class="ability-method-option selector-option${0===e?" is-selected":""}"\n            data-method="${t.value}"\n            role="option"\n            aria-selected="${0===e?"true":"false"}"\n          >\n            <span class="selector-option-label">\n              ${r(t.text,45)}\n            </span>\n          </button>\n        `).join("")),n=i[0]?.value||"standard",s=r(i[0]?.text||"Standard Array",45);e.insertAdjacentHTML("beforeend",`\n      <div class="question-card" data-question-id="${t.id}">\n        <div class="options-container ability-method-container">\n          <label class="settings-label ability-method-label">Ability generation method:</label>\n          <div class="ability-method-controls">\n            <div class="ability-method-trigger-wrap selector-shell selector-shell--listbox">\n              <button\n                class="button-primary ability-method-trigger selector-trigger"\n                id="ability-method-trigger"\n                type="button"\n                aria-haspopup="listbox"\n                aria-expanded="false"\n                aria-controls="ability-method-listbox"\n                data-selected-method="${n}"\n              >\n                <span class="ability-method-trigger-label">\n                  ${s}\n                </span>\n              </button>\n              <div\n                id="ability-method-listbox"\n                class="ability-method-listbox selector-menu"\n                role="listbox"\n                aria-label="Ability generation method"\n              >\n                ${o}\n              </div>\n            </div>\n            <button class="button-primary ability-method-roll" onclick="App.handleAbilityFromSelect()">\n              ROLL\n            </button>\n          </div>\n        </div>\n      </div>`);const l=document.getElementById("ability-method-trigger"),c=document.getElementById("ability-method-listbox");if(l&&c){const t=Array.from(c.querySelectorAll(".ability-method-option")),e=(e,a)=>{l.setAttribute("data-selected-method",e);const r=l.querySelector(".ability-method-trigger-label");r&&(r.textContent=a),t.forEach(t=>{const a=t.getAttribute("data-method")===e;t.classList.toggle("is-selected",a),t.setAttribute("aria-selected",a?"true":"false")})};l.addEventListener("click",e=>{e.stopPropagation();if(c.classList.contains("is-open"))c.classList.remove("is-open"),l.classList.remove("is-open"),l.setAttribute("aria-expanded","false");else{c.classList.add("is-open"),l.classList.add("is-open"),l.setAttribute("aria-expanded","true");const e=l.closest(".selector-shell")||l.parentElement;if(e){e.getBoundingClientRect();const t=l.getBoundingClientRect(),a=c.style.display,r=c.style.visibility,i=c.style.transform;c.style.maxHeight="",c.style.overflowY="",c.style.position="fixed",c.style.top="0",c.style.left="0",c.style.visibility="hidden",c.style.display="block",c.style.transform="none";const o=c.getBoundingClientRect();let n=o.height||0,s=o.width||0;const d=t.width||0;if(d>0&&s<d){c.style.minWidth=`${d}px`;const t=c.getBoundingClientRect();s=t.width||s,n=t.height||n}c.style.display=a,c.style.visibility=r,c.style.transform=i;const u=window.innerHeight,h=window.innerWidth,p=8,m=4,g=(l.closest(".app-root, .terminal-frame, .terminal-container")||document.documentElement).getBoundingClientRect(),y=g.top+p,f=g.bottom-p,w=t.top-y,v=f-t.bottom,b=v>=n+m,S=w>=n+m,A=t.top+t.height/2;let C;C=b&&S?A<u/2:!!b||!S&&v>=w;const I=f-n;let E;C?(E=t.bottom+m,E>I&&(E=Math.max(y,I))):(E=t.top-m-n,E<y&&(E=y));const P=f-E;n>P&&P>0?(c.style.maxHeight=`${P}px`,c.style.overflowY="auto"):(c.style.maxHeight="",c.style.overflowY="");const L=p,x=Math.max(L,h-p-s);let M=t.left;M+s>h-p&&(M=t.right-s),M<L&&(M=L),M>x&&(M=x),c.style.position="fixed",c.style.top=`${E}px`,c.style.left=`${M}px`,c.style.right="auto"}t.length&&t[0].focus()}}),t.forEach(t=>{t.addEventListener("click",a=>{a.stopPropagation();const r=t.getAttribute("data-method")||"standard",i=(t.textContent||"").trim();e(r,i),c.classList.remove("is-open"),l.classList.remove("is-open"),l.setAttribute("aria-expanded","false")})}),document.addEventListener("click",t=>{c.classList.contains("is-open")&&(l.contains(t.target)||c.contains(t.target)||(c.classList.remove("is-open"),l.classList.remove("is-open"),l.setAttribute("aria-expanded","false")))}),document.addEventListener("keydown",t=>{"Escape"===t.key&&c.classList.contains("is-open")&&(c.classList.remove("is-open"),l.classList.remove("is-open"),l.setAttribute("aria-expanded","false"),l.focus())});const a=e=>{const a=c.classList.contains("is-open"),r=e=>{if(c.classList.add("is-open"),l.classList.add("is-open"),l.setAttribute("aria-expanded","true"),t.length){const a=Math.max(0,Math.min(t.length-1,e));t[a].focus()}};if(e.target===l){if(("Enter"===e.key||" "===e.key)&&!a)return e.preventDefault(),void r(0);if("ArrowDown"===e.key&&!a)return e.preventDefault(),void r(0);if("ArrowUp"===e.key&&!a)return e.preventDefault(),void r(t.length-1)}if(a&&"Escape"!==e.key&&t.length){if("ArrowDown"===e.key||"ArrowUp"===e.key){e.preventDefault();const a=t.indexOf(document.activeElement);let r=a;return r=-1===a?"ArrowDown"===e.key?0:t.length-1:"ArrowDown"===e.key?(a+1)%t.length:(a-1+t.length)%t.length,void t[r].focus()}if("Enter"===e.key||" "===e.key){const a=t.find(t=>t===document.activeElement);a&&(e.preventDefault(),a.click())}}};l.addEventListener("keydown",a),c.addEventListener("keydown",a),e(n,s)}KeyboardNav.activate(),await Utils.sleep(150),Utils.scrollToBottom(!0);const d=document.querySelector(".ability-method-roll");d&&d.focus()},async showNameChoice(t){const e=document.getElementById("narrator-panel"),a=CharacterState.get();e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const r=e.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(r,t.text),e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const i=e.lastElementChild.querySelector(".narrator-text");this.showProgressiveThinking(i);let o=[];try{const t=await AIService.generateCharacterSummary(a.character,{nameCount:3});t&&Array.isArray(t.names)&&t.names.length&&(o=t.names),t&&t.backstoryTemplate&&CharacterState.updateCharacter({backstoryTemplate:t.backstoryTemplate}),t&&t.portraitGrantId&&CharacterState.updateCharacter({portraitGrantId:t.portraitGrantId})}catch(t){console.error("Name/backstory summary error; falling back to names-only flow:",t)}o.length||(o=await AIService.generateNames(a.character.race,a.character.class,3)),this.stopProgressiveThinking(),e.lastElementChild.remove(),e.insertAdjacentHTML("beforeend",`\n      <div class="question-card" data-question-id="${t.id}">\n        <div class="options-container">\n          ${o.map((t,e)=>`<button class="button-primary" onclick="App.handleNameSelect(${e})">${t}</button>`).join("\n              ")}\n        </div>\n        <div class="name-input-container">\n          <input \n            type="text" \n            class="input-field" \n            id="custom-name-input" \n            placeholder="Or enter your own name..."\n            data-1p-ignore\n          >\n          <button class="button-primary" onclick="App.handleCustomName()">\n            SUBMIT\n          </button>\n        </div>\n      </div>`),this._generatedNames=o;const n=document.getElementById("custom-name-input");n&&(n.addEventListener("focus",()=>{void 0!==KeyboardNav&&KeyboardNav.clearFocus&&KeyboardNav.clearFocus()}),n.addEventListener("keydown",t=>{"Enter"===t.key&&(t.preventDefault(),this.handleCustomName())})),KeyboardNav.activate(),await Utils.sleep(150),Utils.scrollToBottom(!0)},async showBackstory(t){const e=document.getElementById("narrator-panel"),a=CharacterState.get();e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const r=e.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(r,t.text),Utils.scrollToBottom(!0),e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const i=e.lastElementChild.querySelector(".narrator-text");this.showProgressiveThinking(i);let o=a.character.backstory;const n=a.character.backstoryTemplate,s=a.character.name||"This character";!o&&n&&"string"==typeof n&&(o=n.replace(/{{\s*NAME\s*}}/g,s).replace(/{{\s*RACE\s*}}/g,a.character.race||"adventurer").replace(/{{\s*CLASS\s*}}/g,a.character.class||"hero"),CharacterState.updateCharacter({backstory:o})),o||(o=await AIService.generateBackstory(a.character),CharacterState.updateCharacter({backstory:o})),this.stopProgressiveThinking(),i.textContent="",await Utils.typewriter(i,o),Utils.scrollToBottom(!0),i.classList.add("is-waiting"),await Utils.sleep(2e3),i.classList.remove("is-waiting"),await this.showQuestion(t.next)},async showSpellSelection(t){const e=document.getElementById("narrator-panel"),a=CharacterState.get(),r=a.character.class;e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const i=e.lastElementChild.querySelector(".narrator-text");let o=null;if("quick"===t.mode){if(await Utils.typewriter(i,t.text),Utils.scrollToBottom(!0),await Utils.sleep(500),o=SPELL_DATA.getQuickModeSpells(r),o){SPELL_DATA.getSpellcastingConfig(r);e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const t=e.lastElementChild.querySelector(".narrator-text"),a=`> Selected ${o.cantrips.length} cantrip${1!==o.cantrips.length?"s":""} and ${o.firstLevel.length} 1st level spell${1!==o.firstLevel.length?"s":""}.\n> \n> Cantrips: ${o.cantrips.map(t=>t.name).join(", ")}\n> 1st Level: ${o.firstLevel.map(t=>t.name).join(", ")}`;await Utils.typewriter(t,a),Utils.scrollToBottom(!0)}}else{await Utils.typewriter(i,t.text),Utils.scrollToBottom(!0),await Utils.sleep(500);const n={style:a.answers.spellStyle||"offense",element:a.answers.spellElement||"versatile"};if(o=SPELL_DATA.getGuidedSpells(r,n),o){e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const t=e.lastElementChild.querySelector(".narrator-text");let a="";a="offense"===n.style?"> Ah, a blaster. How... predictable. Here's your destruction kit:":"defense"===n.style?"> The cautious type, I see. Here are your survival tools:":"control"===n.style?"> A tactician. Interesting. Here's your battlefield control suite:":"> Utility over flash. Practical. Here's your toolkit:";const r=`${a}\n> \n> Cantrips: ${o.cantrips.map(t=>t.name).join(", ")}\n> 1st Level: ${o.firstLevel.map(t=>t.name).join(", ")}`;await Utils.typewriter(t,r),Utils.scrollToBottom(!0)}}if(o){const t=SPELL_DATA.getSpellcastingConfig(r);CharacterState.updateCharacter({spellcastingAbility:t.ability,cantrips:o.cantrips,spellsKnown:o.firstLevel,spellsPrepared:t.preparedSpells?o.firstLevel:[],spellSlots:t.spellSlots})}await Utils.sleep(1500),await this.showQuestion(t.next)},async showComplete(t){CharacterState.setCurrentQuestion(t.id);const e=document.getElementById("narrator-panel");e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const a=StorageService.getNarratorId(),r=getNarrator(a).completeText||t.text,i=e.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(i,r),Utils.scrollToBottom(!0);const o=!(this._creationQuotaInfo&&-1!==this._creationQuotaInfo.remaining&&this._creationQuotaInfo.remaining<=0)?'<button class="button-primary" id="completion-new-btn" onclick="App.startNew()">&gt;\xa0CREATE ANOTHER CHARACTER</button>':"";e.insertAdjacentHTML("beforeend",`\n      <div class="question-card mt-lg" data-question-id="${t.id}">\n        <button class="button-primary" id="completion-save-btn" onclick="App.saveAndExit()">&gt;\xa0SAVE AND EXIT</button>\n        ${o}\n      </div>`),Utils.scrollToBottom(!0),KeyboardNav.activate(),this._lastRenderedCharacter=null;const n=CharacterState.get();n.character&&this.updateCharacterPanel(n.character)},_stopPortraitLoadingAnimation(){this._portraitLoadingInterval&&(clearInterval(this._portraitLoadingInterval),this._portraitLoadingInterval=null),this._portraitElapsed=0},_renderPortraitGeneratingLoader(t){if(!t)return;this._stopPortraitLoadingAnimation(),t.classList.add("ascii-portrait--placeholder"),t.classList.add("ascii-portrait--loading"),t.style.fontSize="",t.style.whiteSpace="",t.style.textAlign="",t.style.overflowX="",t.style.overflowY="";const e="Generating character art";let a="(This usually takes 20\u201330 seconds)";try{if(window.PortraitUI&&"function"==typeof PortraitUI.getImageModelSubtext)a=PortraitUI.getImageModelSubtext();else{let t="dall-e-3";window.StorageService&&"function"==typeof StorageService.getImageModel?t=StorageService.getImageModel():"undefined"!=typeof CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL&&(t=CONFIG.DEFAULT_IMAGE_MODEL),"gpt-image-1"===t?a="(This can take up to a minute)":"gpt-image-1.5"===t?a="(GPT Image 1.5 \u2013 usually 15\u201330 seconds)":"flux-1.1-pro"===t?a="(Flux Pro \u2013 usually 10\u201320 seconds)":"flux-schnell"===t&&(a="(Flux Schnell \u2013 usually 5\u201310 seconds)")}}catch(t){}this._portraitElapsed=0;const r=()=>{if(!t)return;const r=this._portraitElapsed%3+1;if(window.PortraitUI&&"function"==typeof PortraitUI.renderGeneratingLoader)PortraitUI.renderGeneratingLoader(t,{baseMessage:e,subtext:a,dotCount:r,isLoading:!0});else{let i=t.querySelector(".portrait-placeholder-cube--generating"),o=t.querySelector(".portrait-placeholder-text");i?o&&o.setAttribute("data-dots",String(r)):(t.innerHTML=`\n            <div class="portrait-placeholder-content">\n              <div class="portrait-placeholder-cube-container">\n                <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">\n                  <i></i>\n                  <i></i>\n                  <i></i>\n                  <i></i>\n                  <i></i>\n                  <i></i>\n                </div>\n              </div>\n              <div class="portrait-placeholder-text" data-dots="${r}">\n                <span class="portrait-placeholder-message">${e}</span>\n                <span class="portrait-placeholder-dots">\n                  <span class="dot dot-1">.</span>\n                  <span class="dot dot-2">.</span>\n                  <span class="dot dot-3">.</span>\n                </span>\n                <div class="portrait-placeholder-subtext">\n                  ${a}\n                </div>\n              </div>\n            </div>\n          `,o=t.querySelector(".portrait-placeholder-text"))}this._portraitElapsed++};r(),this._portraitLoadingInterval=setInterval(r,1e3)},async autoGenerateGuidedAIPortraitIfReady(){try{if(!window.CharacterState||"function"!=typeof CharacterState.get||!window.AsciiArtService||!CONFIG.ENABLE_AI)return;const t=CharacterState.get()||{},e=t.character||{},a=t.answers||{};if("guided"!==a["entry-mode"])return;if(!(e.race&&e.class&&e.name))return;if(e.customPortraitAscii||(e.customPortraitCount||0)>0)return;this._guidedPortraitGenerating=!0;const r=document.getElementById("character-portrait");r&&this._renderPortraitGeneratingLoader(r);const i=await AsciiArtService.generateCustomAIPortrait(e,{creationGrantId:e&&e.portraitGrantId});if(i&&i.asciiArt){const t=e.customPortraitCount||0;let a=null;try{window.StorageService&&"function"==typeof StorageService.getPortraitPromptTheme&&(a=StorageService.getPortraitPromptTheme())}catch(t){}let r="dall-e-3",o=null;try{window.StorageService&&"function"==typeof StorageService.getImageModel?r=StorageService.getImageModel():"undefined"!=typeof CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL&&(r=CONFIG.DEFAULT_IMAGE_MODEL),window.StorageService&&"function"==typeof StorageService.getImageQuality&&(o=StorageService.getImageQuality(r))}catch(t){}const n=window.PortraitHistory&&"function"==typeof PortraitHistory.addVersion?PortraitHistory.addVersion(e,i.asciiArt,i.imageUrl||null,{source:"guided-auto",prompt:AIService.buildPortraitPrompt&&AIService.buildPortraitPrompt(e)||null,style:a,model:r,quality:o}):e.portraitMetadata||{};CharacterState.updateCharacter({originalPortraitUrl:i.imageUrl||null,customPortraitAscii:i.asciiArt,customPortraitCount:t+1,portraitMetadata:n,portraitGrantId:null}),this._lastPortraitArt=null}}catch(t){if(console.error("Guided-mode AI portrait generation error:",t),t.isSafetyRejection){console.group("\ud83d\udeab OpenAI Content Safety Rejection - Guided Mode"),console.error("Rejected prompt:",t.rejectedPrompt||"Unknown"),console.error("Original error:",t.originalMessage),t.promptAnalysis&&console.log("Analysis included above \u2191"),console.groupEnd();let e="OpenAI flagged this portrait request. ";if(t.promptAnalysis&&t.promptAnalysis.hasKnownProblematicTerms){e+=`Possible triggers: ${t.promptAnalysis.potentialIssues.map(t=>t.category).join(", ")}. `}e+="Check browser console for detailed analysis and suggestions.",this.showSystemMessage(e)}else t.isRateLimit?this.showSystemMessage("You've reached today's portrait limit, so we're using a simple fallback portrait for now. You can create a custom one tomorrow from the character sheet."):this.showSystemMessage("AI portrait generation failed, so we're using a simple fallback portrait for now. You can still create a custom one later from the character sheet.");await this._ensurePreGeneratedPortraitFallback(character)}finally{this._guidedPortraitGenerating=!1,this._stopPortraitLoadingAnimation();const t=document.getElementById("character-portrait");t&&(t.style.fontSize="",t.classList.remove("ascii-portrait--loading","ascii-portrait--placeholder"))}},async persistIfAlreadySaved(){const t=CharacterState.get().character;if(t&&t.id)try{await StorageService.saveCharacter(t)}catch(t){console.error("Error persisting character changes:",t)}},async handleListAnswer(t,e){const a=document.getElementById("narrator-panel"),r=CharacterState.get(),i=a?.querySelectorAll(".question-card[data-question-id]"),o=i&&i[i.length-1],n=o?.getAttribute("data-question-id");if(n&&n!==t)return void await this.showChangeConfirmation(t,e,!0);const s=this._optionIndexMapping?.[t]?.[e]??e,l=QUESTIONS.find(e=>e.id===t),c=l.options[s],d=document.querySelector(`.question-card[data-question-id="${t}"]`)||document.querySelector(".question-card:last-child"),u=d?d.querySelectorAll(".button-primary"):document.querySelectorAll(".question-card:last-child .button-primary");if(u.forEach(t=>{t.classList.remove("is-selected","is-locked")}),u.forEach((t,a)=>{a===e?t.classList.add("is-selected"):t.classList.add("is-locked")}),r.answers[t]=c.value,l.saveTo&&(CharacterState.updateCharacter({[l.saveTo]:c.value}),"background"===l.saveTo)){const t=DND_DATA.backgrounds.find(t=>t.id===c.value);t&&CharacterState.updateCharacter({skillProficiencies:t.skillProficiencies||[],toolProficiencies:t.toolProficiencies||[],equipment:t.equipment||[],backgroundFeature:t.feature||null,languageChoices:t.languages||0})}if(l.aiPromptContext){const t=document.getElementById("narrator-panel");t.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const e=t.lastElementChild.querySelector(".narrator-text");this.showProgressiveThinking(e),Utils.scrollToBottom(!0);const a=await AIService.generateNarratorComment({question:l.aiPromptContext,choice:c.text,characterSoFar:r.character});this.stopProgressiveThinking(),e.textContent="",await Utils.typewriter(e,a),Utils.scrollToBottom(!0),e.classList.add("is-waiting"),await Utils.sleep(750),e.classList.remove("is-waiting")}l.next&&await this.showQuestion(l.next)},async handleAnswer(t,e){const a=document.getElementById("narrator-panel"),r=a?.querySelectorAll(".question-card[data-question-id]"),i=r&&r[r.length-1],o=i?.getAttribute("data-question-id");if(o&&o!==t)return void await this.showChangeConfirmation(t,e,!1);const n=CharacterState.get(),s=QUESTIONS.find(e=>e.id===t),l=s.options[e];if("entry-mode"===t&&"quick"===l.value)return n.answers[t]=l.value,void await this.quickCreateCharacter();const c=document.querySelector(`.question-card[data-question-id="${t}"]`)||document.querySelector(".question-card:last-child");if((c?c.querySelectorAll(".button-primary"):document.querySelectorAll(".question-card:last-child .button-primary")).forEach((t,a)=>{t.classList.remove("is-selected","is-locked"),a===e?t.classList.add("is-selected"):t.classList.add("is-locked")}),n.answers[t]=l.value,s.saveTo&&CharacterState.updateCharacter({[s.saveTo]:l.value}),s.aiPromptContext){const t=document.getElementById("narrator-panel");t.innerHTML+=Components.renderNarratorMessage(""),Utils.scrollToBottom(!0);const e=t.lastElementChild.querySelector(".narrator-text");this.showProgressiveThinking(e),Utils.scrollToBottom(!0);const a=await AIService.generateNarratorComment({question:s.aiPromptContext,choice:l.text,characterSoFar:n.character});this.stopProgressiveThinking(),e.textContent="",await Utils.typewriter(e,a),Utils.scrollToBottom(!0),e.classList.add("is-waiting"),await Utils.sleep(750),e.classList.remove("is-waiting")}s.next&&await this.showQuestion(s.next)},async handleAbilityMethod(t){document.querySelectorAll(".question-card:last-child .button-primary").forEach(e=>{e.textContent.includes("standard"===t?"Standard Array":"Roll 4d6")?e.classList.add("is-selected"):e.classList.add("is-locked")});const e=CharacterState.get();let a=DND_DATA.classes.find(t=>t.id===e.character.class);a||(console.error("handleAbilityMethod: missing class data for",e.character?.class),a={id:"fighter",name:"Fighter (fallback)",hitDie:10,primaryAbility:["str"],savingThrows:["str","con"],equipment:[]});let r={};if("standard"===t){const t=a.primaryAbility[0];r={str:"str"===t?15:10,dex:"dex"===t?15:12,con:14,int:"int"===t?15:8,wis:"wis"===t?15:13,cha:"cha"===t?15:10}}else r={str:this.rollAbility(),dex:this.rollAbility(),con:this.rollAbility(),int:this.rollAbility(),wis:this.rollAbility(),cha:this.rollAbility()};const i=DND_DATA.races.find(t=>t.id===e.character.race)||{abilityBonuses:{}};Object.keys(i.abilityBonuses||{}).forEach(t=>{const e=i.abilityBonuses[t]||0;r[t]=(r[t]||0)+e});const{armorCategory:o,hasShield:n}=KeyboardNav.inferArmorLoadoutForClass(e.character.class),s=Utils.abilityModifier(r.con),l=a.hitDie+s,c=KeyboardNav.calculateArmorClassForClass(e.character.class,r,o,n);let d;CharacterState.updateCharacter({baseAbilities:{...r},abilities:r,hitPoints:l,armorClass:c,armorCategory:o,hasShield:n}),CharacterState.set({abilityMethod:t}),d=l<=Math.max(4,Math.floor(.5*a.hitDie))?"Ouch. I hope you like making death saves.":l>=a.hitDie+2?"All meat, no subtlety. The healer will be proud.":"Respectable. You might even survive the tutorial.";const u={str:"Strength",dex:"Dexterity",con:"Constitution",int:"Intelligence",wis:"Wisdom",cha:"Charisma"},h=Object.entries(r),p=h.reduce((t,e)=>e[1]>t[1]?e:t,h[0]),m=h.reduce((t,e)=>e[1]<t[1]?e:t,h[0]);let g="";p&&p[1]>=16&&(g+=` Your ${u[p[0]]} is doing a lot of heavy lifting.`),m&&m[1]<=8&&(g+=` Maybe don't advertise that ${u[m[0]]} score.`);document.getElementById("narrator-panel").innerHTML+=Components.renderNarratorMessage(`Your abilities have been determined. HP: ${l}. ${d}${g}`),Utils.scrollToBottom(!0),await Utils.sleep(2e3);const y=CharacterState.get(),f=y.character.class;let w=this.currentQuestion.next||"background-choice";if("undefined"!=typeof SPELL_DATA&&SPELL_DATA.isSpellcaster(f)){w="guided"===y.answers["entry-mode"]?"spell-style-intro":"spell-quick-mode"}else w="background-choice";await this.showQuestion(w)},async handleAbilityFromSelect(){const t=document.getElementById("ability-method-trigger"),e=t?.getAttribute("data-selected-method")||"standard";await this.handleAbilityMethod(e)},rollAbility(){const t=[Utils.rollDice(6),Utils.rollDice(6),Utils.rollDice(6),Utils.rollDice(6)].sort((t,e)=>e-t);return t[0]+t[1]+t[2]},async handleNameSelect(t){const e=this._generatedNames[t];if(!e)return void console.error("Name not found at index:",t);const a=document.querySelector(".question-card:last-child");a.querySelectorAll(".button-primary").forEach((e,a)=>{e.textContent.includes("SUBMIT")||(a===t?e.classList.add("is-selected"):e.classList.add("is-locked"))});const r=document.getElementById("custom-name-input");r&&(r.disabled=!0,r.classList.add("is-locked"));const i=a.querySelector(".name-input-container .button-primary");i&&(i.disabled=!0,i.classList.add("is-locked")),CharacterState.updateCharacter({name:e}),"function"==typeof this.autoGenerateGuidedAIPortraitIfReady&&this.autoGenerateGuidedAIPortraitIfReady();document.getElementById("narrator-panel").innerHTML+=Components.renderNarratorMessage(`${e}. Sure. Why not.`),Utils.scrollToBottom(!0),await Utils.sleep(1500),await this.showQuestion(this.currentQuestion.next)},async handleCustomName(){const t=document.getElementById("custom-name-input"),e=t.value.trim();if(!e)return void console.log("Custom name cannot be empty.");document.querySelector(".question-card:last-child").querySelectorAll(".button-primary").forEach(t=>{t.classList.add("is-locked"),t.disabled=!0}),t&&(t.disabled=!0,t.classList.add("is-selected")),CharacterState.updateCharacter({name:e}),"function"==typeof this.autoGenerateGuidedAIPortraitIfReady&&this.autoGenerateGuidedAIPortraitIfReady();document.getElementById("narrator-panel").innerHTML+=Components.renderNarratorMessage(`${e}. Sure. Why not.`),Utils.scrollToBottom(!0),await Utils.sleep(1500),await this.showQuestion(this.currentQuestion.next)},async checkBackendStatus(){},async openSettings(){window.SettingsModal&&"function"==typeof SettingsModal.open&&SettingsModal.open()},closeSettings(){window.SettingsModal&&"function"==typeof SettingsModal.close&&SettingsModal.close()},saveSettings(){window.SettingsModal&&"function"==typeof SettingsModal.save&&SettingsModal.save()},_buildPortraitHistoryBody(t){const e=t.metadata||{},a=Array.isArray(t.versions)?t.versions:[],r=!!t.hasVersions,i=!!t.hasCustomPortraitWithoutHistory,o=r?a.map(t=>{const a=e.activeVersionId===t.id,r=(t.createdAt?new Date(t.createdAt).toLocaleString():"")||"Unknown time",i=!!t.url,o=(t.prompt,`\n            <div class="card-thumbnail">\n              <div class="ascii-portrait portrait-history-preview" data-version-id="${t.id}"></div>\n              ${i?`<img src="${t.url}" alt="${r}" class="portrait-history-image is-hidden" data-version-id="${t.id}">`:""}\n            </div>`),n=[];i&&n.push(`\n                <button\n                  class="selector-option"\n                  type="button"\n                  role="menuitem"\n                  onclick="event.stopPropagation(); App.togglePortraitHistoryView('${t.id}')"\n                  data-toggle-version-id="${t.id}"\n                >\n                  <span class="selector-option-icon">\u25c9</span>\n                  <span class="selector-option-label">View original</span>\n                </button>\n              `),n.push(`\n              <button\n                class="selector-option"\n                type="button"\n                role="menuitem"\n                onclick="event.stopPropagation(); App.viewPortraitImageInfo('${t.id}')"\n                title="View image generation details"\n              >\n                <span class="selector-option-icon">\u2139\ufe0e</span>\n                <span class="selector-option-label">Image info</span>\n              </button>\n            `),n.push(`\n              <button\n                class="selector-option portrait-history-delete-option"\n                type="button"\n                role="menuitem"\n                onclick="event.stopPropagation(); App.deletePortraitVersion('${t.id}')"\n                title="Delete this portrait version"\n                aria-label="Delete portrait version"\n              >\n                <span class="selector-option-icon">\xd7</span>\n                <span class="selector-option-label">Delete version</span>\n              </button>\n            `);const s=n.length>0?`\n                <div class="portrait-history-actions selector-shell selector-shell--actions">\n                  <button\n                    class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"\n                    type="button"\n                    aria-haspopup="menu"\n                    aria-expanded="false"\n                    aria-label="More portrait actions"\n                    onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"\n                  >\n                    <span class="sheet-actions-icon" aria-hidden="true">\n                      <span class="sheet-actions-dot dot-1"></span>\n                      <span class="sheet-actions-dot dot-2"></span>\n                      <span class="sheet-actions-dot dot-3"></span>\n                    </span>\n                  </button>\n                  <div class="selector-menu portrait-history-menu" role="menu" aria-hidden="true">\n                    ${n.join("")}\n                  </div>\n                </div>\n              `:"";return`\n            <div class="character-card portrait-history-card${a?" is-selected":""}" data-version-id="${t.id}" onclick="App.selectPortraitHistoryCard('${t.id}')">\n              ${o}\n              <div class="card-details portrait-history-details">\n                <div class="portrait-history-meta">\n                  <div class="card-name">${r}</div>\n                  <div class="card-info">&nbsp;</div>\n                </div>\n                ${s}\n              </div>\n            </div>\n          `}).join(""):i?'<div class="terminal-text-small terminal-text-dim portrait-history-callout">\n              <p><strong>No portrait history yet.</strong></p>\n              <p>This character\'s portrait was created before the history feature was added.</p>\n              <p>Generate a new custom AI portrait to:</p>\n              <ul class="portrait-history-callout-list">\n                <li>Save your current portrait as Version 1</li>\n                <li>Add the new portrait as Version 2</li>\n                <li>Enable portrait version switching</li>\n              </ul>\n            </div>':'<p class="terminal-text-small terminal-text-dim portrait-history-callout">\n              No saved portraits yet.<br><br>\n              Generate a custom AI portrait to start building a history.\n            </p>';return`\n      <p class="terminal-text-small terminal-text-dim">\n        View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.\n      </p>\n      <div class="portrait-history-card-row${1===a.length?" is-single":""}">\n        ${o}\n      </div>\n    `},_animateModalContentResize(t,e){const a=document.getElementById(t);if(!a||"function"!=typeof e)return void("function"==typeof e&&e());const r=a.querySelector(".modal-content");if(!r)return void e();const i=r.offsetHeight;e();const o=r.offsetHeight;if(!i||!o||i===o)return;r.style.height=`${i}px`,r.offsetHeight,r.style.transition="height 220ms cubic-bezier(0.2, 0.8, 0.2, 1.05)",r.style.height=`${o}px`;const n=()=>{r.style.height="",r.style.transition="",r.removeEventListener("transitionend",n)};r.addEventListener("transitionend",n)},openPortraitHistory(){const t=CharacterState.get().character||{},e=window.PortraitHistory&&"function"==typeof PortraitHistory.normalizeForDisplay?PortraitHistory.normalizeForDisplay(t):(()=>{const e=t.portraitMetadata||{},a=Array.isArray(e.versions)?e.versions:[];return{metadata:e,versions:a,hasVersions:a.length>0,hasCustomPortraitWithoutHistory:!a.length}})(),a=e.metadata||{},r=Array.isArray(e.versions)?e.versions:[];if(document.getElementById("portraitHistoryModal"))return;const i=`\n      <div id="portraitHistoryModal" class="modal show" onclick="App.closePortraitHistory()">\n        <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">\n          <div class="modal-header">\n            <h2 class="modal-title">Portrait History</h2>\n            <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>\n          </div>\n          <div class="modal-body">\n            ${this._buildPortraitHistoryBody(e)}\n          </div>\n          <div class="modal-footer modal-footer-end">\n            <button class="terminal-btn" onclick="App.closePortraitHistory()">Cancel</button>\n            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmPortraitHistorySelection()">Use selected</button>\n          </div>\n        </div>\n      </div>\n    `;(document.querySelector(".app-root")||document.querySelector(".terminal-container")).insertAdjacentHTML("beforeend",i),Array.isArray(r)&&r.length>0&&window.PortraitHistory&&"function"==typeof PortraitHistory.batchPopulateAsciiPreviews&&PortraitHistory.batchPopulateAsciiPreviews(r,t=>this.cropAsciiForThumbnail(t));const o=this.getPortraitHistoryCards();if(o.length>0){let t=0;if(a.activeVersionId){const e=o.findIndex(t=>t.getAttribute("data-version-id")===a.activeVersionId);e>=0&&(t=e)}this._portraitHistoryFocusIndex=t,this.updatePortraitHistoryFocus()}this._portraitHistoryEscHandler=t=>{"Escape"===t.key&&this.closePortraitHistory()},this._portraitHistoryKeyHandler=t=>{document.getElementById("portraitHistoryModal")&&("ArrowLeft"===t.key?(t.preventDefault(),this.movePortraitHistoryFocus(-1)):"ArrowRight"===t.key?(t.preventDefault(),this.movePortraitHistoryFocus(1)):"ArrowUp"===t.key?(t.preventDefault(),this.movePortraitHistoryFocus(-1)):"ArrowDown"===t.key?(t.preventDefault(),this.movePortraitHistoryFocus(1)):"Enter"===t.key&&(t.preventDefault(),this.confirmPortraitHistorySelection()))},document.addEventListener("keydown",this._portraitHistoryEscHandler),document.addEventListener("keydown",this._portraitHistoryKeyHandler)},closePortraitHistory(){const t=document.getElementById("portraitHistoryModal");if(!t)return this._portraitHistoryEscHandler&&(document.removeEventListener("keydown",this._portraitHistoryEscHandler),this._portraitHistoryEscHandler=null),this._portraitHistoryKeyHandler&&(document.removeEventListener("keydown",this._portraitHistoryKeyHandler),this._portraitHistoryKeyHandler=null),void(this._portraitHistoryFocusIndex=0);const e=t.querySelector(".modal-content")||t,a=()=>{t&&t.parentNode&&t.parentNode.removeChild(t),this._portraitHistoryEscHandler&&(document.removeEventListener("keydown",this._portraitHistoryEscHandler),this._portraitHistoryEscHandler=null),this._portraitHistoryKeyHandler&&(document.removeEventListener("keydown",this._portraitHistoryKeyHandler),this._portraitHistoryKeyHandler=null),this._portraitHistoryFocusIndex=0};t.classList.contains("closing")||t.classList.add("closing"),e&&e.addEventListener?e.addEventListener("animationend",a,{once:!0}):a(),this._portraitHistoryEscHandler&&(document.removeEventListener("keydown",this._portraitHistoryEscHandler),this._portraitHistoryEscHandler=null),this._portraitHistoryKeyHandler&&(document.removeEventListener("keydown",this._portraitHistoryKeyHandler),this._portraitHistoryKeyHandler=null),this._portraitHistoryFocusIndex=0},getPortraitHistoryCards:()=>Array.from(document.querySelectorAll("#portraitHistoryModal .character-card")),updatePortraitHistoryFocus(){const t=this.getPortraitHistoryCards();if(0===t.length)return;const e="number"==typeof this._portraitHistoryFocusIndex?this._portraitHistoryFocusIndex:0;t.forEach((t,a)=>{const r=a===e;t.classList.toggle("is-keyboard-focused",r),t.classList.toggle("is-selected",r)})},movePortraitHistoryFocus(t){const e=this.getPortraitHistoryCards();if(0===e.length)return;const a="number"==typeof this._portraitHistoryFocusIndex?this._portraitHistoryFocusIndex:0,r=Math.max(0,Math.min(e.length-1,a+t));this._portraitHistoryFocusIndex=r,this.updatePortraitHistoryFocus()},selectPortraitHistoryCard(t){const e=this.getPortraitHistoryCards();if(0===e.length)return;let a=0;e.forEach((e,r)=>{e.getAttribute("data-version-id")===t&&(a=r)}),this._portraitHistoryFocusIndex=a,this.updatePortraitHistoryFocus()},togglePortraitHistoryView(t){const e=document.querySelector(`.portrait-history-preview.ascii-portrait[data-version-id="${t}"]`),a=document.querySelector(`.portrait-history-image[data-version-id="${t}"]`),r=document.querySelector(`.portrait-history-actions button[data-toggle-version-id="${t}"]`);if(!a||!e||!r)return;a.classList.contains("is-hidden")?(e.classList.add("is-hidden"),a.classList.remove("is-hidden"),r.textContent="View ASCII"):(a.classList.add("is-hidden"),e.classList.remove("is-hidden"),r.textContent="View Original")},cropAsciiForThumbnail(t,e=80,a=160){const r=t.split("\n"),i=r.length,o=Math.min(i,e);return r.slice(0,o).map(t=>{if(t.length<=a)return t;const e=t.length-a,r=Math.floor(e/2);return t.slice(r,r+a)}).join("\n")},async confirmPortraitHistorySelection(){const t=this.getPortraitHistoryCards();if(0===t.length)return void this.closePortraitHistory();const e=t["number"==typeof this._portraitHistoryFocusIndex?this._portraitHistoryFocusIndex:0];if(!e)return void this.closePortraitHistory();const a=e.getAttribute("data-version-id");if(!a)return void this.closePortraitHistory();const r=document.getElementById("portraitHistoryModal"),i=r&&r.querySelector(".modal-footer .terminal-btn-primary"),o=i?i.textContent:null;i&&(i.disabled=!0,i.textContent="Applying...");try{await this.usePortraitVersion(a)}catch(t){console.error("App.confirmPortraitHistorySelection: failed to apply portrait version",t),i&&(i.disabled=!1,i.textContent=o||"USE SELECTED"),this.showSystemMessage("Failed to switch portrait. Please try again in a moment.")}},async usePortraitVersion(t){const e=CharacterState.get().character||{},a=e.portraitMetadata||{},r=(Array.isArray(a.versions)?a.versions:[]).find(e=>e.id===t);if(!r)return void this.showSystemMessage("Portrait version not found.");const i={...a,activeVersionId:r.id};CharacterState.updateCharacter({originalPortraitUrl:r.url||e.originalPortraitUrl||null,customPortraitAscii:r.ascii||e.customPortraitAscii||"",portraitMetadata:i}),await this.persistIfAlreadySaved();try{const t=CharacterState.get();t&&t.character&&"function"==typeof this.updateCharacterPanel&&await this.updateCharacterPanel(t.character)}catch(t){console.error("App.usePortraitVersion: failed to refresh character panel after version switch",t)}this.closePortraitHistory()},async deletePortraitVersion(t){const e=CharacterState.get().character||{},a=e.portraitMetadata||{},r=Array.isArray(a.versions)?a.versions:[];if(!r.length)return void this.closePortraitHistory();const i=document.getElementById("portraitHistoryModal");if(!i)return;const o=i.querySelector(".modal-body"),n=i.querySelector(".modal-title"),s=i.querySelector(".modal-footer");if(!o)return;const l=o.innerHTML,c=n?n.textContent:"",d=s?s.innerHTML:"";if(1===r.length){const t='\n        <p class="terminal-text">\n          To delete this portrait, create a new one first.\n        </p>\n      ',e='\n        <button class="terminal-btn" id="portrait-delete-cancel">Cancel</button>\n        <button class="terminal-btn terminal-btn-primary" id="portrait-create-new">Create new</button>\n      ';this._animateModalContentResize("portraitHistoryModal",()=>{n&&(n.textContent="Create a New Portrait?"),o.innerHTML=t,s&&(s.innerHTML=e)});const a=document.getElementById("portrait-delete-cancel"),i=document.getElementById("portrait-create-new");return a&&(a.onclick=()=>{this._animateModalContentResize("portraitHistoryModal",()=>{n&&(n.textContent=c),o.innerHTML=l,s&&(s.innerHTML=d)}),Array.isArray(r)&&r.length>0&&window.PortraitHistory&&"function"==typeof PortraitHistory.batchPopulateAsciiPreviews&&PortraitHistory.batchPopulateAsciiPreviews(r,t=>this.cropAsciiForThumbnail(t));this.getPortraitHistoryCards().length>0&&(this._portraitHistoryFocusIndex=0,this.updatePortraitHistoryFocus())}),void(i&&(i.onclick=()=>{this.closePortraitHistory(),this.generateCustomAIPortrait()}))}this._animateModalContentResize("portraitHistoryModal",()=>{n&&(n.textContent="Confirm Delete"),o.innerHTML='\n      <p class="terminal-text">\n        Delete this saved portrait version? This cannot be undone.\n      </p>\n    ',s&&(s.innerHTML='\n      <button class="terminal-btn" id="portrait-delete-cancel">No</button>\n      <button class="terminal-btn terminal-btn-primary" id="portrait-delete-confirm">Yes</button>\n    ')});const u=document.getElementById("portrait-delete-cancel"),h=document.getElementById("portrait-delete-confirm"),p=()=>{this._animateModalContentResize("portraitHistoryModal",()=>{n&&(n.textContent=c),o.innerHTML=l,s&&(s.innerHTML=d)}),Array.isArray(r)&&r.length>0&&window.PortraitHistory&&"function"==typeof PortraitHistory.batchPopulateAsciiPreviews&&PortraitHistory.batchPopulateAsciiPreviews(r,t=>this.cropAsciiForThumbnail(t));this.getPortraitHistoryCards().length>0&&(this._portraitHistoryFocusIndex=0,this.updatePortraitHistoryFocus())};u&&(u.onclick=p),h&&(h.onclick=async()=>{const i=r.filter(e=>e.id!==t),l=a.activeVersionId===t,u={portraitMetadata:{...a,versions:i,activeVersionId:l?i[0]?.id||null:a.activeVersionId}};if(l&&(i[0]?(u.originalPortraitUrl=i[0].url||e.originalPortraitUrl||null,u.customPortraitAscii=i[0].ascii||e.customPortraitAscii||""):(u.originalPortraitUrl=null,u.customPortraitAscii="")),CharacterState.updateCharacter(u),await this.persistIfAlreadySaved(),!i.length)return void this.closePortraitHistory();const h=CharacterState.get().character||{},p=window.PortraitHistory&&"function"==typeof PortraitHistory.normalizeForDisplay?PortraitHistory.normalizeForDisplay(h):(()=>{const t=h.portraitMetadata||{},e=Array.isArray(t.versions)?t.versions:[];return{metadata:t,versions:e,hasVersions:e.length>0,hasCustomPortraitWithoutHistory:!e.length}})();this._animateModalContentResize("portraitHistoryModal",()=>{n&&(n.textContent=c),o.innerHTML=this._buildPortraitHistoryBody(p),s&&(s.innerHTML=d)});const m=Array.isArray(p.versions)?p.versions:[];Array.isArray(m)&&m.length>0&&window.PortraitHistory&&"function"==typeof PortraitHistory.batchPopulateAsciiPreviews&&PortraitHistory.batchPopulateAsciiPreviews(m,t=>this.cropAsciiForThumbnail(t));this.getPortraitHistoryCards().length>0&&(this._portraitHistoryFocusIndex=0,this.updatePortraitHistoryFocus())})},viewPortraitImageInfo(t){const e=(CharacterState.get().character||{}).portraitMetadata||{},a=Array.isArray(e.versions)?e.versions:[],r=a.find(e=>e.id===t);if(!r)return void this.showToast("No info available for this portrait.");const i=document.getElementById("portraitHistoryModal");if(!i)return;const o=i.querySelector(".modal-body"),n=(i.querySelector(".modal-title"),i.querySelector(".modal-footer"));if(!o)return;const s=i.querySelector(".modal-header"),l=o.innerHTML,c=s?s.innerHTML:"",d=n?n.innerHTML:"",u=t=>{if(!t)return null;let e=t.replace(/[-_]/g," ");return e.length>0&&(e=e.split(" ").map(t=>t.charAt(0).toUpperCase()+t.slice(1).toLowerCase()).join(" ")),e},h=u(r.style)||"Default",p=(t=>{if(!t)return null;return{"dall-e-3":"DALL\xb7E 3","gpt-image-1":"GPT Image 1","gpt-image-1.5":"GPT Image 1.5","flux-1.1-pro":"Flux 1.1 Pro","flux-schnell":"Flux Schnell"}[t]||u(t)})(r.model),m=(t=>{if(!t)return null;return{standard:"Standard",medium:"Medium",high:"High",hd:"HD"}[t]||u(t)})(r.quality),g=(t=>{if(!t)return null;try{return new Date(t).toLocaleString(void 0,{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}catch(e){return t}})(r.createdAt),y=(r.prompt||"").replace(/</g,"&lt;").replace(/>/g,"&gt;");let f="";if(g&&(f+=`\n        <div class="image-info-row">\n          <span class="image-info-label">Created</span>\n          <span class="image-info-value">${g}</span>\n        </div>\n      `),f+=`\n      <div class="image-info-row">\n        <span class="image-info-label">Style</span>\n        <span class="image-info-value">${h}</span>\n      </div>\n    `,p){let t=p;m&&(t=t+" ("+m+")"),f+=`\n        <div class="image-info-row">\n          <span class="image-info-label">Model</span>\n          <span class="image-info-value">${t}</span>\n        </div>\n      `}let w="";w=y?`\n        <div class="image-info-prompt-section">\n          <div class="image-info-prompt-label">Prompt</div>\n          <pre class="terminal-text portrait-prompt-display">${y}</pre>\n        </div>\n      `:'\n        <div class="image-info-prompt-section">\n          <div class="image-info-prompt-label">Prompt</div>\n          <p class="terminal-text-dim">No prompt saved for this portrait.</p>\n        </div>\n      ';const v=`\n      <div class="image-info-container">\n        <div class="image-info-metadata">\n          ${f}\n        </div>\n        ${w}\n      </div>\n    `,b=`\n      <button class="terminal-btn" id="portrait-info-back">Back</button>\n      ${y?'<button class="terminal-btn" id="portrait-info-copy">Copy prompt</button>':""}\n    `;this._animateModalContentResize("portraitHistoryModal",()=>{s&&(s.innerHTML='\n      <h2 class="modal-title">Image Info</h2>\n      <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>\n    '),o.innerHTML=v,n&&(n.innerHTML=b)});const S=document.getElementById("portrait-info-back"),A=document.getElementById("portrait-info-copy"),C=()=>{this._animateModalContentResize("portraitHistoryModal",()=>{s&&(s.innerHTML=c),o.innerHTML=l,n&&(n.innerHTML=d)}),Array.isArray(a)&&a.length>0&&window.PortraitHistory&&"function"==typeof PortraitHistory.batchPopulateAsciiPreviews&&PortraitHistory.batchPopulateAsciiPreviews(a,t=>this.cropAsciiForThumbnail(t));this.getPortraitHistoryCards().length>0&&(this._portraitHistoryFocusIndex=0,this.updatePortraitHistoryFocus())};S&&(S.onclick=C),A&&(A.onclick=async()=>{try{if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(r.prompt);else{const t=document.createElement("textarea");t.value=r.prompt,t.setAttribute("readonly",""),t.style.position="absolute",t.style.left="-9999px",document.body.appendChild(t),t.select();try{document.execCommand("copy")}finally{document.body.removeChild(t)}}this.showToast("Prompt copied.")}catch(t){console.error("Failed to copy portrait prompt:",t),this.showToast("Could not copy prompt.",5e3)}})},viewPortraitPrompt(t){return this.viewPortraitImageInfo(t)},async generateCustomAIPortrait(){const t=CharacterState.get().character;if(window.DemoCharacters&&DemoCharacters.isDemo(t))this.showSystemMessage("Custom art generation is not available for sample characters. Create your own character to generate custom portraits!");else if(t.race&&t.class){try{const t=await fetch(`${CONFIG.BACKEND_URL}/api/ai/status`);if(!t.ok)return void this.showSystemMessage("Backend server is not available. Make sure the backend is running on port 8000.");if(!(await t.json()).available)return void this.showSystemMessage("AI features are not available. The backend server is not configured.")}catch(t){return void this.showSystemMessage("Cannot connect to backend server. Make sure it is running on http://localhost:8000")}this.openPromptModal(t)}else this.showSystemMessage("Select both a race and a class before generating a custom portrait.")},async _ensurePreGeneratedPortraitFallback(t,e={}){const a=!(!e||!e.force);try{if(!window.AsciiArtService||!t||!t.race)return;const e=CharacterState.get(),r=e&&e.character?e.character:{};if(!a&&(r.customPortraitAscii||r.portrait&&(r.portrait.ascii||r.portrait.url)||r.asciiPortrait))return;const i=AsciiArtService.getFullPortrait?AsciiArtService.getFullPortrait(t):"";i&&window.CharacterState&&CharacterState.updateCharacter({customPortraitAscii:i,originalPortraitUrl:null,portrait:{...r.portrait||{},url:null}}),this._lastPortraitArt=null;const o=CharacterState.get().character;await this.updateCharacterPanel(o)}catch(t){console.error("Failed to apply fallback portrait:",t)}},async openPromptModal(t){const e=AIService.buildCharacterDescription?AIService.buildCharacterDescription(t):"";let a=null;try{const e=t.portraitMetadata||{},r=Array.isArray(e.versions)?e.versions:[];if(r.length){const t=e.activeVersionId;let i=t&&r.find(e=>e&&e.id===t)||r[r.length-1];i&&i.style&&(a=i.style)}!a&&window.StorageService&&"function"==typeof StorageService.getPortraitPromptTheme&&(a=StorageService.getPortraitPromptTheme())}catch(t){}const r=`\n      <div id="promptModal" class="modal show" onclick="App.closePromptModal(false)">\n        <div class="modal-content portrait-customize-modal" onclick="event.stopPropagation();">\n          <div class="modal-header">\n            <h2 class="modal-title">Customize portrait</h2>\n            <button class="modal-close" onclick="App.closePromptModal(false)">&times;</button>\n          </div>\n          <div class="modal-body">\n            <div class="portrait-style-row">\n              <div class="portrait-style-label">Style</div>\n              <div class="selector-shell selector-shell--listbox portrait-style-selector" id="builderPortraitStyleShell">\n                <button \n                  type="button"\n                  class="terminal-btn selector-trigger"\n                  id="builderPortraitStyleTrigger"\n                  aria-haspopup="listbox"\n                  aria-expanded="false"\n                  onclick="CharacterSheet.toggleSelectorMenu(this)"\n                >\n                  <span class="selector-trigger-label" id="builderPortraitStyleLabel">Cinematic inks</span>\n                </button>\n                <div class="selector-menu portrait-style-menu" id="builderPortraitStyleMenu" role="listbox" aria-label="Portrait style" aria-hidden="true">\n                  \x3c!-- Options populated by JS --\x3e\n                </div>\n              </div>\n            </div>\n            <div class="image-quota-info is-blinking" id="builderImageQuotaLine">Checking image quota\u2026</div>\n            <textarea\n              class="terminal-textarea portrait-prompt-textarea"\n              id="custom-prompt"\n              placeholder="Enter custom description..."\n            >${e}</textarea>\n          </div>\n          <div class="modal-footer modal-footer-end">\n            <button class="terminal-btn" onclick="App.surpriseMePortrait()">Surprise me</button>\n            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmPromptModal()">Generate portrait</button>\n          </div>\n        </div>\n      </div>\n    `;(document.querySelector(".app-root")||document.querySelector(".terminal-container")).insertAdjacentHTML("beforeend",r),await populateBuilderPortraitStyleDropdown(a);const i=document.getElementById("promptModal");i&&Utils.focusFirstFieldInModal&&Utils.focusFirstFieldInModal(i);try{const t=document.getElementById("builderImageQuotaLine"),e=t=>{const e=document.getElementById("builderImageQuotaLine");if(!e)return;const a=t&&"number"==typeof t.remaining?t.remaining:null,r=t&&"number"==typeof t.limit?t.limit:null,i=t&&t.resetAt?t.resetAt:null;let o="";if(i)try{const t=new Date(i),e=new Date,a=Math.max(0,Math.ceil((t-e)/36e5));a<=1?o=" (resets in ~1 hour)":a<24&&(o=" (resets in ~"+a+" hours)")}catch(t){}const n=document.querySelector("#promptModal .terminal-btn-primary"),s=document.querySelector("#promptModal .terminal-btn:not(.terminal-btn-primary)");return-1===a?(e.textContent="Image quota: unlimited (admin/dev)",n&&(n.disabled=!1,n.title=""),void(s&&(s.disabled=!1,s.title=""))):0===a&&null!=r?(e.textContent="Custom portraits left today: 0/"+r+o,n&&(n.disabled=!0,n.title="Daily custom portrait limit reached"),void(s&&(s.disabled=!0,s.title="Daily custom portrait limit reached"))):null!=a&&null!=r?(e.textContent="Custom portraits left today: "+a+"/"+r+o,n&&(n.disabled=!1,n.title=""),void(s&&(s.disabled=!1,s.title=""))):void(e.textContent="Image quota: unavailable")};if(this._promptModalQuotaHandler=t=>e(t&&t.detail),window.addEventListener("danddy:imageQuotaUpdate",this._promptModalQuotaHandler),window.AIService&&"function"==typeof AIService.getImageQuotaStatus){const a=await AIService.getImageQuotaStatus();t&&a&&e({limit:a.limit,remaining:a.remaining,resetAt:a.resetAt})}}catch(t){}this._promptModalEscHandler=t=>{"Escape"===t.key&&this.closePromptModal(!1)},document.addEventListener("keydown",this._promptModalEscHandler)},closePromptModal(t=!1){const e=document.getElementById("builderPortraitStyleTrigger");e&&e.classList.contains("is-open")&&window.CharacterSheet&&CharacterSheet.toggleSelectorMenu(e);const a=document.getElementById("promptModal");if(!a)return void(currentBuilderPortraitStyle=null);if(a.classList.contains("closing"))return;a.classList.add("closing");const r=a.querySelector(".modal-content")||a,i=()=>{if(a&&a.parentNode&&a.parentNode.removeChild(a),this._promptModalEscHandler&&(document.removeEventListener("keydown",this._promptModalEscHandler),this._promptModalEscHandler=null),this._promptModalQuotaHandler&&(window.removeEventListener("danddy:imageQuotaUpdate",this._promptModalQuotaHandler),this._promptModalQuotaHandler=null),currentBuilderPortraitStyle=null,t){const t=CharacterState.get();this.updateCharacterPanel(t.character)}};r&&r.addEventListener?r.addEventListener("animationend",i,{once:!0}):i()},async confirmPromptModal(){const t=document.getElementById("custom-prompt").value.trim(),e=currentBuilderPortraitStyle;if(!t)return void this.showSystemMessage("Portrait prompt cannot be empty.");this.closePromptModal(!1);const a=document.getElementById("character-portrait"),r=document.getElementById("original-portrait");if(a&&r){const t=a.closest(".portrait-container"),e=document.getElementById("toggle-portrait-btn");let i="original";try{window.StorageService&&StorageService.getPortraitViewMode?i=StorageService.getPortraitViewMode():"undefined"!=typeof CONFIG&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE&&(i=CONFIG.DEFAULT_PORTRAIT_VIEW_MODE)}catch(t){}const o=a.classList.contains("is-hidden"),n=!r.classList.contains("is-hidden"),s=!!t&&t.classList.contains("portrait-container--original-mode");if("original"===i&&o&&n&&s&&(a.classList.remove("is-hidden"),r.classList.add("is-hidden"),t&&t.classList.remove("portrait-container--original-mode"),e)){const t=e.querySelector(".selector-option-icon"),a=e.querySelector(".selector-option-label");t&&a?(t.textContent="\u25c9",a.textContent="View Original Art"):e.textContent="\u25c9 View Original Art"}}if(a){const t=document.getElementById("character-panel");t&&t.scrollTo({top:0,behavior:"smooth"}),this._renderPortraitGeneratingLoader(a)}try{const r=((CharacterState.get().character||{}).class||"default").toLowerCase(),{pose:i,camera:o}=window.PortraitPoseData&&"function"==typeof PortraitPoseData.getRandomPoseAndCamera?PortraitPoseData.getRandomPoseAndCamera(r):{pose:"standing in a relaxed but heroic stance",camera:"Camera angle: three-quarter view that clearly shows the full silhouette."};let n;n="undefined"!=typeof window&&window.PortraitPrompt&&"function"==typeof window.PortraitPrompt.buildCustomPortraitInstructions?window.PortraitPrompt.buildCustomPortraitInstructions({posePrompt:i,cameraPrompt:o,themeId:e}):["Create a high-contrast black-and-white fantasy illustration.","Use bold shadow shapes, strong silhouettes, and clean white highlights.","Include some controlled, directional hatching to define form (light mid-tone texture only).",`Pose: ${i}`,"Background should be simple, entirely black, and free of symbols or text.","Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.","Aspect ratio 3:4."];const s=3900;let l=[t,...n].join(" ");if(l.length>s){console.warn(`Portrait prompt exceeds ${s} chars (${l.length}), truncating...`);const e=n.join(" "),a=s-t.length-50;if(a>200){l=e.substring(0,a)+" "+t}else{const e="High-contrast black-and-white fantasy ink illustration.";l=e+" "+t.substring(0,s-e.length-1)}console.log(`Truncated prompt length: ${l.length}`)}const c=await AsciiArtService.generateCustomAIPortraitWithPrompt(l),d=CharacterState.get().character,u=d.customPortraitCount||0;let h="dall-e-3",p=null;try{window.StorageService&&"function"==typeof StorageService.getImageModel?h=StorageService.getImageModel():"undefined"!=typeof CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL&&(h=CONFIG.DEFAULT_IMAGE_MODEL),window.StorageService&&"function"==typeof StorageService.getImageQuality&&(p=StorageService.getImageQuality(h))}catch(t){}const m=window.PortraitHistory?window.PortraitHistory.addVersion(d,c.asciiArt,c.imageUrl,{source:"custom-ai",prompt:l,style:e,model:h,quality:p}):d.portraitMetadata||{};CharacterState.updateCharacter({originalPortraitUrl:c.imageUrl,customPortraitAscii:c.asciiArt,customPortraitCount:u+1,portraitMetadata:m}),a&&(this._stopPortraitLoadingAnimation(),a.style.fontSize="",a.classList.remove("ascii-portrait--loading","ascii-portrait--placeholder")),this._lastPortraitArt=null;const g=CharacterState.get();await this.updateCharacterPanel(g.character)}catch(t){if(console.error("Error generating custom AI portrait with prompt:",t),t.isSafetyRejection){console.group("\ud83d\udeab OpenAI Content Safety Rejection - Custom Prompt Mode"),console.error("Rejected prompt:",t.rejectedPrompt||"Unknown"),console.error("Original error:",t.originalMessage),t.promptAnalysis&&console.log("Analysis included above \u2191"),console.groupEnd();let e="OpenAI flagged this portrait request. ";if(t.promptAnalysis&&t.promptAnalysis.hasKnownProblematicTerms){e+=`Possible triggers: ${t.promptAnalysis.potentialIssues.map(t=>t.category).join(", ")}. `}e+="Check browser console for detailed analysis and suggestions.",this.showSystemMessage(e)}else t.isRateLimit?this.showSystemMessage("You've reached today's portrait limit, so we're using a simple fallback portrait for now. You can create a custom one tomorrow from the character sheet."):this.showSystemMessage("AI portrait generation failed, so we're using a simple fallback portrait for now. You can still create a custom one later from the character sheet.");const e=CharacterState.get();a&&(a.style.fontSize="",a.classList.remove("ascii-portrait--loading","ascii-portrait--placeholder")),await this._ensurePreGeneratedPortraitFallback(e.character,{force:!(e.character&&(e.character.customPortraitAscii||e.character.asciiPortrait||e.character.portrait&&(e.character.portrait.ascii||e.character.portrait.url)))})}},async surpriseMePortrait(){const t=CharacterState.get(),e=t&&t.character?t.character:{};if(!e.race||!e.class)return void this.showSystemMessage("Select a race and class first.");let a="";try{a=window.AIService&&"function"==typeof AIService.buildCharacterDescription?AIService.buildCharacterDescription(e):`${e.race} ${e.class}`}catch(t){a=`${e.race} ${e.class}`}const r=document.getElementById("custom-prompt");r&&(r.value=a),await this.confirmPromptModal()},togglePortraitView(){const t=document.getElementById("character-portrait"),e=document.getElementById("original-portrait"),a=document.getElementById("toggle-portrait-btn"),r=t?t.closest(".portrait-container"):null;if(!t||!e||!a)return;const i=!t.classList.contains("is-hidden"),o=a.querySelector(".selector-option-icon"),n=a.querySelector(".selector-option-label");i?(t.classList.add("is-hidden"),e.classList.remove("is-hidden"),r&&r.classList.add("portrait-container--original-mode"),o&&n?(o.textContent="\u2261",n.textContent="View ASCII Art"):a.textContent="\u2261 View ASCII Art",a.title="Toggle between ASCII and original art"):(t.classList.remove("is-hidden"),e.classList.add("is-hidden"),r&&r.classList.remove("portrait-container--original-mode"),o&&n?(o.textContent="\u25c9",n.textContent="View Original Art"):a.textContent="\u25c9 View Original Art",a.title="Toggle between ASCII and original art")},_applyPreferredPortraitViewBuilder(t){try{const e=document.getElementById("character-portrait"),a=document.getElementById("original-portrait");if(!e||!a)return;const r=e.closest(".portrait-container");let i="original";try{window.StorageService&&StorageService.getPortraitViewMode?i=StorageService.getPortraitViewMode():"undefined"!=typeof CONFIG&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE&&(i=CONFIG.DEFAULT_PORTRAIT_VIEW_MODE)}catch(t){}let o=!1;try{o=window.CharacterSheet&&"function"==typeof CharacterSheet.getOriginalPortraitUrl?!!CharacterSheet.getOriginalPortraitUrl(t):!!a.getAttribute("src")}catch(t){o=!!a.getAttribute("src")}"original"===i&&o?(e.classList.add("is-hidden"),a.classList.remove("is-hidden"),r&&r.classList.add("portrait-container--original-mode")):(e.classList.remove("is-hidden"),a.classList.add("is-hidden"),r&&r.classList.remove("portrait-container--original-mode"))}catch(t){console.warn("App._applyPreferredPortraitViewBuilder failed",t)}},_guestSaveNoticeShown:!1,async saveCharacter(t=!0){const e=CharacterState.get().character;if(e&&window.StorageService)if(e.name&&e.race&&e.class)try{console.log("\ud83d\udcbe Saving character to shared storage (explicit save)..."),this._suppressNextPortraitAnimation=!0;const a=this.buildCompleteCharacter(e),r=await window.StorageService.saveCharacter(a);CharacterState.updateCharacter(r),CharacterState.clearSession(),t&&this.showToast("Character saved");const i=document.getElementById("completion-new-btn");i&&i.focus(),this._guestSaveNoticeShown||!window.AuthService||window.AuthService.isAuthenticated()||(this._guestSaveNoticeShown=!0,sessionStorage.setItem("showGuestNoticeOnReturn","true"),setTimeout(()=>{this.showNotification("Log in or create an account to save your character to the cloud","info")},1e3))}catch(t){console.error("Error saving character:",t),this.showSystemMessage("Save failed: "+t.message)}else t&&this.showSystemMessage("Character must have at least a name, race, and class before saving.");else this.showSystemMessage("Unable to save character right now. Please try again shortly.")},async saveAndExit(){const t=CharacterState.get().character;if(t&&window.StorageService)if(t.name&&t.race&&t.class)try{console.log("\ud83d\udcbe Saving character and exiting..."),this._suppressNextPortraitAnimation=!0;const e=this.buildCompleteCharacter(t),a=await window.StorageService.saveCharacter(e);CharacterState.updateCharacter(a),CharacterState.clearSession(),this.showToast("Character saved"),this._guestSaveNoticeShown||!window.AuthService||window.AuthService.isAuthenticated()||(this._guestSaveNoticeShown=!0,sessionStorage.setItem("showGuestNoticeOnReturn","true")),setTimeout(()=>{window.suppressBeforeunloadWarning(),window.location.href="index.html?from=builder"},500)}catch(t){console.error("Error saving character:",t),this.showSystemMessage("Save failed: "+t.message)}else this.showSystemMessage("Character must have at least a name, race, and class before saving.");else this.showSystemMessage("Unable to save character right now. Please try again shortly.")},buildCompleteCharacter(t){const e=DND_DATA.races.find(e=>e.id===t.race),a=DND_DATA.classes.find(e=>e.id===t.class),r=DND_DATA.backgrounds.find(e=>e.id===t.background),i={str:Utils.abilityModifier(t.abilities.str),dex:Utils.abilityModifier(t.abilities.dex),con:Utils.abilityModifier(t.abilities.con),int:Utils.abilityModifier(t.abilities.int),wis:Utils.abilityModifier(t.abilities.wis),cha:Utils.abilityModifier(t.abilities.cha)},o=Math.ceil(t.level/4)+1,n=i.dex,s=null!=t.armorClass?t.armorClass:KeyboardNav.calculateArmorClassForClass(t.class,t.abilities,t.armorCategory,t.hasShield),l=e?.speed||30,c=t.hitPoints||(a?a.hitDie+i.con:0),d={};t.skillProficiencies&&t.skillProficiencies.forEach(t=>{const e=this.getSkillAbility(t),a=i[e];d[t]=a+o});const u=KeyboardNav.getStartingArmorItems(t.class,t.armorCategory,t.hasShield),h=[...t.equipment||[]];if(u.forEach(t=>{h.includes(t)||h.push(t)}),a?.isMartial){const t=["weapon","sword","axe","mace","hammer","spear","dagger","bow","crossbow","rapier","scimitar","javelin","glaive","halberd","pike","trident","whip","flail","morningstar","quarterstaff","sickle","club","greatclub","handaxe","light hammer","sling","dart","shortbow","longbow","martial arts","simple weapons","martial weapons"];!h.some(e=>t.some(t=>e.toLowerCase().includes(t)))&&a.equipment&&a.equipment.forEach(e=>{t.some(t=>e.toLowerCase().includes(t))&&!h.includes(e)&&h.push(e)})}const p=document.getElementById("character-portrait"),m=p?p.querySelector("pre"):null,g=m?m.textContent:p?p.textContent.trim():null,y=t.portrait?.url||t.portraitUrl||t.originalPortraitUrl||null,f=t.customPortraitAscii||t.asciiPortrait||g||null;let w=t.characterUid;return w||(w=`danddy_${Date.now()}_${Math.random().toString(36).substr(2,9)}`,window.CharacterState?window.CharacterState.updateCharacter({characterUid:w}):t.characterUid=w),{metadata:{exportVersion:"1.1",exportDate:(new Date).toISOString(),exportedBy:"DandDy Character Builder v1.4",characterUid:w,source:"builder"},...t,portrait:f||y?{ascii:f,url:y}:null,abilityModifiers:i,proficiencyBonus:o,initiative:n,armorClass:s,speed:l,hitPoints:c,armorCategory:t.armorCategory||null,hasShield:!!t.hasShield,skillModifiers:d,savingThrows:a?.savingThrows||[],savingThrowModifiers:this.calculateSavingThrows(i,a?.savingThrows||[],o),raceData:e?{name:e.name,size:e.size,speed:e.speed,traits:e.traits,languages:e.languages}:null,classData:a?{name:a.name,hitDie:a.hitDie,primaryAbility:a.primaryAbility,savingThrows:a.savingThrows,skills:a.skills,equipment:a.equipment,spellcaster:a.spellcaster||!1}:null,backgroundData:r?{name:r.name,description:r.description,feature:r.feature,skillProficiencies:r.skillProficiencies,toolProficiencies:r.toolProficiencies,languages:r.languages,equipment:r.equipment}:null,equipment:h,portrait:{ascii:g,original:y}}},getSkillAbility:t=>({acrobatics:"dex","animal-handling":"wis",arcana:"int",athletics:"str",deception:"cha",history:"int",insight:"wis",intimidation:"cha",investigation:"int",medicine:"wis",nature:"int",perception:"wis",performance:"cha",persuasion:"cha",religion:"int","sleight-of-hand":"dex",stealth:"dex",survival:"wis"}[t]||"str"),calculateSavingThrows(t,e,a){const r={};return["str","dex","con","int","wis","cha"].forEach(i=>{const o=e.includes(i);r[i]=t[i]+(o?a:0)}),r},printCharacterSheet(){const t=document.getElementById("character-panel");t&&t.querySelector(".character-sheet")?window.print():this.showSystemMessage("No character sheet to print yet.")},showSystemMessage(t){const e=document.getElementById("narrator-panel");e&&(e.insertAdjacentHTML("beforeend",Components.renderNarratorMessage(`<span class="text-warning">[ SYSTEM ] ${t}</span>`)),Utils.scrollToBottom(!0))},showToast(t,e=4e3){const a=(null==t?"":String(t)).replace(/^[\s\u200b]*(?:[\u2713\u2714\u2715\u2716\u2717\u2605\u26a0\ud83d\udca1\u274c\u23f0\ud83d\udd0c]+[\s\u00a0\u200b]*)+/u,"").trim().replace(/!{2,}/g,"!").replace(/!+(\s*[\.\)])?$/u,"$1").trim();let r=document.getElementById("toastNotification");if(!r){r=document.createElement("div"),r.id="toastNotification",r.className="toast-notification",r.setAttribute("role","status"),r.setAttribute("aria-live","polite"),r.innerHTML='\n        <span class="toast-message"></span>\n        <div class="toast-dismiss-wrapper">\n          <button type="button" class="toast-dismiss" aria-label="Dismiss notification">\n            <span class="toast-dismiss-icon">&times;</span>\n          </button>\n        </div>\n      ';(document.querySelector(".app-root")||document.querySelector(".terminal-container")||document.body).appendChild(r);const t=r.querySelector(".toast-dismiss");t&&t.addEventListener("click",()=>{r.classList.remove("show"),App._toastShowTimeout&&(clearTimeout(App._toastShowTimeout),App._toastShowTimeout=null),App._toastTimeout&&(clearTimeout(App._toastTimeout),App._toastTimeout=null)})}const i=r.querySelector(".toast-message");i?i.textContent=a:r.textContent=a,App._toastShowTimeout&&(clearTimeout(App._toastShowTimeout),App._toastShowTimeout=null),App._toastTimeout&&(clearTimeout(App._toastTimeout),App._toastTimeout=null),r.classList.remove("show"),r.offsetWidth,App._toastShowTimeout=setTimeout(()=>{r.classList.add("show"),App._toastShowTimeout=null,App._toastTimeout=setTimeout(()=>{r.classList.remove("show"),App._toastTimeout=null},e)},80)},openLevelModal(){const t=CharacterState.get().character;if(!t.race||!t.class)return void this.showSystemMessage("Select a race and class before changing level.");const e=`\n      <div id="levelModal" class="modal show" onclick="App.closeLevelModal()">\n        <div class="modal-content" onclick="event.stopPropagation();">\n          <div class="modal-header">\n            <h2 class="modal-title">Change Character Level</h2>\n            <button class="modal-close" onclick="App.closeLevelModal()">&times;</button>\n          </div>\n          <div class="modal-body">\n            <p class="terminal-text">\n              Changing level will <span class="terminal-text-strong">adjust your ability scores and hit points</span>\n              as if your character had gained Ability Score Increases at higher levels.\n            </p>\n            <p class="terminal-text-small terminal-text-dim">\n              This cannot be undone. Choose a new level between 1 and 99.\n            </p>\n            <div class="level-modal-row modal-section">\n              <label for="level-input" class="terminal-text-small modal-section-label">New Level:</label>\n              <input\n                type="number"\n                id="level-input"\n                class="terminal-input"\n                min="1"\n                max="99"\n                value="${t.level||1}"\n                data-1p-ignore\n              >\n            </div>\n            <div id="level-modal-error" class="terminal-text-error level-modal-error is-hidden"></div>\n          </div>\n          <div class="modal-footer modal-footer-end">\n            <button class="terminal-btn" onclick="App.closeLevelModal()">Cancel</button>\n            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmLevelModal()">Apply level</button>\n          </div>\n        </div>\n      </div>\n    `;(document.querySelector(".app-root")||document.querySelector(".terminal-container")).insertAdjacentHTML("beforeend",e);const a=document.getElementById("levelModal");a&&Utils.focusFirstFieldInModal&&Utils.focusFirstFieldInModal(a),this._levelModalEscHandler=t=>{"Escape"===t.key&&this.closeLevelModal()},document.addEventListener("keydown",this._levelModalEscHandler)},closeLevelModal(){const t=document.getElementById("levelModal");if(!t)return void(this._levelModalEscHandler&&(document.removeEventListener("keydown",this._levelModalEscHandler),this._levelModalEscHandler=null));const e=t.querySelector(".modal-content")||t,a=()=>{t&&t.parentNode&&t.parentNode.removeChild(t),this._levelModalEscHandler&&(document.removeEventListener("keydown",this._levelModalEscHandler),this._levelModalEscHandler=null)};t.classList.contains("closing")||t.classList.add("closing"),e&&e.addEventListener?e.addEventListener("animationend",a,{once:!0}):a()},async confirmLevelModal(){const t=document.getElementById("level-input");if(!t)return void this.closeLevelModal();const e=document.getElementById("level-modal-error");let a=parseInt(t.value,10);if(isNaN(a)||a<1||a>99)return r="Level must be a number between 1 and 99.",void(e&&(e.textContent=r,e.style.display="block"));var r;e&&(e.textContent="",e.style.display="none"),this.closeLevelModal(),await this.applyLevelChange(a)},async applyLevelChange(t){const e=CharacterState.get().character;if(!e.race||!e.class)return void this.showSystemMessage("Select a race and class before changing level.");const a=DND_DATA.classes.find(t=>t.id===e.class),r=DND_DATA.races.find(t=>t.id===e.race);if(!a||!r)return void this.showSystemMessage("Unable to change level because race or class data is missing.");let i={...e.baseAbilities||e.abilities};let o=2*[4,8,12,16,19].filter(e=>e<=t).length;const n=a.primaryAbility?.[0]||"str",s=a.primaryAbility?.[1]||null;for(;o>0;){const t=[];if(i[n]<20&&t.push(n),s&&i[s]<20&&t.push(s),0===t.length)break;i[t[0]]+=1,o-=1}const l=Utils.abilityModifier(i.con),c=a.hitDie+l,d=Math.floor(a.hitDie/2)+1,u=Math.max(1,d+l),h=t<=1?c:c+(t-1)*u,p=KeyboardNav.calculateArmorClassForClass(e.class,i,e.armorCategory,e.hasShield);CharacterState.updateCharacter({level:t,abilities:i,hitPoints:h,armorClass:p}),this.showSystemMessage(`Level set to ${t}. Ability scores and hit points have been re-rolled.`),await this.persistIfAlreadySaved()},openNameModal(){const t=`\n      <div id="nameModal" class="modal show" onclick="App.closeNameModal()">\n        <div class="modal-content" onclick="event.stopPropagation();">\n          <div class="modal-header">\n            <h2 class="modal-title">Change Character Name</h2>\n            <button class="modal-close" onclick="App.closeNameModal()">&times;</button>\n          </div>\n          <div class="modal-body">\n            <p class="terminal-text">\n              Enter a new name for your character.\n            </p>\n            <div class="name-modal-row modal-section">\n              <label for="name-input" class="terminal-text-small modal-section-label">New Name:</label>\n              <input\n                type="text"\n                id="name-input"\n                class="terminal-input name-modal-input"\n                value="${CharacterState.get().character.name||""}"\n                placeholder="Enter character name"\n                data-1p-ignore\n              >\n            </div>\n            <div id="name-modal-error" class="terminal-text-error name-modal-error is-hidden"></div>\n          </div>\n          <div class="modal-footer modal-footer-end">\n            <button class="terminal-btn" onclick="App.closeNameModal()">Cancel</button>\n            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmNameModal()">Apply name</button>\n          </div>\n        </div>\n      </div>\n    `;(document.querySelector(".app-root")||document.querySelector(".terminal-container")).insertAdjacentHTML("beforeend",t);const e=document.getElementById("nameModal");e&&Utils.focusFirstFieldInModal&&Utils.focusFirstFieldInModal(e),this._nameModalEscHandler=t=>{"Escape"===t.key&&this.closeNameModal()},document.addEventListener("keydown",this._nameModalEscHandler)},closeNameModal(){const t=document.getElementById("nameModal");if(!t)return void(this._nameModalEscHandler&&(document.removeEventListener("keydown",this._nameModalEscHandler),this._nameModalEscHandler=null));const e=t.querySelector(".modal-content")||t,a=()=>{t&&t.parentNode&&t.parentNode.removeChild(t),this._nameModalEscHandler&&(document.removeEventListener("keydown",this._nameModalEscHandler),this._nameModalEscHandler=null)};t.classList.contains("closing")||t.classList.add("closing"),e&&e.addEventListener?e.addEventListener("animationend",a,{once:!0}):a()},async confirmNameModal(){const t=document.getElementById("name-input");if(!t)return void this.closeNameModal();const e=document.getElementById("name-modal-error"),a=t.value.trim();if(!a)return r="Name cannot be empty.",void(e&&(e.textContent=r,e.style.display="block"));var r;e&&(e.textContent="",e.style.display="none"),this.closeNameModal(),await this.applyNameChange(a)},async applyNameChange(t){CharacterState.updateCharacter({name:t});document.getElementById("narrator-panel").insertAdjacentHTML("beforeend",Components.renderNarratorMessage(`Character renamed to "${t}". Identity crisis averted.`)),Utils.scrollToBottom(!0),await this.persistIfAlreadySaved()},async _generateQuickCreatePortrait(){try{const t=CharacterState.get().character||{};if(!(CONFIG.ENABLE_AI&&t.race&&t.class&&window.AsciiArtService))return;await new Promise(t=>requestAnimationFrame(()=>requestAnimationFrame(t)));let e=document.getElementById("character-portrait");if(!e)for(let t=0;t<5&&!e;t++)await Utils.sleep(100),e=document.getElementById("character-portrait");e&&this._renderPortraitGeneratingLoader(e);const a=await AsciiArtService.generateCustomAIPortrait(t,{creationGrantId:t&&t.portraitGrantId});if(a&&a.asciiArt){const e=t.customPortraitCount||0;let r=null;try{window.StorageService&&"function"==typeof StorageService.getPortraitPromptTheme&&(r=StorageService.getPortraitPromptTheme())}catch(t){}let i="dall-e-3",o=null;try{window.StorageService&&"function"==typeof StorageService.getImageModel?i=StorageService.getImageModel():"undefined"!=typeof CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL&&(i=CONFIG.DEFAULT_IMAGE_MODEL),window.StorageService&&"function"==typeof StorageService.getImageQuality&&(o=StorageService.getImageQuality(i))}catch(t){}const n=window.PortraitHistory?window.PortraitHistory.addVersion(t,a.asciiArt,a.imageUrl||null,{source:"quick-ai",prompt:AIService.buildPortraitPrompt&&AIService.buildPortraitPrompt(t)||null,style:r,model:i,quality:o}):t.portraitMetadata||{};CharacterState.updateCharacter({originalPortraitUrl:a.imageUrl||null,customPortraitAscii:a.asciiArt,customPortraitCount:e+1,portraitMetadata:n,portraitGrantId:null}),this._lastPortraitArt=null}}catch(t){if(console.error("Quick-create AI portrait generation error:",t),t.isSafetyRejection){console.group("\ud83d\udeab OpenAI Content Safety Rejection - Quick Create Mode"),console.error("Rejected prompt:",t.rejectedPrompt||"Unknown"),console.error("Original error:",t.originalMessage),t.promptAnalysis&&console.log("Analysis included above \u2191"),console.groupEnd();let e="OpenAI flagged this portrait request. ";if(t.promptAnalysis&&t.promptAnalysis.hasKnownProblematicTerms){e+=`Possible triggers: ${t.promptAnalysis.potentialIssues.map(t=>t.category).join(", ")}. `}e+="Check browser console for detailed analysis and suggestions.",this.showSystemMessage(e)}else t.isRateLimit?this.showSystemMessage("You've reached today's portrait limit, so we're using a simple fallback portrait for now. You can create a custom one tomorrow from the character sheet."):this.showSystemMessage("AI portrait generation failed, so we're using a simple fallback portrait for now. You can still create a custom one later from the character sheet.");await this._ensurePreGeneratedPortraitFallback(currentChar,{force:!0})}finally{this._stopPortraitLoadingAnimation();const t=document.getElementById("character-portrait");t&&(t.style.fontSize="",t.classList.remove("ascii-portrait--loading","ascii-portrait--placeholder"))}},async quickCreateCharacter(){const t=document.getElementById("narrator-panel");if(!t)return;const e=t.querySelector(".builder-panel-header");t.innerHTML="",e&&t.appendChild(e),this._lastPortraitArt=null,window.CharacterState&&"function"==typeof CharacterState.updateCharacter&&CharacterState.updateCharacter({asciiPortrait:null,asciiPortraitKey:null,customPortraitAscii:null,originalPortraitUrl:null,portrait:null,portraitMetadata:null,customPortraitCount:0});const a=StorageService.getNarratorId(),r=getNarrator(a);t.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const i=t.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(i,r.quickCreateIntro),Utils.scrollToBottom(!0);const o=Utils.randomChoice(DND_DATA.races),n=Utils.randomChoice(DND_DATA.classes),s=Utils.randomChoice(DND_DATA.backgrounds),l=Utils.randomChoice(DND_DATA.alignments),c=Utils.randomChoice(["male","female"]);let d={str:this.rollAbility(),dex:this.rollAbility(),con:this.rollAbility(),int:this.rollAbility(),wis:this.rollAbility(),cha:this.rollAbility()};Object.keys(o.abilityBonuses).forEach(t=>{d[t]+=o.abilityBonuses[t]});const{armorCategory:u,hasShield:h}=KeyboardNav.inferArmorLoadoutForClass(n.id),p=Utils.abilityModifier(d.con),m=n.hitDie+p,g=KeyboardNav.calculateArmorClassForClass(n.id,d,u,h);let y="",f="";t.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const w=t.lastElementChild.querySelector(".narrator-text");this.showProgressiveThinking(w);try{const t={race:o.id,class:n.id,background:s.id,alignment:l.id,sex:c},e=await AIService.generateCharacterSummary(t,{nameCount:3});e&&Array.isArray(e.names)&&e.names.length&&(y=Utils.randomChoice(e.names)),e&&e.backstoryTemplate&&(f=e.backstoryTemplate.replace(/\{\{NAME\}\}/g,y||"The adventurer")),e&&e.portraitGrantId&&CharacterState.updateCharacter({portraitGrantId:e.portraitGrantId})}catch(t){console.error("Quick create summary error:",t)}if(this.stopProgressiveThinking(),w.parentElement.remove(),!y){const t=["Ashen Vale","Rin Thorn","Kael Brightwind","Lyra Nightbloom"];y=Utils.randomChoice(t)}f||(f="A mysterious past, a questionable present, and a future that depends entirely on your dice."),this._quickCreatePortraitPending=!0,CharacterState.updateCharacter({race:o.id,class:n.id,background:s.id,alignment:l.id,sex:c,baseAbilities:{...d},abilities:d,hitPoints:m,armorClass:g,armorCategory:u,hasShield:h,name:y,backstory:f,skillProficiencies:s.skillProficiencies||[],toolProficiencies:s.toolProficiencies||[],equipment:s.equipment||[],backgroundFeature:s.feature||null,languageChoices:s.languages||0}),CharacterState.set({abilityMethod:"roll"}),t.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const v=t.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(v,r.quickCreateSummary(o.name,n.name,s.name,l.name,c.charAt(0).toUpperCase()+c.slice(1))),Utils.scrollToBottom(!0),t.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const b=t.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(b,r.quickCreateName(y)),Utils.scrollToBottom(!0);const S=document.getElementById("character-portrait");S&&this._renderPortraitGeneratingLoader(S),this._quickCreatePortraitPending=!1,this._quickCreatePortraitGeneration=this._generateQuickCreatePortrait(),t.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const A=t.lastElementChild.querySelector(".narrator-text");if(await Utils.typewriter(A,f),Utils.scrollToBottom(!0),A.classList.add("is-waiting"),await Utils.sleep(1500),A.classList.remove("is-waiting"),"undefined"!=typeof SPELL_DATA&&SPELL_DATA.isSpellcaster(n.id)){const e=SPELL_DATA.getQuickModeSpells(n.id);if(e){const a=SPELL_DATA.getSpellcastingConfig(n.id);CharacterState.updateCharacter({spellcastingAbility:a.ability,cantrips:e.cantrips,spellsKnown:e.firstLevel,spellsPrepared:a.preparedSpells?e.firstLevel:[],spellSlots:a.spellSlots}),t.insertAdjacentHTML("beforeend",Components.renderNarratorMessage("")),Utils.scrollToBottom(!0);const r=t.lastElementChild.querySelector(".narrator-text");await Utils.typewriter(r,`> Auto-selected ${e.cantrips.length} cantrip${1!==e.cantrips.length?"s":""} and ${e.firstLevel.length} 1st level spell${1!==e.firstLevel.length?"s":""} for your ${n.name}.`),Utils.scrollToBottom(!0),await Utils.sleep(1e3)}}if(this._quickCreatePortraitGeneration){try{await this._quickCreatePortraitGeneration}catch(t){}this._quickCreatePortraitGeneration=null}const C=QUESTIONS.find(t=>"complete"===t.id);C&&await this.showComplete(C)},startNew(){const t=CharacterState.get().character,e=t&&t.name&&t.race&&t.class;t&&!t.id&&e?this.showConfirmationOverlay("You have not saved this character yet. What would you like to do?",async()=>{await this.saveCharacter(!0);const t=CharacterState.get().character;t&&t.id?this._startNewInternal():this.showSystemMessage("Character was not saved. Staying on the current character.")},()=>{this._startNewInternal()},{primaryLabel:"SAVE",secondaryLabel:"DISCARD",primaryClass:"terminal-btn"}):this._startNewInternal()},_startNewInternal(){const t=document.getElementById("narrator-panel");document.getElementById("character-panel");if(t){const e=t.querySelector(".builder-panel-header");t.innerHTML="",e&&t.appendChild(e)}CharacterState.reset(),OptionVariationsCache.reset(),window.AIService&&"function"==typeof AIService.resetNarratorSession&&AIService.resetNarratorSession(),this._lastPortraitArt=null,this.showQuestion("entry-mode")},showConfirmationOverlay(t,e,a,r){void 0===r&&"object"==typeof a&&null!==a&&(r=a,a=null);(r=r||{}).targetSelector;const i=r.primaryLabel||"YES",o=void 0===r.secondaryLabel?"NO":r.secondaryLabel,n=Boolean(r.hideSecondary),s=r.primaryClass||"terminal-btn terminal-btn-primary",l=r.secondaryClass||"terminal-btn",c=r.title||"Confirm";KeyboardNav.deactivate();const d=`\n      <div id="confirmationModal" class="modal show confirmation-overlay">\n        <div class="modal-content" onclick="event.stopPropagation();">\n          <div class="modal-header">\n            <h2 class="modal-title">${c}</h2>\n          </div>\n          <div class="modal-body">\n            <p class="terminal-text">\n              ${t}\n            </p>\n          </div>\n          <div class="modal-footer modal-footer-end">\n            ${n||null===o?"":`<button class="${l}" id="confirm-no">${o}</button>`}\n            <button class="${s}" id="confirm-yes">${i}</button>\n          </div>\n        </div>\n      </div>`;(document.querySelector(".terminal-container")||document.querySelector(".app-root")||document.body).insertAdjacentHTML("beforeend",d);const u=document.getElementById("confirmationModal"),h=document.getElementById("confirm-yes"),p=document.getElementById("confirm-no");u.classList.add("just-opened"),setTimeout(()=>{u&&u.classList&&u.classList.remove("just-opened")},0),h&&h.focus();const m=t=>{if(!u||u.classList.contains("closing"))return;u.classList.add("closing");const e=u.querySelector(".modal-content")||u;let a=!1;const r=()=>{a||(a=!0,u&&u.parentNode&&u.parentNode.removeChild(u),KeyboardNav.activate(),"function"==typeof t&&t())};e&&e.addEventListener?(e.addEventListener("animationend",r,{once:!0}),setTimeout(r,400)):r()};h.addEventListener("click",()=>{m(e)}),p&&p.addEventListener("click",()=>{m(a)})},async showChangeConfirmation(t,e,a){const r=`.question-card[data-question-id="${t}"]`;this.showConfirmationOverlay("Changing this answer will reset subsequent choices. Are you sure?",async()=>{const i=CharacterState.get();for(let e=QUESTIONS.findIndex(e=>e.id===t);e<QUESTIONS.length;e++){const t=QUESTIONS[e];delete i.answers[t.id],t.saveTo&&CharacterState.updateCharacter({[t.saveTo]:""})}const o=document.getElementById("narrator-panel");if(o){const t=o.querySelector(r);if(t){const e=Array.from(o.children),a=e.indexOf(t);if(-1!==a){const r=e.slice(a+1),i=400;r.forEach(t=>{t.classList.add("fade-out"),setTimeout(()=>{t.parentNode&&t.remove()},i)}),await Utils.sleep(i+50),t.scrollIntoView({behavior:"smooth",block:"center"})}}}i.recommendations={},OptionVariationsCache.reset(),a?await this.handleListAnswer(t,e):await this.handleAnswer(t,e)},{targetSelector:r})},updateStatus(t){const e=document.getElementById("status-text");e&&(e.textContent=t)},async updateCharacterPanel(t){const e=document.getElementById("character-panel");let a=null,r=null;try{if(window.CharacterState&&"function"==typeof CharacterState.get){const t=CharacterState.get();a=t?.answers?.["entry-mode"]||null,r=t?.currentQuestionId||null}}catch(t){a=null,r=null}const i="quick"===a,o="guided"===a,n="complete"===r;if(this._portraitAnimating)this._pendingCharacterUpdate=t;else{try{const e=JSON.stringify(t);if(this._lastRenderedCharacter===e)return;this._lastRenderedCharacter=e}catch(t){}if(t.race){if(i||o){const a=t.customPortraitAscii||null,r=!(!a||this._suppressNextPortraitAnimation||this._lastPortraitArt&&this._lastPortraitArt===a);this._lastPortraitArt=a||null,this._suppressNextPortraitAnimation=!1;const i=!!a,o=!!this._quickCreatePortraitGeneration||!!this._guidedPortraitGenerating||!!this._quickCreatePortraitPending,s=document.getElementById("character-portrait"),l=s&&s.querySelector(".portrait-placeholder-cube--generating"),c=o&&l?s.innerHTML:null,d=!n||o||!i;e.innerHTML=Components.renderCharacterSheet(t,null,!0,{showGeneratePortraitButton:i,hideOverflowMenu:d});const u=document.getElementById("character-portrait"),h=document.getElementById("original-portrait");if(o&&u){c?u.innerHTML=c:this._renderPortraitGeneratingLoader(u),u.classList.add("ascii-portrait--placeholder"),u.classList.add("ascii-portrait--loading"),u.classList.remove("is-hidden"),h&&h.classList.add("is-hidden");const t=u.closest(".portrait-container");t&&t.classList.remove("portrait-container--original-mode")}return h&&t.originalPortraitUrl&&!o&&(h.src=t.originalPortraitUrl),u&&a&&(r?(this._portraitAnimating=!0,this.typePortrait(u,a).then(async()=>{if(this._portraitAnimating=!1,this._pendingCharacterUpdate){const t=this._pendingCharacterUpdate;this._pendingCharacterUpdate=null,await this.updateCharacterPanel(t)}})):window.CharacterSheet&&"function"==typeof CharacterSheet.setPortraitContent&&CharacterSheet.setPortraitContent(u,a)),void this._applyPreferredPortraitViewBuilder(t)}try{const a=await AsciiArtService.generateAIPortrait(t);if(this._portraitAnimating)return;const r=!(this._suppressNextPortraitAnimation||this._lastPortraitArt&&this._lastPortraitArt===a);r&&(this._portraitAnimating=!0),this._lastPortraitArt=a,this._suppressNextPortraitAnimation=!1,e.innerHTML=Components.renderCharacterSheet(t,a,!0,{hideOverflowMenu:!n});const i=document.getElementById("character-portrait"),o=document.getElementById("original-portrait");if(o&&t.originalPortraitUrl&&(o.src=t.originalPortraitUrl),i&&a)if(r){if(await this.typePortrait(i,a),this._portraitAnimating=!1,this._pendingCharacterUpdate){const t=this._pendingCharacterUpdate;this._pendingCharacterUpdate=null,await this.updateCharacterPanel(t)}}else window.CharacterSheet&&"function"==typeof CharacterSheet.setPortraitContent&&CharacterSheet.setPortraitContent(i,a)}catch(a){if(console.error("Error generating portrait:",a),this._portraitAnimating)return;const r=AsciiArtService.getFullPortrait(t),i=!(this._suppressNextPortraitAnimation||this._lastPortraitArt&&this._lastPortraitArt===r);i&&(this._portraitAnimating=!0),this._lastPortraitArt=r,this._suppressNextPortraitAnimation=!1,e.innerHTML=Components.renderCharacterSheet(t,r,!0,{hideOverflowMenu:!n});const o=document.getElementById("character-portrait"),s=document.getElementById("original-portrait");if(s&&t.originalPortraitUrl&&(s.src=t.originalPortraitUrl),o&&r)if(i){if(await this.typePortrait(o,r),this._portraitAnimating=!1,this._pendingCharacterUpdate){const t=this._pendingCharacterUpdate;this._pendingCharacterUpdate=null,await this.updateCharacterPanel(t)}}else window.CharacterSheet&&"function"==typeof CharacterSheet.setPortraitContent&&CharacterSheet.setPortraitContent(o,r);this._applyPreferredPortraitViewBuilder(t)}}else e.innerHTML=Components.renderCharacterSheet(t,null,!0,{hideOverflowMenu:!0})}},async typePortrait(t,e){const a=e.split("\n");t.innerHTML="";const r=document.createElement("pre");t.appendChild(r);let i="";let o=0;for(let t=0;t<a.length;t++){const e=a[t];for(let t=0;t<e.length;t++)i+=e[t],o++,o>=40&&(r.textContent=i,o=0,await new Promise(t=>requestAnimationFrame(t)));t<a.length-1&&(i+="\n")}r.textContent=i}};let builderSplashActive=!0,loadingInterval=null;function startLoadingAnimation(){const t=document.getElementById("status-text");t&&(t.textContent="")}let allowNavigationFlag=!1;function exitToManager(){if("true"===new URLSearchParams(window.location.search).get("required"))return void App.showSystemMessage("Please create your first character to continue.");const t=CharacterState.get().character,e=t&&t.name&&t.race&&t.class;t&&!t.id&&e?App.showConfirmationOverlay("You have unsaved changes. What would you like to do?",async()=>{await App.saveCharacter(!0);const t=CharacterState.get().character;t&&t.id?(window.suppressBeforeunloadWarning(),window.location.href="index.html?from=builder"):App.showSystemMessage("Character was not saved. Staying in the builder.")},()=>{window.suppressBeforeunloadWarning(),window.location.href="index.html?from=builder"},{primaryLabel:"SAVE",secondaryLabel:"DISCARD",primaryClass:"terminal-btn",secondaryClass:"terminal-btn"}):(window.suppressBeforeunloadWarning(),window.location.href="index.html?from=builder")}function dismissBuilderSplash(t=!1){const e=document.getElementById("splash-content"),a=document.getElementById("main-content");e&&builderSplashActive&&(builderSplashActive=!1,t?(e.classList.add("is-hidden"),a&&a.classList.remove("is-hidden")):(e.classList.add("fade-out"),setTimeout(()=>{e.classList.add("is-hidden"),a&&a.classList.remove("is-hidden")},300)))}window.suppressBeforeunloadWarning=()=>{allowNavigationFlag=!0};const PortraitLightbox={_lightbox:null,_isTouch:!1,_mobileBreakpoint:768,_isMobile(){return window.innerWidth<=this._mobileBreakpoint},_ensureLightbox(){if(this._lightbox)return this._lightbox;const t=document.createElement("div");t.className="portrait-lightbox",t.innerHTML='\n      <div class="portrait-lightbox-backdrop"></div>\n      <img class="portrait-lightbox-image" src="" alt="Portrait">\n      <div class="portrait-lightbox-name"></div>\n      <div class="portrait-lightbox-hint">Tap to close</div>\n    ',document.body.appendChild(t),this._lightbox=t;const e=t.querySelector(".portrait-lightbox-backdrop");return e.addEventListener("click",()=>this.close()),t.addEventListener("click",a=>{a.target!==t&&a.target!==e||this.close()}),document.addEventListener("keydown",t=>{"Escape"===t.key&&this.isOpen()&&this.close()}),t},isOpen(){return this._lightbox&&this._lightbox.classList.contains("is-open")},open(t,e=""){if(!t)return;const a=this._ensureLightbox(),r=a.querySelector(".portrait-lightbox-image"),i=a.querySelector(".portrait-lightbox-name");r.src=t,i&&(i.textContent=e,i.style.display=e?"":"none"),document.body.style.overflow="hidden",a.classList.add("is-open")},close(){this._lightbox&&(this._lightbox.classList.remove("is-open"),document.body.style.overflow="")},init(){this._isTouch="ontouchstart"in window||navigator.maxTouchPoints>0,document.addEventListener("click",t=>{if(!t.target||"function"!=typeof t.target.closest)return;if(!this._isMobile()&&!this._isTouch)return;if(t.target.closest(".sheet-shared-tag, .sheet-status-badge, .sheet-demo-tag, .sheet-spell-tag, .custom-tooltip"))return;const e=t.target.closest(".portrait-container--original-mode .original-portrait.is-loaded");if(!e)return;if(this.isOpen())return;const a=e.src;if(a){t.preventDefault(),t.stopPropagation();const r=e.closest(".character-sheet"),i=r?.querySelector(".sheet-title"),o=i?.textContent?.trim()||"";this.open(a,o)}},!0)}};function showAuthModal(){const t=document.getElementById("authModal");if(t){t.classList.add("show");const e=document.querySelector(".terminal-frame")||document.querySelector(".app-root");return e&&e.classList.add("auth-flow-dim"),void showLoginForm()}window.App&&"function"==typeof window.App.showAuthScreen?window.App.showAuthScreen():window.AuthUI&&"function"==typeof window.AuthUI.showLogin&&window.AuthUI.showLogin(()=>location.reload(),()=>{},()=>{})}function cancelAuthFlow(){closeAuthModal()}function openPasswordResetFromLogin(){window.location.href="index.html#password-reset"}function closeAuthModal(){const t=document.getElementById("authModal"),e=document.getElementById("authError");if(!t||!e)return;t.classList.remove("show");const a=document.querySelector(".terminal-frame")||document.querySelector(".app-root");a&&a.classList.remove("auth-flow-dim"),e.classList.add("is-hidden");const r=document.getElementById("loginEmail"),i=document.getElementById("loginPassword"),o=document.getElementById("registerEmail"),n=document.getElementById("registerPassword"),s=document.getElementById("registerPasswordConfirm");r&&(r.value=""),i&&(i.value="",i.type="password"),o&&(o.value=""),n&&(n.value="",n.type="password"),s&&(s.value="",s.type="password"),document.querySelectorAll(".password-toggle-btn").forEach(t=>{try{t.textContent="Show",t.setAttribute("aria-pressed","false"),t.setAttribute("aria-label","Show password")}catch(t){}})}function showLoginForm(){shouldAnimateAuthFormSwap()?animateAuthFormSwap("login"):applyAuthFormState("login")}function showRegisterForm(){shouldAnimateAuthFormSwap()?animateAuthFormSwap("register"):applyAuthFormState("register")}function applyAuthFormState(t){const e="register"===t;document.getElementById("loginForm").classList.toggle("is-hidden",e),document.getElementById("registerForm").classList.toggle("is-hidden",!e),document.getElementById("authModalTitle").textContent=e?"REGISTER":"LOG IN",document.getElementById("loginBtn").classList.toggle("is-hidden",e),document.getElementById("registerBtn").classList.toggle("is-hidden",!e),document.getElementById("authError").classList.add("is-hidden");const a=document.getElementById("authModal");a&&"function"==typeof window.focusFirstFieldInModal&&window.focusFirstFieldInModal(a)}function shouldAnimateAuthFormSwap(){const t=document.getElementById("authModal");return!!t&&(!!t.classList.contains("show")&&(!t.classList.contains("closing")&&(!window.matchMedia||!window.matchMedia("(prefers-reduced-motion: reduce)").matches)))}function animateAuthFormSwap(t){const e=document.getElementById("authModal");if(!e)return void applyAuthFormState(t);const a=document.getElementById("loginForm"),r=document.getElementById("registerForm"),i=e.querySelector(".modal-body");if(!a||!r||!i)return void applyAuthFormState(t);const o="register"===t,n=o?a:r,s=o?r:a;if(!s.classList.contains("is-hidden"))return void applyAuthFormState(t);if("1"===e.dataset.authSwapAnimating)return;e.dataset.authSwapAnimating="1";const l=i.offsetHeight;i.style.overflow="hidden",i.style.height=`${l}px`,n.style.transition="opacity 120ms ease-out",n.style.opacity="0",setTimeout(()=>{applyAuthFormState(t),s.style.transition="none",s.style.opacity="0",i.style.height="auto";const a=i.offsetHeight;i.style.height=`${l}px`,i.offsetHeight,i.style.transition="height 260ms cubic-bezier(0.4, 0, 0.2, 1)",i.style.height=`${a}px`,s.style.transition="opacity 180ms ease-out 80ms",s.style.opacity="1",setTimeout(()=>{i.style.transition="",i.style.height="",i.style.overflow="",n.style.transition="",n.style.opacity="",s.style.transition="",s.style.opacity="",delete e.dataset.authSwapAnimating},360)},120)}async function handleLogin(){console.log("[handleLogin] Function called");const t=document.getElementById("authError"),e=document.getElementById("loginForm");if(e&&e.classList.contains("is-hidden"))return void console.log("[handleLogin] Aborted: loginForm is hidden");await new Promise(t=>setTimeout(t,50));const a=document.getElementById("loginEmail"),r=document.getElementById("loginPassword"),i=a?a.value.trim():"",o=r?r.value:"";if(console.log("[handleLogin] Got email:",i?"(provided)":"(empty)"),!i||!o)return t.textContent="Please enter your username/email and password",t.classList.remove("is-hidden"),void console.log("[handleLogin] Validation failed: missing identifier or password");console.log("[handleLogin] Calling AuthService.login...");try{const e=await window.AuthService.login(i,o);if(console.log("[handleLogin] AuthService.login returned:",e),e.success)return console.log(`\u2713 Logged in as ${i}`),window.App&&window.App.showNotification&&window.App.showNotification(`\u2713 Logged in as ${i}`,"success"),void setTimeout(()=>{window.location.reload()},300);t.textContent=e.error||"Login failed",t.classList.remove("is-hidden"),console.log("[handleLogin] Login failed:",e.error)}catch(e){console.error("[handleLogin] Exception:",e),t.textContent="Login failed. Please try again.",t.classList.remove("is-hidden")}}async function handleRegister(){const t=document.getElementById("registerUsername"),e=t?t.value.trim():"",a=document.getElementById("registerEmail").value.trim(),r=document.getElementById("registerPassword").value,i=document.getElementById("registerPasswordConfirm"),o=i?i.value:"",n=document.getElementById("authError");if(!e||!a||!r||i&&!o)return n.textContent="Please fill in all fields",void n.classList.remove("is-hidden");if(!/^[a-zA-Z0-9_]{3,30}$/.test(e))return n.textContent="Username must be 3-30 characters, using only letters, numbers, and underscores",void n.classList.remove("is-hidden");if(i&&r!==o)return n.textContent="Passwords do not match",void n.classList.remove("is-hidden");try{const t=await window.AuthService.register(e,a,r);t.success?(closeAuthModal(),updateAuthUI(),console.log(`\u2713 Registered as @${e}`),"function"==typeof window.AuthService.startSessionMonitor&&window.AuthService.startSessionMonitor(),window.App&&window.App.showNotification&&window.App.showNotification(`\u2713 Registered as ${a}`,"success")):(n.textContent=t.error||"Registration failed",n.classList.remove("is-hidden"))}catch(t){n.textContent="Registration failed. Please try again.",n.classList.remove("is-hidden")}}async function handleLogout(){window.CharacterState&&window.CharacterState.current.character.name&&await saveCurrentCharacterToCloud(),window.AuthService.logout(),updateAuthUI(),window.App&&window.App.showNotification&&window.App.showNotification("\u2713 Logged out","success"),showAuthModal()}function updateAuthUI(){const t=document.getElementById("authBtn"),e=document.getElementById("userInfoDisplay"),a=document.getElementById("userStatusIcon"),r=document.getElementById("userStatusText");if(t&&e&&a&&r)if(window.AuthService&&window.AuthService.isAuthenticated()){const e=window.AuthService.getCurrentUser();a.textContent="\u2601";const i=e?.username?`@${e.username}`:e?.email||"Logged In";r.textContent=i,t.textContent="Log out",t.onclick=handleLogout}else a.textContent="\u25a3",r.textContent="Guest mode",t.textContent="LOG IN",t.onclick=showAuthModal;else"function"==typeof window.updateAuthUI&&window.updateAuthUI()}function initBuilderAuthModalWiring(){const t=document.getElementById("loginPassword"),e=document.getElementById("registerPasswordConfirm");t&&t.addEventListener("keypress",t=>{"Enter"===t.key&&(t.preventDefault(),handleLogin())}),e&&e.addEventListener("keypress",t=>{"Enter"===t.key&&(t.preventDefault(),handleRegister())}),document.addEventListener("keydown",t=>{if("Escape"!==t.key)return;const e=document.getElementById("authModal");e&&e.classList.contains("show")&&(t.preventDefault(),cancelAuthFlow())});document.querySelectorAll(".password-toggle-btn").forEach(t=>{t.addEventListener("click",()=>{const e=t.getAttribute("data-target");if(!e)return;const a=document.getElementById(e);if(!a)return;const r="password"===a.type;a.type=r?"text":"password",t.textContent=r?"HIDE":"SHOW",t.setAttribute("aria-pressed",String(r)),t.setAttribute("aria-label",r?"Hide password":"Show password")})})}async function saveCurrentCharacterToCloud(){try{if(!window.AuthService||!window.AuthService.isAuthenticated())return console.log("\ud83d\udcbe Not logged in - character saved to localStorage only"),!1;if(!window.CharacterCloudStorage)return console.error("\u2601\ufe0f CharacterCloudStorage not available"),!1;const t=window.CharacterState.current.character;if(!t.name)return console.log("\u2601\ufe0f Character has no name yet - skipping cloud save"),!1;console.log("\u2601\ufe0f Saving character to cloud:",t.name);const e=(await window.CharacterCloudStorage.getAll()).find(e=>e.characterUid===t.characterUid||e.metadata?.characterUid===t.characterUid);if(e)console.log("\u2601\ufe0f Updating existing character in cloud:",e.id),await window.CharacterCloudStorage.update(e.id,t),console.log("\u2601\ufe0f Character updated in cloud successfully");else{console.log("\u2601\ufe0f Creating new character in cloud");const e=await window.CharacterCloudStorage.add(t);console.log("\u2601\ufe0f Character created in cloud with ID:",e.id)}return!0}catch(t){return console.error("\u2601\ufe0f Failed to save character to cloud:",t),!1}}function handleSessionExpired(){updateAuthUI(),window.App&&window.App.showConfirmationOverlay?window.App.showConfirmationOverlay("Your character is safe locally, but you'll need to log in again to sync with the cloud.",()=>{showAuthModal()},()=>{},{title:"[!] Your session has expired",primaryLabel:"LOG IN",secondaryLabel:"CONTINUE OFFLINE"}):window.App&&window.App.showNotification&&window.App.showNotification("Your session has expired. Please log in again.","warning")}function initBuilderAuth(){updateAuthUI(),window.AuthService&&window.AuthService.isAuthenticated()&&("function"==typeof window.AuthService.startSessionMonitor&&window.AuthService.startSessionMonitor(),window.StorageService&&StorageService.loadPreferencesFromServer&&StorageService.loadPreferencesFromServer()),window.addEventListener("danddy:sessionExpired",handleSessionExpired)}window.addEventListener("DOMContentLoaded",async()=>{startLoadingAnimation(),CONFIG.ENABLE_AI&&(console.log("%c\ud83d\ude80 BOOT: Waking up backend server early...","color: #0ff; font-weight: 500"),AIService.warmupBackend());const t=document.getElementById("main-content");t&&t.classList.remove("is-hidden");const e=window.DANDDY_VERSION||"3.0.0",a=document.querySelector(".terminal-title-text");a&&(a.innerHTML=`D&amp;Dy v${e}`);const r=document.getElementById("splash-content");if(r){const t=t=>{builderSplashActive&&(t.preventDefault(),t.stopPropagation(),dismissBuilderSplash())};window.addEventListener("keydown",t),r.addEventListener("click",()=>dismissBuilderSplash(),{once:!0})}await App.init(),PortraitLightbox.init(),loadingInterval&&clearInterval(loadingInterval);const i=document.getElementById("status-text");i&&(i.textContent=""),window.addEventListener("resize",()=>{Utils.scrollToBottom()}),window.addEventListener("beforeunload",t=>{if(allowNavigationFlag)return;const e=CharacterState.get().character,a=e&&e.name&&e.race&&e.class;return e&&!e.id&&a?(t.preventDefault(),t.returnValue="",""):void 0}),window.addEventListener("keydown",t=>{document.querySelector(".modal.show")||("ArrowUp"===t.key?(t.preventDefault(),KeyboardNav.moveUp()):"ArrowDown"===t.key?(t.preventDefault(),KeyboardNav.moveDown()):"ArrowLeft"===t.key?(t.preventDefault(),KeyboardNav.moveLeft()):"ArrowRight"===t.key?(t.preventDefault(),KeyboardNav.moveRight()):"Enter"===t.key&&(t.preventDefault(),KeyboardNav.select()))}),window.addEventListener("keydown",t=>{if("Enter"!==t.key||!t.metaKey&&!t.ctrlKey)return;const e=document.querySelector(".modal.show");if(!e||e.classList.contains("just-opened"))return;const a=document.activeElement;if(!a||!e.contains(a))return;const r=e.querySelector(".modal-footer .terminal-btn-primary");r&&(t.preventDefault(),r.click())})}),"loading"===document.readyState?document.addEventListener("DOMContentLoaded",initBuilderAuthModalWiring):initBuilderAuthModalWiring(),"loading"===document.readyState?document.addEventListener("DOMContentLoaded",initBuilderAuth):initBuilderAuth(),console.log("\u2601\ufe0f Character Builder Cloud Integration loaded");
+
+
+// ===== BUNDLE PART: builder-spells.js =====
+
+// Spell data for D&D 5e character builder.
+// Exposes SPELL_DATA as a global on window.
+
+window.SPELL_DATA = {
+  // Spellcasting class configurations
+  spellcastingClasses: {
+    wizard: {
+      ability: 'int',
+      cantripsKnown: 3,
+      spellsKnown: 6, // Written in spellbook
+      preparedSpells: 'INT + level', // Can prepare this many
+      spellSlots: { 1: 2 },
+    },
+    sorcerer: {
+      ability: 'cha',
+      cantripsKnown: 4,
+      spellsKnown: 2,
+      spellSlots: { 1: 2 },
+    },
+    warlock: {
+      ability: 'cha',
+      cantripsKnown: 2,
+      spellsKnown: 2,
+      spellSlots: { 1: 1 }, // Pact magic
+    },
+    bard: {
+      ability: 'cha',
+      cantripsKnown: 2,
+      spellsKnown: 4,
+      spellSlots: { 1: 2 },
+    },
+    cleric: {
+      ability: 'wis',
+      cantripsKnown: 3,
+      preparedSpells: 'WIS + level', // Can prepare from full list
+      spellSlots: { 1: 2 },
+    },
+    druid: {
+      ability: 'wis',
+      cantripsKnown: 2,
+      preparedSpells: 'WIS + level', // Can prepare from full list
+      spellSlots: { 1: 2 },
+    },
+  },
+
+  // Cantrips organized by class
+  cantrips: {
+    wizard: [
+      {
+        id: 'fire-bolt',
+        name: 'Fire Bolt',
+        school: 'Evocation',
+        description: 'Hurl a mote of fire at a creature or object. 1d10 fire damage.',
+        tags: ['damage', 'fire', 'offense'],
+      },
+      {
+        id: 'mage-hand',
+        name: 'Mage Hand',
+        school: 'Conjuration',
+        description: 'Create a spectral hand that can manipulate objects at range.',
+        tags: ['utility', 'manipulation'],
+      },
+      {
+        id: 'light',
+        name: 'Light',
+        school: 'Evocation',
+        description: 'Touch an object to make it shed bright light for 1 hour.',
+        tags: ['utility', 'light'],
+      },
+      {
+        id: 'ray-of-frost',
+        name: 'Ray of Frost',
+        school: 'Evocation',
+        description: 'Frigid beam dealing 1d8 cold damage and reducing speed.',
+        tags: ['damage', 'cold', 'offense', 'control'],
+      },
+      {
+        id: 'shocking-grasp',
+        name: 'Shocking Grasp',
+        school: 'Evocation',
+        description: 'Lightning damage on touch (1d8) and target cannot take reactions.',
+        tags: ['damage', 'lightning', 'offense'],
+      },
+      {
+        id: 'prestidigitation',
+        name: 'Prestidigitation',
+        school: 'Transmutation',
+        description: 'Minor magical trick: light a candle, clean clothes, flavor food.',
+        tags: ['utility', 'social'],
+      },
+      {
+        id: 'minor-illusion',
+        name: 'Minor Illusion',
+        school: 'Illusion',
+        description: 'Create a sound or image of an object within range.',
+        tags: ['utility', 'illusion', 'deception'],
+      },
+    ],
+    sorcerer: [
+      { id: 'fire-bolt', name: 'Fire Bolt', school: 'Evocation', description: 'Hurl a mote of fire at a creature or object. 1d10 fire damage.', tags: ['damage', 'fire', 'offense'] },
+      { id: 'ray-of-frost', name: 'Ray of Frost', school: 'Evocation', description: 'Frigid beam dealing 1d8 cold damage and reducing speed.', tags: ['damage', 'cold', 'offense', 'control'] },
+      { id: 'shocking-grasp', name: 'Shocking Grasp', school: 'Evocation', description: 'Lightning damage on touch (1d8) and target cannot take reactions.', tags: ['damage', 'lightning', 'offense'] },
+      { id: 'light', name: 'Light', school: 'Evocation', description: 'Touch an object to make it shed bright light for 1 hour.', tags: ['utility', 'light'] },
+      { id: 'mage-hand', name: 'Mage Hand', school: 'Conjuration', description: 'Create a spectral hand that can manipulate objects at range.', tags: ['utility', 'manipulation'] },
+      { id: 'prestidigitation', name: 'Prestidigitation', school: 'Transmutation', description: 'Minor magical trick: light a candle, clean clothes, flavor food.', tags: ['utility', 'social'] },
+      { id: 'minor-illusion', name: 'Minor Illusion', school: 'Illusion', description: 'Create a sound or image of an object within range.', tags: ['utility', 'illusion', 'deception'] },
+    ],
+    warlock: [
+      { id: 'eldritch-blast', name: 'Eldritch Blast', school: 'Evocation', description: 'Beam of crackling energy dealing 1d10 force damage.', tags: ['damage', 'force', 'offense'] },
+      { id: 'mage-hand', name: 'Mage Hand', school: 'Conjuration', description: 'Create a spectral hand that can manipulate objects at range.', tags: ['utility', 'manipulation'] },
+      { id: 'minor-illusion', name: 'Minor Illusion', school: 'Illusion', description: 'Create a sound or image of an object within range.', tags: ['utility', 'illusion', 'deception'] },
+      { id: 'prestidigitation', name: 'Prestidigitation', school: 'Transmutation', description: 'Minor magical trick: light a candle, clean clothes, flavor food.', tags: ['utility', 'social'] },
+      { id: 'chill-touch', name: 'Chill Touch', school: 'Necromancy', description: 'Ghostly hand dealing 1d8 necrotic damage and preventing healing.', tags: ['damage', 'necrotic', 'offense'] },
+    ],
+    bard: [
+      { id: 'vicious-mockery', name: 'Vicious Mockery', school: 'Enchantment', description: 'Insult dealing 1d4 psychic damage and imposing disadvantage.', tags: ['damage', 'psychic', 'debuff', 'social'] },
+      { id: 'light', name: 'Light', school: 'Evocation', description: 'Touch an object to make it shed bright light for 1 hour.', tags: ['utility', 'light'] },
+      { id: 'mage-hand', name: 'Mage Hand', school: 'Conjuration', description: 'Create a spectral hand that can manipulate objects at range.', tags: ['utility', 'manipulation'] },
+      { id: 'prestidigitation', name: 'Prestidigitation', school: 'Transmutation', description: 'Minor magical trick: light a candle, clean clothes, flavor food.', tags: ['utility', 'social'] },
+      { id: 'minor-illusion', name: 'Minor Illusion', school: 'Illusion', description: 'Create a sound or image of an object within range.', tags: ['utility', 'illusion', 'deception'] },
+    ],
+    cleric: [
+      { id: 'sacred-flame', name: 'Sacred Flame', school: 'Evocation', description: 'Flame-like radiance dealing 1d8 radiant damage (Dex save).', tags: ['damage', 'radiant', 'offense'] },
+      { id: 'light', name: 'Light', school: 'Evocation', description: 'Touch an object to make it shed bright light for 1 hour.', tags: ['utility', 'light'] },
+      { id: 'guidance', name: 'Guidance', school: 'Divination', description: 'Touch a creature to grant +1d4 to one ability check.', tags: ['buff', 'support'] },
+      { id: 'spare-the-dying', name: 'Spare the Dying', school: 'Necromancy', description: 'Touch a dying creature to stabilize it.', tags: ['healing', 'support'] },
+      { id: 'thaumaturgy', name: 'Thaumaturgy', school: 'Transmutation', description: 'Minor wonder: amplify voice, flicker flames, open doors.', tags: ['utility', 'social'] },
+    ],
+    druid: [
+      { id: 'produce-flame', name: 'Produce Flame', school: 'Conjuration', description: 'Flickering flame for light or to throw (1d8 fire damage).', tags: ['damage', 'fire', 'utility', 'light'] },
+      { id: 'guidance', name: 'Guidance', school: 'Divination', description: 'Touch a creature to grant +1d4 to one ability check.', tags: ['buff', 'support'] },
+      { id: 'shillelagh', name: 'Shillelagh', school: 'Transmutation', description: 'Imbue a club or staff to use Wisdom for attacks (1d8 damage).', tags: ['buff', 'combat'] },
+      { id: 'druidcraft', name: 'Druidcraft', school: 'Transmutation', description: 'Minor druidic effects: predict weather, bloom flowers, light fires.', tags: ['utility', 'nature'] },
+    ],
+  },
+
+  // 1st level spells organized by class
+  firstLevel: {
+    wizard: [
+      {
+        id: 'magic-missile',
+        name: 'Magic Missile',
+        school: 'Evocation',
+        description: 'Three darts of force, each dealing 1d4+1 damage (auto-hit).',
+        tags: ['damage', 'force', 'offense', 'reliable'],
+      },
+      {
+        id: 'shield',
+        name: 'Shield',
+        school: 'Abjuration',
+        description: 'Reaction: +5 AC until start of your next turn.',
+        tags: ['defense', 'protection', 'reaction'],
+      },
+      {
+        id: 'mage-armor',
+        name: 'Mage Armor',
+        school: 'Abjuration',
+        description: 'Set AC to 13 + Dex modifier for 8 hours.',
+        tags: ['defense', 'protection', 'buff'],
+      },
+      {
+        id: 'detect-magic',
+        name: 'Detect Magic',
+        school: 'Divination',
+        description: 'Sense magic within 30 feet for 10 minutes (concentration).',
+        tags: ['utility', 'detection', 'exploration'],
+      },
+      {
+        id: 'identify',
+        name: 'Identify',
+        school: 'Divination',
+        description: 'Learn properties of a magical object or spell affecting a creature.',
+        tags: ['utility', 'knowledge', 'exploration'],
+      },
+      {
+        id: 'sleep',
+        name: 'Sleep',
+        school: 'Enchantment',
+        description: 'Put 5d8 HP worth of creatures to sleep.',
+        tags: ['control', 'debuff', 'crowd-control'],
+      },
+      {
+        id: 'burning-hands',
+        name: 'Burning Hands',
+        school: 'Evocation',
+        description: 'Cone of fire dealing 3d6 fire damage (Dex save for half).',
+        tags: ['damage', 'fire', 'aoe', 'offense'],
+      },
+      {
+        id: 'disguise-self',
+        name: 'Disguise Self',
+        school: 'Illusion',
+        description: 'Make yourself look different for 1 hour.',
+        tags: ['utility', 'illusion', 'social', 'deception'],
+      },
+      {
+        id: 'feather-fall',
+        name: 'Feather Fall',
+        school: 'Transmutation',
+        description: 'Reaction: Up to 5 creatures fall slowly, taking no damage.',
+        tags: ['utility', 'protection', 'reaction'],
+      },
+      {
+        id: 'grease',
+        name: 'Grease',
+        school: 'Conjuration',
+        description: 'Slick grease covers a 10-foot square (Dex save or fall prone).',
+        tags: ['control', 'terrain', 'debuff'],
+      },
+    ],
+    sorcerer: [
+      { id: 'magic-missile', name: 'Magic Missile', school: 'Evocation', description: 'Three darts of force, each dealing 1d4+1 damage (auto-hit).', tags: ['damage', 'force', 'offense', 'reliable'] },
+      { id: 'shield', name: 'Shield', school: 'Abjuration', description: 'Reaction: +5 AC until start of your next turn.', tags: ['defense', 'protection', 'reaction'] },
+      { id: 'mage-armor', name: 'Mage Armor', school: 'Abjuration', description: 'Set AC to 13 + Dex modifier for 8 hours.', tags: ['defense', 'protection', 'buff'] },
+      { id: 'burning-hands', name: 'Burning Hands', school: 'Evocation', description: 'Cone of fire dealing 3d6 fire damage (Dex save for half).', tags: ['damage', 'fire', 'aoe', 'offense'] },
+      { id: 'chromatic-orb', name: 'Chromatic Orb', school: 'Evocation', description: 'Hurl a 4-inch sphere dealing 3d8 damage (choose: acid, cold, fire, lightning, poison, thunder).', tags: ['damage', 'versatile', 'offense'] },
+      { id: 'disguise-self', name: 'Disguise Self', school: 'Illusion', description: 'Make yourself look different for 1 hour.', tags: ['utility', 'illusion', 'social', 'deception'] },
+      { id: 'sleep', name: 'Sleep', school: 'Enchantment', description: 'Put 5d8 HP worth of creatures to sleep.', tags: ['control', 'debuff', 'crowd-control'] },
+    ],
+    warlock: [
+      { id: 'hex', name: 'Hex', school: 'Enchantment', description: 'Curse a creature to take +1d6 necrotic damage and disadvantage on checks (1 hour, concentration).', tags: ['damage', 'debuff', 'curse'] },
+      { id: 'armor-of-agathys', name: 'Armor of Agathys', school: 'Abjuration', description: 'Gain 5 temp HP; attackers take 5 cold damage when they hit you (1 hour).', tags: ['defense', 'protection', 'retaliation'] },
+      { id: 'arms-of-hadar', name: 'Arms of Hadar', school: 'Conjuration', description: 'Tendrils deal 2d6 necrotic damage in 10-foot radius (Str save for half).', tags: ['damage', 'necrotic', 'aoe', 'offense'] },
+      { id: 'charm-person', name: 'Charm Person', school: 'Enchantment', description: 'Charm a humanoid (Wis save) for 1 hour.', tags: ['control', 'social', 'charm'] },
+      { id: 'hellish-rebuke', name: 'Hellish Rebuke', school: 'Evocation', description: 'Reaction: Attacker takes 2d10 fire damage (Dex save for half).', tags: ['damage', 'fire', 'reaction', 'retaliation'] },
+    ],
+    bard: [
+      { id: 'healing-word', name: 'Healing Word', school: 'Evocation', description: 'Bonus action: Heal a creature for 1d4 + spellcasting modifier.', tags: ['healing', 'support', 'bonus-action'] },
+      { id: 'cure-wounds', name: 'Cure Wounds', school: 'Evocation', description: 'Touch to heal 1d8 + spellcasting modifier HP.', tags: ['healing', 'support'] },
+      { id: 'charm-person', name: 'Charm Person', school: 'Enchantment', description: 'Charm a humanoid (Wis save) for 1 hour.', tags: ['control', 'social', 'charm'] },
+      { id: 'disguise-self', name: 'Disguise Self', school: 'Illusion', description: 'Make yourself look different for 1 hour.', tags: ['utility', 'illusion', 'social', 'deception'] },
+      { id: 'faerie-fire', name: 'Faerie Fire', school: 'Evocation', description: 'Outline creatures in light, granting advantage on attacks against them (1 minute, concentration).', tags: ['buff', 'support', 'debuff'] },
+      { id: 'sleep', name: 'Sleep', school: 'Enchantment', description: 'Put 5d8 HP worth of creatures to sleep.', tags: ['control', 'debuff', 'crowd-control'] },
+      { id: 'thunderwave', name: 'Thunderwave', school: 'Evocation', description: '15-foot cube of thunderous force dealing 2d8 thunder damage and pushing creatures (Con save for half).', tags: ['damage', 'thunder', 'aoe', 'control'] },
+    ],
+    cleric: [
+      { id: 'cure-wounds', name: 'Cure Wounds', school: 'Evocation', description: 'Touch to heal 1d8 + spellcasting modifier HP.', tags: ['healing', 'support'] },
+      { id: 'healing-word', name: 'Healing Word', school: 'Evocation', description: 'Bonus action: Heal a creature for 1d4 + spellcasting modifier.', tags: ['healing', 'support', 'bonus-action'] },
+      { id: 'bless', name: 'Bless', school: 'Enchantment', description: 'Up to 3 creatures add 1d4 to attacks and saves (1 minute, concentration).', tags: ['buff', 'support', 'team'] },
+      { id: 'shield-of-faith', name: 'Shield of Faith', school: 'Abjuration', description: 'Grant +2 AC to a creature (10 minutes, concentration).', tags: ['buff', 'defense', 'support'] },
+      { id: 'guiding-bolt', name: 'Guiding Bolt', school: 'Evocation', description: 'Ranged attack dealing 4d6 radiant damage; next attack against target has advantage.', tags: ['damage', 'radiant', 'offense', 'buff'] },
+      { id: 'inflict-wounds', name: 'Inflict Wounds', school: 'Necromancy', description: 'Melee attack dealing 3d10 necrotic damage.', tags: ['damage', 'necrotic', 'offense'] },
+      { id: 'sanctuary', name: 'Sanctuary', school: 'Abjuration', description: 'Attackers must make Wis save or choose another target (1 minute).', tags: ['defense', 'protection', 'support'] },
+    ],
+    druid: [
+      { id: 'cure-wounds', name: 'Cure Wounds', school: 'Evocation', description: 'Touch to heal 1d8 + spellcasting modifier HP.', tags: ['healing', 'support'] },
+      { id: 'healing-word', name: 'Healing Word', school: 'Evocation', description: 'Bonus action: Heal a creature for 1d4 + spellcasting modifier.', tags: ['healing', 'support', 'bonus-action'] },
+      { id: 'entangle', name: 'Entangle', school: 'Conjuration', description: 'Grasping vines restrain creatures in 20-foot square (Str save, 1 minute, concentration).', tags: ['control', 'terrain', 'debuff'] },
+      { id: 'faerie-fire', name: 'Faerie Fire', school: 'Evocation', description: 'Outline creatures in light, granting advantage on attacks against them (1 minute, concentration).', tags: ['buff', 'support', 'debuff'] },
+      { id: 'goodberry', name: 'Goodberry', school: 'Transmutation', description: 'Create 10 berries that each restore 1 HP and provide nourishment (24 hours).', tags: ['healing', 'utility', 'support'] },
+      { id: 'thunderwave', name: 'Thunderwave', school: 'Evocation', description: '15-foot cube of thunderous force dealing 2d8 thunder damage and pushing creatures (Con save for half).', tags: ['damage', 'thunder', 'aoe', 'control'] },
+      { id: 'speak-with-animals', name: 'Speak with Animals', school: 'Divination', description: 'Communicate with beasts for 10 minutes.', tags: ['utility', 'social', 'nature'] },
+    ],
+  },
+
+  // Helper to get spells for a class
+  getCantripsForClass(classId) {
+    return this.cantrips[classId] || [];
+  },
+
+  getFirstLevelSpellsForClass(classId) {
+    return this.firstLevel[classId] || [];
+  },
+
+  getSpellcastingConfig(classId) {
+    return this.spellcastingClasses[classId] || null;
+  },
+
+  isSpellcaster(classId) {
+    return !!this.spellcastingClasses[classId];
+  },
+
+  // Quick mode auto-selection (balanced starter spells)
+  getQuickModeSpells(classId) {
+    const config = this.getSpellcastingConfig(classId);
+    if (!config) return null;
+
+    const cantrips = this.getCantripsForClass(classId);
+    const firstLevel = this.getFirstLevelSpellsForClass(classId);
+
+    const result = {
+      cantrips: [],
+      firstLevel: [],
+    };
+
+    // Auto-select balanced cantrips
+    switch (classId) {
+      case 'wizard':
+        result.cantrips = [cantrips[0], cantrips[1], cantrips[2]]; // Fire Bolt, Mage Hand, Light
+        result.firstLevel = [
+          firstLevel[0], // Magic Missile
+          firstLevel[1], // Shield
+          firstLevel[2], // Mage Armor
+          firstLevel[3], // Detect Magic
+          firstLevel[4], // Identify
+          firstLevel[5], // Sleep
+        ];
+        break;
+      case 'sorcerer':
+        result.cantrips = [cantrips[0], cantrips[1], cantrips[4], cantrips[5]]; // Fire Bolt, Ray of Frost, Mage Hand, Prestidigitation
+        result.firstLevel = [firstLevel[0], firstLevel[1]]; // Magic Missile, Shield
+        break;
+      case 'warlock':
+        result.cantrips = [cantrips[0], cantrips[1]]; // Eldritch Blast, Mage Hand
+        result.firstLevel = [firstLevel[0], firstLevel[1]]; // Hex, Armor of Agathys
+        break;
+      case 'bard':
+        result.cantrips = [cantrips[0], cantrips[4]]; // Vicious Mockery, Minor Illusion
+        result.firstLevel = [firstLevel[0], firstLevel[1], firstLevel[2], firstLevel[3]]; // Healing Word, Cure Wounds, Charm Person, Disguise Self
+        break;
+      case 'cleric':
+        result.cantrips = [cantrips[0], cantrips[2], cantrips[3]]; // Sacred Flame, Guidance, Spare the Dying
+        // Clerics prepare spells, so we give them a starter prepared list
+        result.firstLevel = [firstLevel[0], firstLevel[1], firstLevel[2]]; // Cure Wounds, Healing Word, Bless
+        break;
+      case 'druid':
+        result.cantrips = [cantrips[0], cantrips[1]]; // Produce Flame, Guidance
+        // Druids prepare spells, so we give them a starter prepared list
+        result.firstLevel = [firstLevel[0], firstLevel[2], firstLevel[3]]; // Cure Wounds, Entangle, Faerie Fire
+        break;
+    }
+
+    return result;
+  },
+
+  // Guided mode spell selection based on playstyle
+  getGuidedSpells(classId, preferences) {
+    const config = this.getSpellcastingConfig(classId);
+    if (!config) return null;
+
+    const cantrips = this.getCantripsForClass(classId);
+    const firstLevel = this.getFirstLevelSpellsForClass(classId);
+
+    // Filter spells by tags based on preferences
+    const filterByTags = (spells, preferredTags, count) => {
+      const tagged = spells.map(spell => {
+        const matchCount = spell.tags.filter(tag => preferredTags.includes(tag)).length;
+        return { spell, matchCount };
+      });
+      tagged.sort((a, b) => b.matchCount - a.matchCount);
+      return tagged.slice(0, count).map(item => item.spell);
+    };
+
+    // Determine preferred tags from preferences
+    const preferredTags = [];
+    if (preferences.style === 'offense') preferredTags.push('damage', 'offense');
+    if (preferences.style === 'defense') preferredTags.push('defense', 'protection', 'healing', 'support');
+    if (preferences.style === 'control') preferredTags.push('control', 'debuff', 'crowd-control');
+    if (preferences.style === 'utility') preferredTags.push('utility', 'social', 'exploration');
+
+    if (preferences.element) preferredTags.push(preferences.element);
+
+    const result = {
+      cantrips: filterByTags(cantrips, preferredTags, config.cantripsKnown),
+      firstLevel: [],
+    };
+
+    // Get first level spells
+    if (config.spellsKnown) {
+      result.firstLevel = filterByTags(firstLevel, preferredTags, config.spellsKnown);
+    } else if (config.preparedSpells) {
+      // For clerics/druids, suggest a starter prepared list
+      result.firstLevel = filterByTags(firstLevel, preferredTags, 3);
+    }
+
+    return result;
+  },
+};
+
+
+
+
+// ===== BUNDLE PART: builder-auth.js =====
+
+// Authentication UI screens for the DandDy terminal character builder.
+// Exposes AuthUI as global on window.
+
+const AuthUI = (window.AuthUI = {
+  _underlayPrevHidden: null,
+
+  _hideUnderlay() {
+    const ids = ['splash-content', 'main-content'];
+    const prev = {};
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      prev[id] = el.classList.contains('is-hidden');
+      el.classList.add('is-hidden');
+    });
+    this._underlayPrevHidden = prev;
+  },
+
+  _restoreUnderlay() {
+    const prev = this._underlayPrevHidden;
+    if (!prev) return;
+    Object.keys(prev).forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      // Restore exact previous state
+      if (prev[id]) el.classList.add('is-hidden');
+      else el.classList.remove('is-hidden');
+    });
+    this._underlayPrevHidden = null;
+  },
+
+  // Show login screen
+  showLogin(onSuccess, onSwitchToRegister, onGuestMode) {
+    const container = document.querySelector('.app-root') || document.querySelector('.terminal-container');
+    if (!container) return;
+
+    // Hide underlying content (we restore this in removeAuthScreen)
+    this._hideUnderlay();
+
+    // Create auth screen
+    const authScreen = document.createElement('div');
+    authScreen.id = 'auth-screen';
+    authScreen.className = 'auth-screen';
+    authScreen.innerHTML = `
+      <div class="auth-container">
+        <div class="auth-header">
+          <div class="auth-title">╔═══════════════════════════════════════╗</div>
+          <div class="auth-title">║     D&D CHARACTER BUILDER LOGIN       ║</div>
+          <div class="auth-title">╚═══════════════════════════════════════╝</div>
+        </div>
+        
+        <div class="auth-form">
+          <div class="form-group">
+            <label class="form-label">[ USERNAME OR EMAIL ]</label>
+            <input type="text" id="login-email" class="terminal-input" placeholder="username or email" autocomplete="username" autocapitalize="off" />
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">[ PASSWORD ]</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="login-password" class="terminal-input" placeholder="••••••••" autocomplete="current-password" />
+              <button type="button" class="password-toggle-btn" data-target="login-password" aria-label="Show password">Show</button>
+            </div>
+          </div>
+          
+          <div class="auth-footer" style="margin-bottom: 1rem;">
+            <span class="auth-link" id="forgot-password-link" style="cursor: pointer;">
+              Forgot your password? <span class="link-highlight">Reset here</span>
+            </span>
+          </div>
+          
+          <div id="login-error" class="error-message is-hidden"></div>
+          
+          <div class="button-group">
+            <button id="login-submit" class="button-primary">
+              <span class="button-icon">▶</span> Log in
+            </button>
+            <button id="login-guest" class="button-secondary">
+              <span class="button-icon">👤</span> Continue as guest
+            </button>
+          </div>
+          
+          <div id="demo-mode-info" class="demo-mode-notice is-hidden">
+            <div class="demo-notice-content">
+              <span class="demo-notice-icon">ℹ</span>
+              <span>Guest mode: Create up to 3 characters and generate up to 10 custom portraits per day. Create an account to save characters in the cloud and get higher limits!</span>
+            </div>
+          </div>
+          
+          <div class="auth-footer">
+            <span class="auth-link" id="switch-to-register">
+              Don't have an account? <span class="link-highlight">Register here</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(authScreen);
+
+    // Add event listeners
+    const emailInput = document.getElementById('login-email');
+    const passwordInput = document.getElementById('login-password');
+    const passwordToggle = authScreen.querySelector(
+      '.password-toggle-btn[data-target="login-password"]',
+    );
+    const submitButton = document.getElementById('login-submit');
+    const guestButton = document.getElementById('login-guest');
+    const switchButton = document.getElementById('switch-to-register');
+    const forgotPasswordLink = document.getElementById('forgot-password-link');
+    const errorDiv = document.getElementById('login-error');
+
+    // Handle submit
+    const handleSubmit = async () => {
+      // Give password managers / autofill a brief moment to finish
+      // populating fields before we read them. This avoids bogus
+      // "Please enter both email and password" errors when the UI
+      // *appears* filled in.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!email || !password) {
+        this.showError(errorDiv, 'Please enter your username/email and password');
+        return;
+      }
+
+      // Lightweight UI-side debug logging (never logs the raw password)
+      try {
+        const cfg = window.DanddyConfig || {};
+        const debug = !!cfg.DEBUG;
+        if (debug) {
+          console.log('[AuthUI] Login submit clicked', {
+            email,
+            apiBaseUrl: cfg.API_BASE_URL,
+          });
+        }
+      } catch (_) {
+        // Ignore logging failures – never block login
+      }
+
+      this.showLoading(submitButton, true, 'AUTHENTICATING...');
+      errorDiv.classList.add('is-hidden');
+
+      try {
+        const result = await AuthService.login(email, password);
+        this.showLoading(submitButton, false);
+        if (result && result.success) {
+          this.removeAuthScreen();
+          if (onSuccess) onSuccess(result.user);
+        } else {
+          this.showError(
+            errorDiv,
+            (result && result.error) || 'Login failed. Please try again.',
+          );
+        }
+      } catch (error) {
+        this.showLoading(submitButton, false);
+        this.showError(errorDiv, error.message || 'Login failed. Please try again.');
+      }
+    };
+
+    submitButton.addEventListener('click', handleSubmit);
+    if (passwordToggle && passwordInput) {
+      passwordToggle.addEventListener('click', () => {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        passwordToggle.textContent = isPassword ? 'HIDE' : 'SHOW';
+        passwordToggle.setAttribute('aria-pressed', String(isPassword));
+        passwordToggle.setAttribute(
+          'aria-label',
+          isPassword ? 'Hide password' : 'Show password',
+        );
+      });
+    }
+    
+    passwordInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleSubmit();
+    });
+
+    guestButton.addEventListener('click', () => {
+      // Show demo mode info message
+      const demoInfo = document.getElementById('demo-mode-info');
+      if (demoInfo) {
+        demoInfo.classList.remove('is-hidden');
+        // Brief pause to let user see the message, then proceed
+        setTimeout(() => {
+          this.removeAuthScreen();
+          if (onGuestMode) onGuestMode();
+        }, 1500);
+      } else {
+        this.removeAuthScreen();
+        if (onGuestMode) onGuestMode();
+      }
+    });
+
+    switchButton.addEventListener('click', () => {
+      this.removeAuthScreen();
+      if (onSwitchToRegister) onSwitchToRegister();
+    });
+
+    if (forgotPasswordLink) {
+      forgotPasswordLink.addEventListener('click', () => {
+        // Redirect to character manager's password reset page
+        window.location.href = 'index.html#password-reset';
+      });
+    }
+
+    // Focus email input
+    emailInput.focus();
+  },
+
+  // Show register screen
+  showRegister(onSuccess, onSwitchToLogin) {
+    const container = document.querySelector('.app-root') || document.querySelector('.terminal-container');
+    if (!container) return;
+
+    // Hide underlying content (we restore this in removeAuthScreen)
+    this._hideUnderlay();
+
+    // Create auth screen
+    const authScreen = document.createElement('div');
+    authScreen.id = 'auth-screen';
+    authScreen.className = 'auth-screen';
+    authScreen.innerHTML = `
+      <div class="auth-container">
+        <div class="auth-header">
+          <div class="auth-title">╔═══════════════════════════════════════╗</div>
+          <div class="auth-title">║   D&D CHARACTER BUILDER REGISTER      ║</div>
+          <div class="auth-title">╚═══════════════════════════════════════╝</div>
+        </div>
+        
+        <div class="auth-form">
+          <div class="form-group">
+            <label class="form-label">[ EMAIL ]</label>
+            <input type="email" id="register-email" class="terminal-input" placeholder="adventurer@tavern.com" autocomplete="email" autocapitalize="off" />
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">[ PASSWORD ]</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="register-password" class="terminal-input" placeholder="••••••••" autocomplete="new-password" />
+              <button type="button" class="password-toggle-btn" data-target="register-password" aria-label="Show password">Show</button>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">[ CONFIRM PASSWORD ]</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="register-password-confirm" class="terminal-input" placeholder="••••••••" autocomplete="new-password" />
+              <button type="button" class="password-toggle-btn" data-target="register-password-confirm" aria-label="Show password">Show</button>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">[ ROLE ]</label>
+            <select id="register-role" class="terminal-select">
+              <option value="player">Player</option>
+              <option value="dm">Dungeon Master</option>
+            </select>
+          </div>
+          
+          <div id="register-error" class="error-message is-hidden"></div>
+          
+          <div class="button-group">
+            <button id="register-submit" class="button-primary">
+              <span class="button-icon">▶</span> Create account
+            </button>
+            <button id="register-cancel" class="button-secondary">
+              <span class="button-icon">◀</span> Back to login
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(authScreen);
+
+    // Add event listeners
+    const emailInput = document.getElementById('register-email');
+    const passwordInput = document.getElementById('register-password');
+    const confirmInput = document.getElementById('register-password-confirm');
+    const passwordToggle = authScreen.querySelector(
+      '.password-toggle-btn[data-target="register-password"]',
+    );
+    const confirmToggle = authScreen.querySelector(
+      '.password-toggle-btn[data-target="register-password-confirm"]',
+    );
+    const roleSelect = document.getElementById('register-role');
+    const submitButton = document.getElementById('register-submit');
+    const cancelButton = document.getElementById('register-cancel');
+    const errorDiv = document.getElementById('register-error');
+
+    // Handle submit
+    const handleSubmit = async () => {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const confirmPassword = confirmInput.value;
+      const role = roleSelect.value;
+
+      if (!email || !password || !confirmPassword) {
+        this.showError(errorDiv, 'Please fill in all fields');
+        return;
+      }
+
+      if (password.length < 6) {
+        this.showError(errorDiv, 'Password must be at least 6 characters');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        this.showError(errorDiv, 'Passwords do not match');
+        return;
+      }
+
+      this.showLoading(submitButton, true, 'CREATING ACCOUNT...');
+      errorDiv.classList.add('is-hidden');
+
+      try {
+        const result = await AuthService.register(email, password, role);
+        this.showLoading(submitButton, false);
+        if (result && result.success) {
+          this.removeAuthScreen();
+          if (onSuccess) onSuccess(result.user);
+        } else {
+          this.showError(
+            errorDiv,
+            (result && result.error) ||
+              'Registration failed. Please try again.',
+          );
+        }
+      } catch (error) {
+        this.showLoading(submitButton, false);
+        this.showError(
+          errorDiv,
+          error.message || 'Registration failed. Please try again.',
+        );
+      }
+    };
+
+    submitButton.addEventListener('click', handleSubmit);
+    if (passwordToggle && passwordInput) {
+      passwordToggle.addEventListener('click', () => {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        passwordToggle.textContent = isPassword ? 'HIDE' : 'SHOW';
+        passwordToggle.setAttribute('aria-pressed', String(isPassword));
+        passwordToggle.setAttribute(
+          'aria-label',
+          isPassword ? 'Hide password' : 'Show password',
+        );
+      });
+    }
+
+    if (confirmToggle && confirmInput) {
+      confirmToggle.addEventListener('click', () => {
+        const isPassword = confirmInput.type === 'password';
+        confirmInput.type = isPassword ? 'text' : 'password';
+        confirmToggle.textContent = isPassword ? 'HIDE' : 'SHOW';
+        confirmToggle.setAttribute('aria-pressed', String(isPassword));
+        confirmToggle.setAttribute(
+          'aria-label',
+          isPassword ? 'Hide password' : 'Show password',
+        );
+      });
+    }
+    
+    confirmInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleSubmit();
+    });
+
+    cancelButton.addEventListener('click', () => {
+      this.removeAuthScreen();
+      if (onSwitchToLogin) onSwitchToLogin();
+    });
+
+    // Focus email input
+    emailInput.focus();
+  },
+
+  // Helper: Show error message
+  showError(errorDiv, message) {
+    errorDiv.textContent = `⚠ ERROR: ${message}`;
+    errorDiv.classList.remove('is-hidden');
+  },
+
+  // Helper: Show/hide loading on a primary button
+  showLoading(button, show, label) {
+    if (!button) return;
+
+    if (show) {
+      if (!button.dataset.originalLabel) {
+        button.dataset.originalLabel = button.innerHTML;
+      }
+      button.disabled = true;
+      const loadingLabel = label || 'WORKING...';
+      const cubeMarkup = 
+        '<span class="spinner-cube-scene">' +
+        '<span class="spinner-cube-tilt">' +
+        '<span class="spinner-cube">' +
+        '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
+        '</span></span></span>';
+      button.innerHTML = `${cubeMarkup} ${loadingLabel}`;
+    } else {
+      button.disabled = false;
+      if (button.dataset.originalLabel) {
+        button.innerHTML = button.dataset.originalLabel;
+        delete button.dataset.originalLabel;
+      }
+    }
+  },
+
+  // Helper: Remove auth screen
+  removeAuthScreen() {
+    const authScreen = document.getElementById('auth-screen');
+    if (authScreen) {
+      authScreen.remove();
+    }
+    this._restoreUnderlay();
+  },
+
+  // Show user info in header (uses same IDs as manager: userInfoDisplay, userStatusText, authBtn)
+  updateHeaderWithUser(user) {
+    const userStatusText = document.getElementById('userStatusText');
+    const userStatusIcon = document.getElementById('userStatusIcon');
+    const authBtn = document.getElementById('authBtn');
+    
+    if (userStatusText && user) {
+      // Show username if available, fall back to email
+      const displayName = user?.username ? `@${user.username}` : (user?.email || 'Logged In');
+      userStatusText.textContent = displayName;
+      if (userStatusIcon) userStatusIcon.textContent = '☁';
+    }
+    
+    if (authBtn) {
+      authBtn.textContent = 'Log out';
+      authBtn.onclick = () => {
+        try {
+          window.AuthService?.logout?.();
+        } catch (_) {}
+        // Re-render header state after logout
+        if (typeof window.updateAuthUI === 'function') {
+          window.updateAuthUI();
+        }
+        window.App?.showNotification?.('✓ Logged out', 'success');
+      };
+    }
+    
+    // Update overflow menu - show account header
+    const overflowAccountHeader = document.getElementById('overflowAccountHeader');
+    const overflowAccountSeparator = document.getElementById('overflowAccountSeparator');
+    const overflowUsername = document.getElementById('overflowUsername');
+    const overflowEmail = document.getElementById('overflowEmail');
+    if (overflowAccountHeader) overflowAccountHeader.classList.remove('is-hidden');
+    if (overflowAccountSeparator) overflowAccountSeparator.classList.remove('is-hidden');
+    if (overflowUsername) overflowUsername.textContent = user?.username ? `@${user.username}` : 'Not set';
+    if (overflowEmail) overflowEmail.textContent = user?.email || '';
+    
+    const overflowIcon = document.getElementById('overflowAuthIcon');
+    const overflowLabel = document.getElementById('overflowAuthLabel');
+    if (overflowIcon) overflowIcon.textContent = '←';
+    if (overflowLabel) overflowLabel.textContent = 'Log Out';
+    
+    const overflowCreateAccountBtn = document.getElementById('overflowCreateAccountBtn');
+    if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.add('is-hidden');
+  },
+
+  // Show guest mode banner (uses same IDs as manager)
+  showGuestBanner() {
+    const userStatusText = document.getElementById('userStatusText');
+    const userStatusIcon = document.getElementById('userStatusIcon');
+    const authBtn = document.getElementById('authBtn');
+    
+    if (userStatusText) {
+      userStatusText.textContent = 'Guest Mode';
+      if (userStatusIcon) userStatusIcon.textContent = '▣';
+    }
+    
+    if (authBtn) {
+      authBtn.textContent = 'Log in';
+      authBtn.onclick = () => {
+        // Prefer the manager-style auth modal (matches manager flow + markup).
+        if (typeof window.showAuthModal === 'function') {
+          window.showAuthModal();
+          return;
+        }
+        // Fallback: full-screen overlay auth if modal isn't available.
+        if (window.App && typeof window.App.showAuthScreen === 'function') {
+          window.App.showAuthScreen();
+          return;
+        }
+        if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
+          window.AuthUI.showLogin(() => window.location.reload(), () => {}, () => {});
+        }
+      };
+    }
+    
+    // Update overflow menu - hide account header
+    const overflowAccountHeader = document.getElementById('overflowAccountHeader');
+    const overflowAccountSeparator = document.getElementById('overflowAccountSeparator');
+    if (overflowAccountHeader) overflowAccountHeader.classList.add('is-hidden');
+    if (overflowAccountSeparator) overflowAccountSeparator.classList.add('is-hidden');
+    
+    const overflowIcon = document.getElementById('overflowAuthIcon');
+    const overflowLabel = document.getElementById('overflowAuthLabel');
+    if (overflowIcon) overflowIcon.textContent = '→';
+    if (overflowLabel) overflowLabel.textContent = 'Log In';
+    
+    // Show create account in overflow
+    const overflowCreateAccountBtn = document.getElementById('overflowCreateAccountBtn');
+    if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.remove('is-hidden');
+  },
+});
+
+// Unified builder auth UI updater (called by AuthService session expiry + by builder)
+window.updateAuthUI = async function updateAuthUI() {
+  try {
+    if (!window.AuthService || !window.AuthUI) return;
+
+    if (window.AuthService.isAuthenticated()) {
+      let user = window.AuthService.getCurrentUser();
+      if (!user && typeof window.AuthService.fetchProfile === 'function') {
+        user = await window.AuthService.fetchProfile();
+        if (user) window.AuthService.setCurrentUser(user);
+      }
+      if (user) {
+        window.AuthUI.updateHeaderWithUser(user);
+      } else {
+        // Token exists but no profile (network?) – still show logged-in state
+        window.AuthUI.updateHeaderWithUser({ email: 'Logged In', role: 'player' });
+      }
+    } else {
+      window.AuthUI.showGuestBanner();
+    }
+  } catch (e) {
+    console.warn('[Builder] updateAuthUI failed:', e);
+  }
+};
+
+// Keep builder header auth state in sync and handle session expiry re-login.
+function initBuilderHeaderAuth() {
+  // Initial render
+  if (typeof window.updateAuthUI === 'function') {
+    window.updateAuthUI();
+  }
+
+  // Start session monitoring if authenticated
+  if (window.AuthService && window.AuthService.isAuthenticated()) {
+    if (typeof window.AuthService.startSessionMonitor === 'function') {
+      window.AuthService.startSessionMonitor();
+    }
+  }
+
+  // NOTE: Session expiry handling is done in character-builder-manager.js
+  // (initBuilderAuth / handleSessionExpired) to avoid duplicate overlays.
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initBuilderHeaderAuth);
+} else {
+  initBuilderHeaderAuth();
+}
+
+
+
+
+// ===== BUNDLE PART: builder-api.js =====
+
+// API service layer for backend character operations.
+// Exposes CharacterAPI as global on window.
+
+const CharacterAPI = (window.CharacterAPI = {
+  // Helper to convert arrays to dict format for backend
+  arrayToDict(arr) {
+    if (!arr || !Array.isArray(arr)) return [];
+    
+    return arr.map(item => {
+      // If already an object, return as-is
+      if (typeof item === 'object' && item !== null) {
+        return item;
+      }
+      // If string, convert to dict format
+      if (typeof item === 'string') {
+        return { name: item };
+      }
+      // Fallback
+      return { value: item };
+    });
+  },
+  
+  // Helper to convert spell arrays (objects or strings) to string arrays for backend
+  spellsToStringArray(arr) {
+    if (!arr || !Array.isArray(arr)) return [];
+    
+    return arr.map(item => {
+      // If it's an object with a name property, extract the name
+      if (typeof item === 'object' && item !== null && item.name) {
+        return item.name;
+      }
+      // If it's already a string, return as-is
+      if (typeof item === 'string') {
+        return item;
+      }
+      // Fallback - convert to string
+      return String(item);
+    });
+  },
+  
+  // Helper to make authenticated API requests
+  async request(method, endpoint, body = null) {
+    const token = AuthService.getToken();
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const options = {
+      method,
+      headers,
+    };
+    
+    if (body) {
+      options.body = JSON.stringify(body);
+    }
+    
+    try {
+      const response = await fetch(`${CONFIG.BACKEND_URL}${endpoint}`, options);
+      
+      if (response.status === 401) {
+        // Token expired or invalid - handle unexpected logout and notify user
+        AuthService.handleUnexpectedLogout?.('builder_api_401');
+        throw new Error('Session expired. Please log in again.');
+      }
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || `API error: ${response.status}`);
+      }
+      
+      // Handle 204 No Content
+      if (response.status === 204) {
+        return null;
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error(`API request failed [${method} ${endpoint}]:`, error);
+      throw error;
+    }
+  },
+  
+  // Transform frontend character format to backend format (shared mapper)
+  toBackendFormat(character) {
+    return window.DanddyCharacterMapper.fromBuilderToBackend(character);
+  },
+  
+  // Transform backend character format to frontend format (shared mapper)
+  toFrontendFormat(backendChar) {
+    return window.DanddyCharacterMapper.fromBackendToBuilder(backendChar);
+  },
+  
+  // Helper: Map alignment format
+  mapAlignment(alignment) {
+    if (!alignment) return null;
+    
+    // Convert from frontend format (e.g., "Lawful Good") to backend format (e.g., "lawful_good")
+    const map = {
+      'Lawful Good': 'lawful_good',
+      'Neutral Good': 'neutral_good',
+      'Chaotic Good': 'chaotic_good',
+      'Lawful Neutral': 'lawful_neutral',
+      'True Neutral': 'true_neutral',
+      'Chaotic Neutral': 'chaotic_neutral',
+      'Lawful Evil': 'lawful_evil',
+      'Neutral Evil': 'neutral_evil',
+      'Chaotic Evil': 'chaotic_evil',
+    };
+    
+    return map[alignment] || null;
+  },
+  
+  // Helper: Calculate AC (simplified)
+  calculateAC(character) {
+    const dexMod = character.abilities?.dex ? Math.floor((character.abilities.dex - 10) / 2) : 0;
+    return 10 + dexMod; // Base AC calculation
+  },
+  
+  // Helper: Calculate initiative
+  calculateInitiative(character) {
+    return character.abilities?.dex ? Math.floor((character.abilities.dex - 10) / 2) : 0;
+  },
+  
+  // Helper: Get speed based on race
+  getSpeed(character) {
+    const speedMap = {
+      'dwarf': 25,
+      'halfling': 25,
+      'gnome': 25,
+      'elf': 30,
+      'human': 30,
+      'half-elf': 30,
+      'half-orc': 30,
+      'tiefling': 30,
+      'dragonborn': 30,
+    };
+    
+    return speedMap[character.race?.toLowerCase()] || 30;
+  },
+  
+  // ==== CHARACTER CRUD OPERATIONS ====
+  
+  // Create a new character
+  async createCharacter(character) {
+    const backendData = this.toBackendFormat(character);
+    const response = await this.request('POST', '/api/characters', backendData);
+    return this.toFrontendFormat(response);
+  },
+  
+  // Get all characters for current user
+  async getCharacters() {
+    const response = await this.request('GET', '/api/characters');
+    return response.map(char => this.toFrontendFormat(char));
+  },
+  
+  // Get a single character by ID
+  async getCharacter(id) {
+    const response = await this.request('GET', `/api/characters/${id}`);
+    return this.toFrontendFormat(response);
+  },
+  
+  // Update a character
+  async updateCharacter(id, updates) {
+    // If updates is a full character object, convert it
+    const backendUpdates = updates.id ? this.toBackendFormat(updates) : updates;
+    const response = await this.request('PUT', `/api/characters/${id}`, backendUpdates);
+    return this.toFrontendFormat(response);
+  },
+  
+  // Delete a character
+  async deleteCharacter(id) {
+    await this.request('DELETE', `/api/characters/${id}`);
+    return true;
+  },
+  
+  // ==== CAMPAIGN OPERATIONS ====
+  
+  // Get all campaigns
+  async getCampaigns() {
+    return await this.request('GET', '/api/campaigns');
+  },
+  
+  // Create a campaign (DM only)
+  async createCampaign(name, description) {
+    return await this.request('POST', '/api/campaigns', { name, description });
+  },
+  
+  // Assign character to campaign
+  async assignToCampaign(characterId, campaignId) {
+    return await this.request('PUT', `/api/characters/${characterId}`, {
+      campaign_id: campaignId,
+    });
+  },
+  
+  // ==== ADDITIONAL CHARACTER OPERATIONS ====
+  
+  // Duplicate a character
+  async duplicateCharacter(id, newName) {
+    const response = await this.request('POST', `/api/characters/${id}/duplicate?new_name=${encodeURIComponent(newName || '')}`);
+    return this.toFrontendFormat(response);
+  },
+  
+  // Export character
+  async exportCharacter(id) {
+    return await this.request('GET', `/api/characters/${id}/export`);
+  },
+  
+  // Import character
+  async importCharacter(characterData) {
+    const backendData = this.toBackendFormat(characterData);
+    const response = await this.request('POST', '/api/characters/import', backendData);
+    return this.toFrontendFormat(response);
+  },
+});
+
+
+
+
+// ===== BUNDLE PART: builder-state.js =====
+
+// State management for the DandDy terminal character builder.
+// Exposes CharacterState and OptionVariationsCache as globals on window.
+
+// Session persistence key (using localStorage for cross-tab and browser restart persistence)
+const SESSION_STORAGE_KEY = 'danddy_builder_session';
+
+// Cache of AI-generated option text variations (per session)
+const OptionVariationsCache = (window.OptionVariationsCache = {
+  cache: {},
+
+  async get(questionId, question) {
+    // Don't vary race, class, background, or alignment choices - keep classic D&D terms
+    const noVariationQuestions = [
+      'race-choice',
+      'class-choice',
+      'background-choice',
+      'alignment-choice',
+    ];
+    if (noVariationQuestions.includes(questionId)) {
+      return question.options;
+    }
+
+    // Return cached if exists
+    if (this.cache[questionId]) {
+      return this.cache[questionId];
+    }
+
+    // Generate new variations
+    const variations = await AIService.generateOptionVariations(
+      question.text,
+      question.options,
+    );
+
+    // Create new options array with varied text but same underlying data
+    const variedOptions = question.options.map((opt, index) => ({
+      ...opt,
+      text: variations[index],
+    }));
+
+    // Cache it
+    this.cache[questionId] = variedOptions;
+
+    return variedOptions;
+  },
+
+  reset() {
+    this.cache = {};
+  },
+});
+
+// Character creation state (current character, answers, listeners)
+const CharacterState = (window.CharacterState = {
+  current: {
+    id: null,
+    step: 0,
+    abilityMethod: null,
+    answers: {},
+    currentQuestionId: null, // Track current question for session resume
+    character: {
+      // Stable identity for this character across renames/exports/imports
+      // Used by Character Manager to detect "this is the same character"
+      characterUid: null,
+      name: '',
+      race: '',
+      class: '',
+      background: '',
+      alignment: '',
+      sex: null,
+      baseAbilities: null,
+      abilities: {
+        str: 10,
+        dex: 10,
+        con: 10,
+        int: 10,
+        wis: 10,
+        cha: 10,
+      },
+      level: 1,
+      hitPoints: 0,
+      personalityTrait: '',
+      backstory: '',
+      // Background benefits
+      skillProficiencies: [],
+      toolProficiencies: [],
+      languages: [],
+      equipment: [],
+      backgroundFeature: null,
+      // Spellcasting
+      spellcastingAbility: null,
+      cantrips: [],
+      spellsKnown: [],
+      spellsPrepared: [],
+      spellSlots: {},
+    },
+  },
+
+  listeners: [],
+  
+  // Flag to prevent auto-save during restore
+  _restoring: false,
+
+  get() {
+    return this.current;
+  },
+
+  set(updates) {
+    this.current = { ...this.current, ...updates };
+    this.notify();
+  },
+
+  updateCharacter(updates) {
+    this.current.character = { ...this.current.character, ...updates };
+    this.notify();
+  },
+
+  // Set the current question ID (called by App.showQuestion)
+  setCurrentQuestion(questionId) {
+    this.current.currentQuestionId = questionId;
+    this._saveSession();
+  },
+
+  subscribe(listener) {
+    this.listeners.push(listener);
+  },
+
+  notify() {
+    this.listeners.forEach((listener) => listener(this.current));
+    // Auto-save to session on every state change (unless restoring)
+    if (!this._restoring) {
+      this._saveSession();
+    }
+  },
+
+  // ===== Session Persistence =====
+
+  // Get the current user's identifier (for session ownership)
+  _getCurrentUserId() {
+    // AuthService may not be loaded yet in character-builder context
+    if (typeof AuthService !== 'undefined' && AuthService.getCurrentUser) {
+      const user = AuthService.getCurrentUser();
+      // Use the user's ID if available, fall back to email
+      return user ? (user.id || user.email || null) : null;
+    }
+    return null;
+  },
+
+  // Check if there's an in-progress session to resume
+  hasSession() {
+    try {
+      const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (!raw) return false;
+      const session = JSON.parse(raw);
+      
+      // Check if this session belongs to the current user
+      const currentUserId = this._getCurrentUserId();
+      const sessionUserId = session._userId !== undefined ? session._userId : null;
+      
+      // If user IDs don't match, don't offer to resume
+      // (null matches null for anonymous sessions)
+      if (currentUserId !== sessionUserId) {
+        return false;
+      }
+      
+      // Consider it a valid session if we have meaningful progress
+      // (past the intro, or have any character data)
+      const hasProgress = session.currentQuestionId && session.currentQuestionId !== 'intro';
+      const hasCharacterData = session.character && (
+        session.character.name ||
+        session.character.race ||
+        session.character.class
+      );
+      return hasProgress || hasCharacterData;
+    } catch {
+      return false;
+    }
+  },
+
+  // Get session metadata for display (without fully loading)
+  getSessionPreview() {
+    try {
+      const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (!raw) return null;
+      const session = JSON.parse(raw);
+      
+      // Only return preview if session belongs to current user
+      const currentUserId = this._getCurrentUserId();
+      const sessionUserId = session._userId !== undefined ? session._userId : null;
+      if (currentUserId !== sessionUserId) {
+        return null;
+      }
+      
+      return {
+        characterName: session.character?.name || null,
+        race: session.character?.race || null,
+        class: session.character?.class || null,
+        currentQuestionId: session.currentQuestionId,
+        savedAt: session._savedAt || null,
+      };
+    } catch {
+      return null;
+    }
+  },
+
+  // Save current state to localStorage
+  _saveSession() {
+    try {
+      // Only save session if user has made at least one choice (entry-mode selected)
+      // This prevents saving empty/intro-only sessions
+      if (!this.current.answers || !this.current.answers['entry-mode']) {
+        return;
+      }
+      
+      const toSave = {
+        ...this.current,
+        _savedAt: new Date().toISOString(),
+        _userId: this._getCurrentUserId(), // Track which user owns this session
+      };
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(toSave));
+    } catch (e) {
+      console.warn('[CharacterState] Failed to save session:', e);
+    }
+  },
+
+  // Restore state from localStorage
+  restoreSession() {
+    try {
+      const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (!raw) return false;
+      
+      const session = JSON.parse(raw);
+      this._restoring = true;
+      this.current = {
+        id: session.id || Date.now().toString(),
+        step: session.step || 0,
+        abilityMethod: session.abilityMethod || null,
+        answers: session.answers || {},
+        currentQuestionId: session.currentQuestionId || null,
+        character: {
+          characterUid: session.character?.characterUid || `danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: session.character?.name || '',
+          race: session.character?.race || '',
+          class: session.character?.class || '',
+          background: session.character?.background || '',
+          alignment: session.character?.alignment || '',
+          baseAbilities: session.character?.baseAbilities || null,
+          abilities: session.character?.abilities || {
+            str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10,
+          },
+          level: session.character?.level || 1,
+          hitPoints: session.character?.hitPoints || 0,
+          personalityTrait: session.character?.personalityTrait || '',
+          backstory: session.character?.backstory || '',
+          skillProficiencies: session.character?.skillProficiencies || [],
+          toolProficiencies: session.character?.toolProficiencies || [],
+          languages: session.character?.languages || [],
+          equipment: session.character?.equipment || [],
+          backgroundFeature: session.character?.backgroundFeature || null,
+          spellcastingAbility: session.character?.spellcastingAbility || null,
+          cantrips: session.character?.cantrips || [],
+          spellsKnown: session.character?.spellsKnown || [],
+          spellsPrepared: session.character?.spellsPrepared || [],
+          spellSlots: session.character?.spellSlots || {},
+          // Portrait data - restore all portrait-related fields
+          customPortraitAscii: session.character?.customPortraitAscii || null,
+          originalPortraitUrl: session.character?.originalPortraitUrl || null,
+          customPortraitCount: session.character?.customPortraitCount || 0,
+          portraitMetadata: session.character?.portraitMetadata || null,
+          asciiPortrait: session.character?.asciiPortrait || null,
+          asciiPortraitKey: session.character?.asciiPortraitKey || null,
+        },
+      };
+      this._restoring = false;
+      this.notify();
+      return session.currentQuestionId || 'intro';
+    } catch (e) {
+      console.warn('[CharacterState] Failed to restore session:', e);
+      this._restoring = false;
+      return false;
+    }
+  },
+
+  // Clear the saved session (call after save/discard)
+  clearSession() {
+    try {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch (e) {
+      console.warn('[CharacterState] Failed to clear session:', e);
+    }
+  },
+
+  reset() {
+    this.current = {
+      id: Date.now().toString(),
+      step: 0,
+      abilityMethod: null,
+      answers: {},
+      currentQuestionId: null,
+      character: {
+        // Generate a fresh stable UID for this new character
+        characterUid: `danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: '',
+        race: '',
+        class: '',
+        background: '',
+        alignment: '',
+        sex: null,
+        baseAbilities: null,
+        abilities: {
+          str: 10,
+          dex: 10,
+          con: 10,
+          int: 10,
+          wis: 10,
+          cha: 10,
+        },
+        level: 1,
+        hitPoints: 0,
+        personalityTrait: '',
+        backstory: '',
+        // Background benefits
+        skillProficiencies: [],
+        toolProficiencies: [],
+        languages: [],
+        equipment: [],
+        backgroundFeature: null,
+        // Spellcasting
+        spellcastingAbility: null,
+        cantrips: [],
+        spellsKnown: [],
+        spellsPrepared: [],
+        spellSlots: {},
+      },
+    };
+    // Clear session when explicitly resetting
+    this.clearSession();
+    this.notify();
+  },
+});
+
+
+
+
+
+
+
+// ===== BUNDLE PART: builder-questions.js =====
+
+// Question flow definition for the DandDy terminal character builder.
+// Exposes QUESTIONS as a global on window.
+
+const QUESTIONS = (window.QUESTIONS = [
+  {
+    id: 'intro',
+    type: 'message',
+    text: `>  SYSTEM INITIALIZED...\n>  LOADING CHARACTER CREATION PROTOCOL...\n>  \n>  Ah.${' '}Another soul seeking adventure.${' '}Or at least,${' '}trying to.\n>  \n>  Look,${' '}I've done this a thousand times.${' '}You'll make choices.${' '}I'll pretend they matter.${' '}We'll both get through this.\n>  \n>  Let's start with something easy...`,
+    next: 'entry-mode',
+  },
+
+  {
+    id: 'entry-mode',
+    type: 'choice',
+    text: 'How would you like to create your character?',
+    options: [
+      {
+        text: 'Co-create with the narrator (guided mode)',
+        value: 'guided',
+      },
+      {
+        text: 'Quick create (let the system roll everything)',
+        value: 'quick',
+      },
+    ],
+    next: 'motivation',
+  },
+
+  {
+    id: 'motivation',
+    type: 'choice',
+    text: 'What draws you to the adventuring life?',
+    options: [
+      { text: 'Glory and heroism', value: 'glory', trait: 'heroic' },
+      { text: 'Gold and treasure', value: 'gold', trait: 'greedy' },
+      { text: 'Escaping my past', value: 'escape', trait: 'mysterious' },
+      { text: 'Just bored, honestly', value: 'bored', trait: 'casual' },
+    ],
+    aiPromptContext: 'player motivation for adventuring',
+    next: 'playstyle',
+  },
+
+  {
+    id: 'playstyle',
+    type: 'choice',
+    text: 'What kind of playstyle sounds most fun to you?',
+    options: [
+      {
+        text: 'Sneaky and tactical',
+        value: 'sneaky',
+      },
+      {
+        text: 'Tanky and hard to kill',
+        value: 'tanky',
+      },
+      {
+        text: 'Social and talkative',
+        value: 'social',
+      },
+      {
+        text: 'Blasting things from the back line',
+        value: 'blaster',
+      },
+    ],
+    aiPromptContext: 'player preferred combat and roleplay playstyle',
+    next: 'sex-choice',
+  },
+
+  {
+    id: 'sex-choice',
+    type: 'choice',
+    text: 'And this character of yours — what form do they take?',
+    options: [
+      {
+        text: 'Male',
+        value: 'male',
+      },
+      {
+        text: 'Female',
+        value: 'female',
+      },
+    ],
+    saveTo: 'sex',
+    aiPromptContext: 'character biological sex',
+    next: 'physicality',
+  },
+
+  {
+    id: 'physicality',
+    type: 'choice',
+    text: 'And physically, how would you describe yourself?',
+    options: [
+      {
+        text: 'Strong and imposing',
+        value: 'strong',
+        suggests: ['fighter', 'barbarian', 'paladin'],
+      },
+      {
+        text: 'Quick and nimble',
+        value: 'nimble',
+        suggests: ['rogue', 'ranger', 'monk'],
+      },
+      {
+        text: 'Mystically gifted',
+        value: 'mystical',
+        suggests: ['wizard', 'sorcerer', 'warlock'],
+      },
+      {
+        text: 'Unremarkable, honestly',
+        value: 'average',
+        suggests: ['bard', 'cleric', 'druid'],
+      },
+    ],
+    aiPromptContext: 'player physical description',
+    next: 'social',
+  },
+
+  {
+    id: 'social',
+    type: 'choice',
+    text: 'In social situations, you tend to be...',
+    options: [
+      {
+        text: 'Charismatic and charming',
+        value: 'charismatic',
+        suggests: ['bard', 'paladin', 'sorcerer', 'warlock'],
+      },
+      {
+        text: 'Observant and quiet',
+        value: 'observant',
+        suggests: ['rogue', 'ranger', 'druid'],
+      },
+      {
+        text: 'Intimidating',
+        value: 'intimidating',
+        suggests: ['barbarian', 'fighter'],
+      },
+      {
+        text: 'Awkward but well-meaning',
+        value: 'awkward',
+        suggests: ['wizard', 'cleric', 'monk'],
+      },
+    ],
+    aiPromptContext: 'player social tendencies',
+    next: 'race-suggest',
+  },
+
+  {
+    id: 'race-suggest',
+    type: 'suggestion',
+    text: 'Analyzing your responses... ( ._. )',
+    getSuggestion: (state) => {
+      const answers = state.answers;
+      const suggestions = [];
+
+      // Map answers to race suggestions
+      if (answers.physicality === 'strong') {
+        suggestions.push('dwarf', 'half-orc', 'dragonborn');
+      }
+      if (answers.physicality === 'nimble') {
+        suggestions.push('elf', 'halfling', 'half-elf');
+      }
+      if (answers.physicality === 'mystical') {
+        suggestions.push('tiefling', 'elf', 'gnome');
+      }
+      if (answers.physicality === 'average') {
+        suggestions.push('human', 'half-elf', 'halfling');
+      }
+
+      if (answers.social === 'charismatic') {
+        suggestions.push('human', 'half-elf', 'tiefling');
+      }
+      if (answers.social === 'observant') {
+        suggestions.push('elf', 'gnome');
+      }
+      if (answers.social === 'intimidating') {
+        suggestions.push('half-orc', 'dragonborn', 'dwarf');
+      }
+      if (answers.social === 'awkward') {
+        suggestions.push('gnome', 'halfling', 'tiefling');
+      }
+
+      // Get top 3 most suggested
+      const counts = {};
+      suggestions.forEach((s) => {
+        counts[s] = (counts[s] || 0) + 1;
+      });
+      const top3 = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([race]) => race);
+
+      return {
+        message:
+          'Based on your answers, you seem like the type who would be... let me think...',
+        suggestions: top3.length === 3 ? top3 : ['human', 'elf', 'dwarf'],
+      };
+    },
+    next: 'race-choice',
+  },
+
+  {
+    id: 'race-choice',
+    type: 'list-choice',
+    text: 'Choose your race:',
+    options: DND_DATA.races.map((r) => ({
+      text: `${r.name} - ${r.description}`,
+      value: r.id,
+    })),
+    saveTo: 'race',
+    next: 'class-suggest',
+  },
+
+  {
+    id: 'class-suggest',
+    type: 'suggestion',
+    text: 'Interesting choice. Now for your class...',
+    getSuggestion: (state) => {
+      const answers = state.answers;
+      const suggestions = [];
+
+      // Physicality preferences
+      if (answers.physicality === 'strong') {
+        suggestions.push('fighter', 'barbarian', 'paladin');
+      }
+      if (answers.physicality === 'nimble') {
+        suggestions.push('rogue', 'ranger', 'monk');
+      }
+      if (answers.physicality === 'mystical') {
+        suggestions.push('wizard', 'sorcerer', 'warlock');
+      }
+
+      // Social tendencies
+      if (answers.social === 'charismatic') {
+        suggestions.push('bard', 'paladin', 'warlock');
+      }
+
+      // Playstyle preferences (sneaky / tanky / social / blaster)
+      if (answers.playstyle === 'sneaky') {
+        suggestions.push('rogue', 'ranger', 'monk');
+      }
+      if (answers.playstyle === 'tanky') {
+        suggestions.push('barbarian', 'fighter', 'paladin');
+      }
+      if (answers.playstyle === 'social') {
+        suggestions.push('bard', 'paladin', 'warlock');
+      }
+      if (answers.playstyle === 'blaster') {
+        suggestions.push('wizard', 'sorcerer', 'warlock');
+      }
+
+      // If we collected multiple ideas, bias toward the ones that appear more often
+      const counts = {};
+      suggestions.forEach((cls) => {
+        counts[cls] = (counts[cls] || 0) + 1;
+      });
+      const ranked = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([cls]) => cls);
+
+      const finalSuggestions =
+        ranked.length > 0 ? ranked.slice(0, 3) : ['fighter', 'wizard', 'rogue'];
+
+      return {
+        message: 'Given your choices, might I suggest...',
+        suggestions: finalSuggestions,
+      };
+    },
+    next: 'class-choice',
+  },
+
+  {
+    id: 'class-choice',
+    type: 'list-choice',
+    text: 'Choose your class:',
+    options: DND_DATA.classes.map((c) => ({
+      text: `${c.name} - ${c.description}`,
+      value: c.id,
+    })),
+    saveTo: 'class',
+    next: 'abilities',
+  },
+
+  {
+    id: 'abilities',
+    type: 'abilities',
+    text: 'Time to roll your ability scores. Choose your method:',
+    options: [
+      {
+        text: 'Standard Array (15, 14, 13, 12, 10, 8)',
+        value: 'standard',
+      },
+      { text: 'Roll 4d6 (drop lowest)', value: 'roll' },
+    ],
+    // Next question is chosen dynamically in handleAbilityMethod
+    // based on class (spellcaster or not) and entry mode (guided vs quick).
+    next: 'background-choice',
+  },
+
+  // === SPELL SELECTION (Guided Mode) ===
+  {
+    id: 'spell-style-intro',
+    type: 'message',
+    text: `>  Ah,${' '}right.${' '}You're a spellcaster.\n>  \n>  *sighs*\n>  \n>  I suppose we should talk about your magical abilities.${' '}Because what's an adventure without someone hurling fireballs or dramatically shouting healing incantations?\n>  \n>  Let's figure out your spell preferences...`,
+    next: 'spell-style',
+  },
+
+  {
+    id: 'spell-style',
+    type: 'choice',
+    text: 'What draws you to magic?',
+    options: [
+      {
+        text: 'Blasting things into oblivion',
+        value: 'offense',
+        trait: 'aggressive',
+      },
+      {
+        text: 'Protecting myself and allies',
+        value: 'defense',
+        trait: 'protective',
+      },
+      {
+        text: 'Controlling the battlefield',
+        value: 'control',
+        trait: 'tactical',
+      },
+      {
+        text: 'Practical utility and tricks',
+        value: 'utility',
+        trait: 'clever',
+      },
+    ],
+    saveTo: 'spellStyle',
+    next: 'spell-element',
+  },
+
+  {
+    id: 'spell-element',
+    type: 'choice',
+    text: 'And if you had to pick a magical specialty...',
+    options: [
+      { text: 'Fire and flames', value: 'fire' },
+      { text: 'Ice and cold', value: 'cold' },
+      { text: 'Lightning and storms', value: 'lightning' },
+      { text: 'Shadows and darkness', value: 'necrotic' },
+      { text: 'Light and radiance', value: 'radiant' },
+      { text: "Whatever's most effective", value: 'versatile' },
+    ],
+    saveTo: 'spellElement',
+    next: 'spell-selection-guided',
+  },
+
+  {
+    id: 'spell-selection-guided',
+    type: 'spell-selection',
+    mode: 'guided',
+    text: 'Based on your preferences, here are your recommended spells...',
+    next: 'background-choice',
+  },
+
+  // === SPELL SELECTION (Quick Mode) ===
+  {
+    id: 'spell-quick-mode',
+    type: 'spell-selection',
+    mode: 'quick',
+    text: 'Auto-selecting balanced starter spells...',
+    next: 'background-choice',
+  },
+
+  {
+    id: 'background-choice',
+    type: 'list-choice',
+    text: 'What was your life before adventuring?',
+    options: DND_DATA.backgrounds.map((b) => ({
+      text: `${b.name} - ${b.description}`,
+      value: b.id,
+    })),
+    saveTo: 'background',
+    next: 'alignment-choice',
+  },
+
+  {
+    id: 'alignment-choice',
+    type: 'list-choice',
+    text: 'And your moral compass points toward...',
+    options: DND_DATA.alignments.map((a) => ({
+      text: `${a.name} - ${a.description}`,
+      value: a.id,
+    })),
+    saveTo: 'alignment',
+    next: 'name-choice',
+  },
+
+  {
+    id: 'name-choice',
+    type: 'name',
+    text: 'Finally, what shall we call you?',
+    next: 'backstory',
+  },
+
+  {
+    id: 'backstory',
+    type: 'backstory',
+    text: 'Generating your backstory...',
+    next: 'complete',
+  },
+
+  {
+    id: 'complete',
+    type: 'complete',
+    text: "Well. That's done. Your character is ready. Try not to die immediately.",
+  },
+]);
+
+
+
+
+
+
+
+// ===== BUNDLE PART: builder-app.js =====
+
+// Core app logic and keyboard navigation for the DandDy terminal character builder.
+// Exposes App and KeyboardNav as globals on window.
+
+// ===== KEYBOARD NAVIGATION =====
+
+const KeyboardNav = (window.KeyboardNav = {
+  currentFocusIndex: 0,
+  isActive: false,
+  retryCount: 0,
+
+  activate() {
+    this.isActive = true;
+    // Focus on the first button of the last question by default
+    const buttons = this.getActiveButtons();
+    if (buttons.length > 0) {
+      // Find the first button in the last question card
+      const allCards = document.querySelectorAll('.question-card');
+      const lastCard = allCards[allCards.length - 1];
+      const lastCardButtons = buttons.filter((btn) => lastCard.contains(btn));
+
+      if (lastCardButtons.length > 0) {
+        this.currentFocusIndex = buttons.indexOf(lastCardButtons[0]);
+      } else {
+        this.currentFocusIndex = 0;
+      }
+    } else {
+      this.currentFocusIndex = 0;
+    }
+    this.retryCount = 0;
+    // Wait for DOM to update before focusing
+    this.tryActivate();
+  },
+
+  /**
+   * Calculate a reasonable default Armor Class based on class, abilities,
+   * and a simplified 5e armor model.
+   *
+   * Precedence:
+   * - If class is Barbarian/Monk *and* no armorCategory is set → Unarmored Defense.
+   * - Otherwise, if armorCategory is set → use armor + optional shield.
+   * - Otherwise → 10 + DEX mod (no armor).
+   */
+  calculateArmorClassForClass(classId, abilities, armorCategory = null, hasShield = false) {
+    const dexMod = Utils.abilityModifier(abilities.dex);
+    const conMod = Utils.abilityModifier(abilities.con);
+    const wisMod = Utils.abilityModifier(abilities.wis);
+
+    // Unarmored Defense for Barbarian/Monk when not wearing armor
+    if (classId === 'barbarian' && !armorCategory) {
+      return 10 + dexMod + conMod;
+    }
+    if (classId === 'monk' && !armorCategory) {
+      return 10 + dexMod + wisMod;
+    }
+
+    // Armor-based AC when an armor category is present
+    let baseAC;
+    switch (armorCategory) {
+      case 'light':
+        // Typical light armor baseline (leather): 11 + DEX
+        baseAC = 11 + dexMod;
+        break;
+      case 'medium':
+        // Typical medium armor (scale mail): 14 + min(DEX, +2)
+        baseAC = 14 + Math.min(dexMod, 2);
+        break;
+      case 'heavy':
+        // Typical heavy armor (chain mail): fixed 16, no DEX
+        baseAC = 16;
+        break;
+      default:
+        // No armor: 10 + DEX
+        baseAC = 10 + dexMod;
+        break;
+    }
+
+    if (hasShield) {
+      baseAC += 2;
+    }
+
+    return baseAC;
+  },
+
+  /**
+   * Infer a coarse armor loadout (armor category + shield) from the class's
+   * starting equipment text. This doesn't try to be exhaustive – it gives us
+   * stable fields we can later surface in UI.
+   */
+  inferArmorLoadoutForClass(classId) {
+    const cls = DND_DATA.classes.find((c) => c.id === classId);
+    if (!cls || !Array.isArray(cls.equipment)) {
+      return { armorCategory: null, hasShield: false };
+    }
+
+    const equipmentText = cls.equipment.join(' ').toLowerCase();
+
+    let armorCategory = null;
+    if (equipmentText.includes('leather armor') || equipmentText.includes('light armor')) {
+      armorCategory = 'light';
+    } else if (equipmentText.includes('medium armor')) {
+      armorCategory = 'medium';
+    } else if (equipmentText.includes('heavy armor')) {
+      armorCategory = 'heavy';
+    }
+
+    const hasShield =
+      equipmentText.includes('shield') ||
+      equipmentText.includes('wooden shield');
+
+    return { armorCategory, hasShield };
+  },
+
+  /**
+   * Map an armorCategory + class into concrete armor item strings that should
+   * appear in the equipment list (e.g., "Leather Armor", "Chain Mail", "Shield").
+   */
+  getStartingArmorItems(classId, armorCategory, hasShield) {
+    const items = [];
+
+    if (armorCategory === 'light') {
+      items.push('Leather Armor');
+    } else if (armorCategory === 'medium') {
+      // Barbarians often start in hide; others in scale mail.
+      if (classId === 'barbarian') {
+        items.push('Hide Armor');
+      } else {
+        items.push('Scale Mail');
+      }
+    } else if (armorCategory === 'heavy') {
+      items.push('Chain Mail');
+    }
+
+    if (hasShield) {
+      // Druids/clerics often have wooden shields; others a generic shield.
+      if (classId === 'druid' || classId === 'cleric') {
+        items.push('Wooden Shield');
+      } else {
+        items.push('Shield');
+      }
+    }
+
+    return items;
+  },
+
+  tryActivate() {
+    setTimeout(() => {
+      const buttons = this.getActiveButtons();
+
+      if (buttons.length > 0) {
+        this.updateFocus();
+      } else if (this.retryCount < 10) {
+        // Retry up to 10 times (1 second total)
+        this.retryCount++;
+        this.tryActivate();
+      }
+    }, 100);
+  },
+
+  deactivate() {
+    this.isActive = false;
+    this.clearFocus();
+  },
+
+  getActiveButtons() {
+    // Get ALL question cards
+    const allCards = document.querySelectorAll('.question-card');
+
+    if (allCards.length === 0) {
+      return [];
+    }
+
+    // Get ALL clickable buttons from ALL cards
+    const allButtons = [];
+    allCards.forEach((card) => {
+      const cardButtons = Array.from(card.querySelectorAll('.button-primary'));
+      // Include all buttons (selected, locked, etc) - they're all clickable now
+      cardButtons.forEach((btn) => {
+        // Skip only truly disabled buttons (like name input buttons after selection)
+        if (!btn.hasAttribute('disabled')) {
+          allButtons.push(btn);
+        }
+      });
+    });
+
+    return allButtons;
+  },
+
+  updateFocus() {
+    const buttons = this.getActiveButtons();
+    if (buttons.length === 0) {
+      return;
+    }
+
+    // Remove focus from all buttons
+    buttons.forEach((btn) => btn.classList.remove('is-focused'));
+
+    // Add focus to current index
+    if (buttons[this.currentFocusIndex]) {
+      const focusedButton = buttons[this.currentFocusIndex];
+      focusedButton.classList.add('is-focused');
+
+      // Scroll the focused button into view
+      focusedButton.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    }
+  },
+
+  clearFocus() {
+    const buttons = this.getActiveButtons();
+    buttons.forEach((btn) => btn.classList.remove('is-focused'));
+  },
+
+  moveUp() {
+    if (!this.isActive) return;
+    const buttons = this.getActiveButtons();
+    if (buttons.length === 0) return;
+
+    // Don't wrap - stop at the top
+    this.currentFocusIndex = Math.max(0, this.currentFocusIndex - 1);
+    this.updateFocus();
+  },
+
+  moveDown() {
+    if (!this.isActive) return;
+    const buttons = this.getActiveButtons();
+    if (buttons.length === 0) return;
+
+    // Don't wrap - stop at the bottom
+    this.currentFocusIndex = Math.min(buttons.length - 1, this.currentFocusIndex + 1);
+    this.updateFocus();
+  },
+
+  // Horizontal navigation mirrors vertical movement for now:
+  // buttons are laid out linearly, but when they appear side by side,
+  // Left/Right should feel like moving between siblings.
+  moveLeft() {
+    this.moveUp();
+  },
+
+  moveRight() {
+    this.moveDown();
+  },
+
+  select() {
+    if (!this.isActive) return;
+    const buttons = this.getActiveButtons();
+    if (buttons.length === 0) return;
+
+    const button = buttons[this.currentFocusIndex];
+    if (button) {
+      button.click();
+      this.deactivate();
+    }
+  },
+});
+
+// ===== APP LOGIC =====
+
+// Track current portrait style selected in modal (module-level like manager)
+let currentBuilderPortraitStyle = null;
+
+/**
+ * Format style ID to display label (title case, no dashes/underscores)
+ */
+function formatStyleLabelBuilder(idOrLabel) {
+  if (!idOrLabel) return '';
+  
+  // Remove "Custom: " prefix if present
+  let cleaned = String(idOrLabel).replace(/^Custom:\s*/i, '');
+  
+  // Remove " (default)" suffix
+  cleaned = cleaned.replace(/\s*\(default\)\s*$/i, '');
+  
+  // Replace dashes/underscores with spaces
+  cleaned = cleaned.replace(/[-_]/g, ' ');
+  
+  // Title case: capitalize first letter of each word
+  if (cleaned.length > 0) {
+    cleaned = cleaned.split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+  }
+  
+  return cleaned;
+}
+
+/**
+ * Populate the style listbox menu in the portrait prompt modal.
+ * Uses the same selector pattern as the settings modal and manager.
+ * 
+ * This is now async to properly wait for API sync before fetching themes.
+ */
+async function populateBuilderPortraitStyleDropdown(activeStyle) {
+  const menu = document.getElementById('builderPortraitStyleMenu');
+  const label = document.getElementById('builderPortraitStyleLabel');
+  if (!menu) return null;
+
+  // Clear existing options
+  menu.innerHTML = '';
+
+  // Wait for API sync to complete before fetching themes
+  // This ensures global styles are loaded for authenticated users
+  if (window.PortraitPrompt && typeof PortraitPrompt.syncFromAPI === 'function') {
+    try {
+      await PortraitPrompt.syncFromAPI();
+    } catch (e) {
+      console.warn('populateBuilderPortraitStyleDropdown: API sync failed', e);
+    }
+  }
+
+  // Get available themes from PortraitPrompt
+  let themes = [];
+  let defaultThemeId = 'cinematic-inks';
+  
+  try {
+    if (window.PortraitPrompt) {
+      if (typeof PortraitPrompt.getThemes === 'function') {
+        themes = PortraitPrompt.getThemes() || [];
+      }
+      if (typeof PortraitPrompt.getDefaultThemeId === 'function') {
+        defaultThemeId = PortraitPrompt.getDefaultThemeId() || defaultThemeId;
+      }
+    }
+  } catch (e) {
+    console.warn('populateBuilderPortraitStyleDropdown: Error getting themes', e);
+  }
+
+  // Always ensure at least the default theme is available
+  if (!themes.length) {
+    themes = [
+      { id: 'cinematic-inks', label: 'Cinematic Inks (default)' }
+    ];
+  }
+
+  // Sort themes alphabetically by id
+  themes = themes.slice().sort((a, b) => {
+    const nameA = (a.id || '').toLowerCase();
+    const nameB = (b.id || '').toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
+
+  // Determine selected value
+  const selectedStyle = activeStyle || defaultThemeId;
+  let selectedLabel = formatStyleLabelBuilder(defaultThemeId);
+
+  // Populate menu with options (same pattern as settings modal)
+  themes.forEach((theme) => {
+    const formattedLabel = formatStyleLabelBuilder(theme.id);
+    const isSelected = theme.id === selectedStyle;
+    
+    if (isSelected) {
+      selectedLabel = formattedLabel;
+    }
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'selector-option' + (isSelected ? ' is-selected' : '');
+    button.setAttribute('role', 'option');
+    button.setAttribute('data-value', theme.id);
+    button.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+    button.innerHTML = `<span class="selector-option-label">${formattedLabel}</span>`;
+    menu.appendChild(button);
+  });
+
+  // Update trigger label
+  if (label) {
+    label.textContent = selectedLabel;
+  }
+
+  currentBuilderPortraitStyle = selectedStyle;
+  
+  // Wire up option clicks
+  initBuilderPortraitStyleSelector();
+  
+  return selectedStyle;
+}
+
+/**
+ * Initialize the portrait style selector click handlers.
+ * Uses the same pattern as manager.
+ */
+function initBuilderPortraitStyleSelector() {
+  const menu = document.getElementById('builderPortraitStyleMenu');
+  const label = document.getElementById('builderPortraitStyleLabel');
+  const trigger = document.getElementById('builderPortraitStyleTrigger');
+  
+  if (!menu) return;
+  
+  const options = menu.querySelectorAll('.selector-option');
+  
+  options.forEach((option) => {
+    option.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const value = option.getAttribute('data-value');
+      const optionLabel = option.querySelector('.selector-option-label');
+      
+      if (value && optionLabel) {
+        // Update trigger label
+        if (label) {
+          label.textContent = optionLabel.textContent.trim();
+        }
+        
+        // Update current style
+        currentBuilderPortraitStyle = value;
+        
+        // Update visual selection state
+        options.forEach((opt) => {
+          const isSelected = opt.getAttribute('data-value') === value;
+          opt.classList.toggle('is-selected', isSelected);
+          opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        });
+        
+        // Close the menu using the standard toggle
+        if (trigger && window.CharacterSheet && typeof CharacterSheet.toggleSelectorMenu === 'function') {
+          CharacterSheet.toggleSelectorMenu(trigger);
+        }
+      }
+    });
+  });
+}
+
+const App = (window.App = {
+  currentQuestion: null,
+  _lastRenderedCharacter: null,
+  _PORTRAIT_HISTORY_MAX_VERSIONS: 5,
+  // When true, the next character-panel update will render portraits without
+  // re-running the ASCII "type-in" animation (used for non-visual updates like save).
+  _suppressNextPortraitAnimation: false,
+
+  async init() {
+    console.log('Initializing Character Builder...');
+
+    // Subscribe to state changes
+    CharacterState.subscribe((state) => {
+      this.updateCharacterPanel(state.character);
+    });
+
+    // Check URL for explicit resume parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceResume = urlParams.get('resume') === 'true';
+    const forceNew = urlParams.get('new') === 'true';
+    const isRequired = urlParams.get('required') === 'true';
+    
+    // Remove exit button if character creation is required (new user flow)
+    if (isRequired) {
+      const exitBtn = document.getElementById('exitBuilderBtn');
+      if (exitBtn) {
+        exitBtn.remove();
+      }
+    }
+
+    // Check for existing session to resume
+    if (!forceNew && CharacterState.hasSession()) {
+      const preview = CharacterState.getSessionPreview();
+      
+      if (forceResume) {
+        // URL says resume - do it immediately
+        await this._resumeSession();
+        return;
+      }
+      
+      // Show resume prompt
+      await this._showResumePrompt(preview);
+      return;
+    }
+
+    // Start fresh
+    await this._startNewCharacter();
+  },
+
+  // Resume from saved session
+  async _resumeSession() {
+    console.log('Resuming character builder session...');
+    const resumeQuestionId = CharacterState.restoreSession();
+    OptionVariationsCache.reset(); // Clear variation cache (may regenerate)
+    this._lastPortraitArt = null;
+    
+    // Update character panel with restored data
+    const character = CharacterState.get().character;
+    this.updateCharacterPanel(character);
+    
+    // Show a brief "resuming" message then continue
+    const narratorPanel = document.getElementById('narrator-panel');
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(messageEl, '> SESSION RESTORED. Let\'s continue where we left off...');
+    Utils.scrollToBottom(true);
+    await Utils.sleep(1000);
+    
+    // Check if character is complete (has all required fields)
+    // If so, jump straight to the completion screen regardless of currentQuestionId
+    const isCharacterComplete = character.name && character.race && 
+                                 character.class && character.background && 
+                                 character.alignment;
+    
+    if (isCharacterComplete) {
+      await this.showQuestion('complete');
+    } else {
+    // Jump to the question we were on
+    await this.showQuestion(resumeQuestionId || 'intro');
+    }
+  },
+
+  // Start a brand new character
+  async _startNewCharacter() {
+    CharacterState.reset();
+    OptionVariationsCache.reset();
+    this._lastPortraitArt = null;
+    await this.showQuestion('intro');
+  },
+
+  // Show modal asking user if they want to resume
+  async _showResumePrompt(preview) {
+    const modal = document.getElementById('sessionResumeModal');
+    const timeStampEl = document.getElementById('sessionTimeStamp');
+    const resumeBtn = document.getElementById('sessionResumeBtn');
+    const discardBtn = document.getElementById('sessionDiscardBtn');
+    
+    // Format the time if available
+    let timeNote = '';
+    if (preview.savedAt) {
+      const savedDate = new Date(preview.savedAt);
+      const now = new Date();
+      const diffMs = now - savedDate;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      
+      if (diffMins < 1) {
+        timeNote = 'saved moments ago';
+      } else if (diffMins < 60) {
+        timeNote = `saved ${diffMins}m ago`;
+      } else if (diffHours < 24) {
+        timeNote = `saved ${diffHours}h ago`;
+      } else {
+        timeNote = `saved ${savedDate.toLocaleDateString()}`;
+      }
+    }
+
+    // Update timestamp in header
+    timeStampEl.textContent = timeNote;
+    
+    // Show the modal
+    modal.classList.add('show');
+    
+    // Handle button clicks
+    return new Promise((resolve) => {
+      const handleResume = async () => {
+        cleanup();
+        modal.classList.remove('show');
+        await this._resumeSession();
+        resolve();
+      };
+      
+      const handleDiscard = async () => {
+        cleanup();
+        modal.classList.remove('show');
+        CharacterState.clearSession();
+        await this._startNewCharacter();
+        resolve();
+      };
+      
+      const cleanup = () => {
+        resumeBtn.removeEventListener('click', handleResume);
+        discardBtn.removeEventListener('click', handleDiscard);
+      };
+      
+      resumeBtn.addEventListener('click', handleResume);
+      discardBtn.addEventListener('click', handleDiscard);
+    });
+  },
+
+  // Show progressive "thinking" messages while waiting for AI
+  showProgressiveThinking(element) {
+    if (!element) return;
+    
+    // Clear any existing interval
+    if (this._thinkingInterval) {
+      clearInterval(this._thinkingInterval);
+    }
+    
+    let elapsed = 0;
+    // Cube markup used inside a narrator-spinner-shell so that whitespace
+    // behavior is controlled and the cube + text stay on a single line.
+    const cubeMarkup =
+      '<span class="spinner-cube-scene">' +
+      '<span class="spinner-cube-tilt">' +
+      '<span class="spinner-cube">' +
+      '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
+      '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
+      '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
+      '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
+      '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
+      '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
+      '</span></span></span>';
+
+    const renderLine = (text) =>
+      `<span class="narrator-spinner-shell">${cubeMarkup} ${text}</span>`;
+
+    element.innerHTML = renderLine('rolling the dice...');
+    
+    this._thinkingInterval = setInterval(() => {
+      elapsed++;
+      
+      if (elapsed < 3) {
+        element.innerHTML = renderLine('rolling the dice...');
+      } else if (elapsed < 6) {
+        element.innerHTML = renderLine('still rolling...');
+      } else {
+        element.innerHTML = renderLine('server waking up... hang tight!');
+      }
+    }, 1000); // Update every second
+  },
+  
+  stopProgressiveThinking() {
+    if (this._thinkingInterval) {
+      clearInterval(this._thinkingInterval);
+      this._thinkingInterval = null;
+    }
+  },
+
+  async showQuestion(questionId) {
+    const question = QUESTIONS.find((q) => q.id === questionId);
+    if (!question) {
+      console.error('Question not found:', questionId);
+      return;
+    }
+
+    this.currentQuestion = question;
+    // Track current question for session persistence
+    CharacterState.setCurrentQuestion(questionId);
+    const narratorPanel = document.getElementById('narrator-panel');
+
+    // Handle different question types
+    switch (question.type) {
+      case 'message':
+        await this.showMessage(question);
+        break;
+      case 'choice':
+        await this.showChoice(question);
+        break;
+      case 'list-choice':
+        await this.showListChoice(question);
+        break;
+      case 'suggestion':
+        await this.showSuggestion(question);
+        break;
+      case 'abilities':
+        await this.showAbilities(question);
+        break;
+      case 'name':
+        await this.showNameChoice(question);
+        break;
+      case 'backstory':
+        await this.showBackstory(question);
+        break;
+      case 'complete':
+        await this.showComplete(question);
+        break;
+      case 'spell-selection':
+        await this.showSpellSelection(question);
+        break;
+    }
+  },
+
+  async showMessage(question) {
+    const narratorPanel = document.getElementById('narrator-panel');
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+
+    // For intro message, use narrator-specific intro text
+    let messageText = question.text;
+    if (question.id === 'intro') {
+      const narratorId = StorageService.getNarratorId();
+      const narrator = getNarrator(narratorId);
+      messageText = narrator.introText;
+    }
+
+    const messageEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(messageEl, messageText);
+    Utils.scrollToBottom(true);
+
+    if (question.next) {
+      messageEl.classList.add('is-waiting');
+      await Utils.sleep(1500);
+      messageEl.classList.remove('is-waiting');
+      await this.showQuestion(question.next);
+    }
+  },
+
+  async showChoice(question) {
+    const narratorPanel = document.getElementById('narrator-panel');
+    
+    // For entry-mode question, check creation quota first
+    if (question.id === 'entry-mode') {
+      let quotaInfo = null;
+      try {
+        quotaInfo = await AIService.getCreationQuotaStatus();
+      } catch (e) {
+        // Non-fatal: quota check failed, allow user to proceed
+        console.warn('Creation quota check failed:', e);
+      }
+
+      // Store quota info for later display
+      this._creationQuotaInfo = quotaInfo;
+    }
+
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+
+    const messageEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(messageEl, question.text);
+
+    // Get varied options (AI-generated or cached)
+    const variedOptions = await OptionVariationsCache.get(question.id, question);
+    const variedQuestion = { ...question, options: variedOptions };
+
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderQuestion(variedQuestion),
+    );
+
+    // For entry-mode, add quota info inside the options box
+    if (question.id === 'entry-mode' && this._creationQuotaInfo) {
+      const qi = this._creationQuotaInfo;
+      const questionCard = narratorPanel.querySelector(`.question-card[data-question-id="${question.id}"]`);
+      const optionsContainer = questionCard?.querySelector('.options-container');
+      
+      // Only show if enforced (remaining !== -1 means quota is enforced)
+      if (qi.remaining !== -1 && optionsContainer) {
+        const quotaLine = document.createElement('div');
+        quotaLine.className = 'creation-quota-info';
+        
+        if (qi.remaining === 0) {
+          // Format reset time nicely
+          let resetText = 'Resets tomorrow';
+          if (qi.resetAt) {
+            try {
+              const resetDate = new Date(qi.resetAt);
+              const now = new Date();
+              const hoursUntil = Math.ceil((resetDate - now) / (1000 * 60 * 60));
+              if (hoursUntil <= 1) {
+                resetText = 'Resets in about an hour';
+              } else if (hoursUntil < 24) {
+                resetText = `Resets in about ${hoursUntil} hours`;
+              }
+            } catch (_) {}
+          }
+          quotaLine.textContent = `You've reached today's limit. ${resetText}.`;
+          quotaLine.classList.add('is-exhausted');
+          
+          // Disable the option buttons
+          const buttons = questionCard.querySelectorAll('.button-primary');
+          buttons.forEach(btn => {
+            btn.disabled = true;
+            btn.title = "Daily character creation limit reached";
+            btn.classList.add('is-quota-disabled');
+          });
+          
+          // Add a back button
+          optionsContainer.insertAdjacentHTML(
+            'beforeend',
+            `<button class="button-primary" onclick="exitToManager()" style="margin-top: var(--spacing-md);">
+              Back to Character Manager
+            </button>`,
+          );
+        } else {
+          // Show remaining + reset timing to make the daily nature explicit.
+          let resetText = '';
+          if (qi.resetAt) {
+            try {
+              const resetDate = new Date(qi.resetAt);
+              const now = new Date();
+              const hoursUntil = Math.max(0, Math.ceil((resetDate - now) / (1000 * 60 * 60)));
+              if (hoursUntil <= 1) resetText = ' (resets in ~1 hour)';
+              else if (hoursUntil < 24) resetText = ' (resets in ~' + hoursUntil + ' hours)';
+            } catch (_) {}
+          }
+          quotaLine.textContent = qi.remaining + ' character creation' + (qi.remaining === 1 ? '' : 's') + ' remaining today' + resetText;
+          // Slow continuous blink
+          quotaLine.classList.add('is-blinking');
+        }
+        
+        // Insert at the top of options container
+        optionsContainer.insertBefore(quotaLine, optionsContainer.firstChild);
+      }
+    }
+
+    // Activate keyboard navigation first
+    KeyboardNav.activate();
+
+    // Wait for DOM and keyboard nav to settle
+    await Utils.sleep(150);
+
+    // In guided (co-create) mode, default keyboard focus to the ROLL button so
+    // players can immediately press Enter to roll abilities, while still being
+    // able to arrow between the selector and the roll button.
+    try {
+      const rollButton = document.querySelector(
+        `.question-card[data-question-id="${question.id}"] .ability-method-roll`,
+      );
+      if (
+        rollButton &&
+        typeof KeyboardNav !== 'undefined' &&
+        typeof KeyboardNav.getActiveButtons === 'function'
+      ) {
+        const activeButtons = KeyboardNav.getActiveButtons();
+        const rollIndex = activeButtons.indexOf(rollButton);
+        if (rollIndex !== -1) {
+          KeyboardNav.currentFocusIndex = rollIndex;
+          KeyboardNav.updateFocus();
+        }
+      }
+    } catch (e) {
+      // Non-fatal: fall back to the default keyboard focus behavior
+      console.error('Ability method keyboard focus override failed', e);
+    }
+
+    Utils.scrollToBottom(true);
+  },
+
+  async showListChoice(question) {
+    const narratorPanel = document.getElementById('narrator-panel');
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+
+    const messageEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(messageEl, question.text);
+
+    // Get varied options (AI-generated or cached)
+    const variedOptions = await OptionVariationsCache.get(question.id, question);
+
+    // Check for recommendations
+    const state = CharacterState.get();
+    const recommendations = state.recommendations?.[question.id] || [];
+
+    // Separate options into recommended and non-recommended
+    const recommendedOptions = [];
+    const otherOptions = [];
+
+    variedOptions.forEach((opt, index) => {
+      // Check if this option's value is in the recommendations list
+      const isRecommended = recommendations.includes(opt.value);
+      if (isRecommended) {
+        recommendedOptions.push({ opt, originalIndex: index });
+      } else {
+        otherOptions.push({ opt, originalIndex: index });
+      }
+    });
+
+    // Ensure recommended options appear in the SAME order as the narrator's
+    // recommendation list, so the "RECOMMENDED" buttons match the bullet list
+    // that was just narrated to the player.
+    if (recommendations.length > 0 && recommendedOptions.length > 1) {
+      const indexInRecommendations = (value) => {
+        const idx = recommendations.indexOf(value);
+        return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+      };
+
+      recommendedOptions.sort(
+        (a, b) =>
+          indexInRecommendations(a.opt.value) -
+          indexInRecommendations(b.opt.value),
+      );
+    }
+
+    // Reorder options: recommended first (in narrated order), then others
+    const reorderedOptions = [...recommendedOptions, ...otherOptions];
+
+    // Store the reordered mapping for handleAnswer to use
+    if (!this._optionIndexMapping) this._optionIndexMapping = {};
+    this._optionIndexMapping[question.id] = reorderedOptions.map(
+      (item) => item.originalIndex,
+    );
+
+    // Build the HTML with recommendations first
+    let optionsHTML = '';
+    let displayIndex = 0;
+
+    if (recommendedOptions.length > 0) {
+      optionsHTML += '<div class="recommendations-header">RECOMMENDED</div>';
+      optionsHTML += recommendedOptions
+        .map(({ opt, originalIndex }) => {
+          const currentIndex = displayIndex++;
+          return `
+              <button class="button-primary" onclick="App.handleListAnswer('${question.id}', ${currentIndex})">★\u00A0${opt.text}</button>
+            `;
+        })
+        .join('');
+
+      if (otherOptions.length > 0) {
+        optionsHTML += '<hr class="recommendations-divider">';
+      }
+    }
+
+    optionsHTML += otherOptions
+      .map(({ opt, originalIndex }) => {
+        const currentIndex = displayIndex++;
+        return `
+            <button class="button-primary" onclick="App.handleListAnswer('${question.id}', ${currentIndex})">
+              ${opt.text}
+            </button>
+          `;
+      })
+      .join('');
+
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      `
+      <div class="question-card" data-question-id="${question.id}">
+        <div class="options-container">
+          ${optionsHTML}
+        </div>
+      </div>`,
+    );
+
+    // Activate keyboard navigation first
+    KeyboardNav.activate();
+
+    // Wait for DOM and keyboard nav to settle, then scroll
+    await Utils.sleep(150);
+    Utils.scrollToBottom(true);
+  },
+
+  async showSuggestion(question) {
+    const narratorPanel = document.getElementById('narrator-panel');
+    const state = CharacterState.get();
+
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+    const messageEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(messageEl, question.text);
+    Utils.scrollToBottom(true);
+
+    // Get AI suggestion if available
+    const suggestion = question.getSuggestion(state);
+
+    // Store recommendations in state for the next question
+    if (!state.recommendations) {
+      state.recommendations = {};
+    }
+    state.recommendations[question.next] = suggestion.suggestions;
+
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+    const suggestionEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(suggestionEl, suggestion.message);
+    Utils.scrollToBottom(true);
+
+    // Show suggested options
+    const suggestedHTML = suggestion.suggestions
+      .map((s) => {
+        const data =
+          DND_DATA.races.find((r) => r.id === s) ||
+          DND_DATA.classes.find((c) => c.id === s);
+        if (data) return `• ${data.name}`;
+        return `• ${s}`;
+      })
+      .join('\n');
+
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(suggestedHTML),
+    );
+    await Utils.sleep(100);
+    Utils.scrollToBottom(true);
+
+    const suggestedListEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+    suggestedListEl.classList.add('is-waiting');
+    await Utils.sleep(2000);
+    suggestedListEl.classList.remove('is-waiting');
+    await this.showQuestion(question.next);
+  },
+
+  async showAbilities(question) {
+    const narratorPanel = document.getElementById('narrator-panel');
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+
+    const messageEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(messageEl, question.text);
+
+    // Helper to truncate option text
+    const truncate = (text, maxLength) => {
+      return text.length > maxLength
+        ? text.substring(0, maxLength - 3) + '...'
+        : text;
+    };
+
+    const options = question.options || [];
+    const selectOptionsHTML = options
+      .map(
+        (opt, index) => `
+          <option value="${opt.value}" ${
+            index === 0 ? 'selected' : ''
+          }>${truncate(opt.text, 45)}</option>
+        `,
+      )
+      .join('');
+
+    const listboxOptionsHTML = options
+      .map(
+        (opt, index) => `
+          <button
+            class="ability-method-option selector-option${
+              index === 0 ? ' is-selected' : ''
+            }"
+            data-method="${opt.value}"
+            role="option"
+            aria-selected="${index === 0 ? 'true' : 'false'}"
+          >
+            <span class="selector-option-label">
+              ${truncate(opt.text, 45)}
+            </span>
+          </button>
+        `,
+      )
+      .join('');
+
+    const initialMethod = options[0]?.value || 'standard';
+    const initialLabel = truncate(
+      options[0]?.text || 'Standard Array',
+      45,
+    );
+
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      `
+      <div class="question-card" data-question-id="${question.id}">
+        <div class="options-container ability-method-container">
+          <label class="settings-label ability-method-label">Ability generation method:</label>
+          <div class="ability-method-controls">
+            <div class="ability-method-trigger-wrap selector-shell selector-shell--listbox">
+              <button
+                class="button-primary ability-method-trigger selector-trigger"
+                id="ability-method-trigger"
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-controls="ability-method-listbox"
+                data-selected-method="${initialMethod}"
+              >
+                <span class="ability-method-trigger-label">
+                  ${initialLabel}
+                </span>
+              </button>
+              <div
+                id="ability-method-listbox"
+                class="ability-method-listbox selector-menu"
+                role="listbox"
+                aria-label="Ability generation method"
+              >
+                ${listboxOptionsHTML}
+              </div>
+            </div>
+            <button class="button-primary ability-method-roll" onclick="App.handleAbilityFromSelect()">
+              ROLL
+            </button>
+          </div>
+        </div>
+      </div>`,
+    );
+
+    // Wire up animated listbox behavior for ability method selector
+    const trigger = document.getElementById('ability-method-trigger');
+    const listbox = document.getElementById('ability-method-listbox');
+    if (trigger && listbox) {
+      const optionsEls = Array.from(
+        listbox.querySelectorAll('.ability-method-option'),
+      );
+
+      const setMethod = (method, label) => {
+        trigger.setAttribute('data-selected-method', method);
+        const labelEl = trigger.querySelector(
+          '.ability-method-trigger-label',
+        );
+        if (labelEl) {
+          labelEl.textContent = label;
+        }
+
+        optionsEls.forEach((opt) => {
+          const isSelected = opt.getAttribute('data-method') === method;
+          opt.classList.toggle('is-selected', isSelected);
+          opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        });
+      };
+
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = listbox.classList.contains('is-open');
+        if (!isOpen) {
+          // Open and focus first option for immediate keyboard nav
+          listbox.classList.add('is-open');
+          trigger.classList.add('is-open');
+          trigger.setAttribute('aria-expanded', 'true');
+
+          // Position the listbox relative to the trigger so it behaves like
+          // other selector menus: always above or below (preferring below),
+          // at least as wide as the trigger, and constrained to the viewport
+          // with internal scrolling if it can't fully fit on-screen.
+          const shell =
+            trigger.closest('.selector-shell') || trigger.parentElement;
+          if (shell) {
+            const shellRect = shell.getBoundingClientRect();
+            const triggerRect = trigger.getBoundingClientRect();
+
+            // Measure menu size without affecting final animation. Temporarily
+            // neutralize transforms so we get the full height instead of the
+            // scaled (collapsed) height from CSS. Also clear any previous
+            // inline sizing so each open starts from a clean baseline.
+            const prevDisplay = listbox.style.display;
+            const prevVisibility = listbox.style.visibility;
+            const prevTransform = listbox.style.transform;
+
+            listbox.style.maxHeight = '';
+            listbox.style.overflowY = '';
+            listbox.style.position = 'fixed';
+            listbox.style.top = '0';
+            listbox.style.left = '0';
+            listbox.style.visibility = 'hidden';
+            listbox.style.display = 'block';
+            listbox.style.transform = 'none';
+
+            const menuRect = listbox.getBoundingClientRect();
+            let menuHeight = menuRect.height || 0;
+            let menuWidth = menuRect.width || 0;
+
+            // Ensure the listbox is at least as wide as the trigger. For small
+            // triggers (like icons), we still respect the global min-width.
+            const triggerWidth = triggerRect.width || 0;
+            if (triggerWidth > 0 && menuWidth < triggerWidth) {
+              listbox.style.minWidth = `${triggerWidth}px`;
+              const remeasureRect = listbox.getBoundingClientRect();
+              menuWidth = remeasureRect.width || menuWidth;
+              menuHeight = remeasureRect.height || menuHeight;
+            }
+
+            listbox.style.display = prevDisplay;
+            listbox.style.visibility = prevVisibility;
+            listbox.style.transform = prevTransform;
+
+            const viewportHeight = window.innerHeight;
+            const viewportWidth = window.innerWidth;
+            const padding = 8; // breathing room from edges
+            const gapY = 4; // small gap between trigger and menu when opening below
+
+            // Treat the nearest terminal frame/container as the visual "viewport"
+            // so the listbox never extends outside the green app frame.
+            const host =
+              trigger.closest('.app-root, .terminal-frame, .terminal-container') ||
+              document.documentElement;
+            const hostRect = host.getBoundingClientRect();
+            const hostTop = hostRect.top + padding;
+            const hostBottom = hostRect.bottom - padding;
+
+            // Space available above and below the trigger within the host.
+            const spaceAbove = triggerRect.top - hostTop;
+            const spaceBelow = hostBottom - triggerRect.bottom;
+
+            const fitsBelow = spaceBelow >= menuHeight + gapY;
+            const fitsAbove = spaceAbove >= menuHeight + gapY;
+
+            // Choose direction: prefer below when possible, but fall back to
+            // whichever side has room, similar to the shared selector menus.
+            const triggerCenterY = triggerRect.top + triggerRect.height / 2;
+            const inTopHalf = triggerCenterY < viewportHeight / 2;
+
+            let openBelow;
+            if (fitsBelow && fitsAbove) {
+              openBelow = inTopHalf;
+            } else if (fitsBelow) {
+              openBelow = true;
+            } else if (fitsAbove) {
+              openBelow = false;
+            } else {
+              // Neither direction fits perfectly: use the side with more space.
+              openBelow = spaceBelow >= spaceAbove;
+            }
+
+            // Position using a single top coordinate, clamped so the menu stays
+            // fully inside the host. If there's not enough room for full height,
+            // we'll cap height and enable internal scrolling.
+            const maxTop = hostBottom - menuHeight;
+            let topInViewport;
+
+            if (openBelow) {
+              topInViewport = triggerRect.bottom + gapY;
+              if (topInViewport > maxTop) {
+                topInViewport = Math.max(hostTop, maxTop);
+              }
+            } else {
+              topInViewport = triggerRect.top - gapY - menuHeight;
+              if (topInViewport < hostTop) {
+                topInViewport = hostTop;
+              }
+            }
+
+            // If the menu would extend past the host, cap its height so it scrolls
+            // instead of being clipped by the terminal container.
+            const availableHeight = hostBottom - topInViewport;
+            if (menuHeight > availableHeight && availableHeight > 0) {
+              listbox.style.maxHeight = `${availableHeight}px`;
+              listbox.style.overflowY = 'auto';
+            } else {
+              listbox.style.maxHeight = '';
+              listbox.style.overflowY = '';
+            }
+
+            // Horizontal alignment: start left-aligned, then if that would
+            // overflow to the right, right-align to the trigger instead.
+            const minLeft = padding;
+            const maxLeft = Math.max(
+              minLeft,
+              viewportWidth - padding - menuWidth,
+            );
+
+            let targetLeft = triggerRect.left;
+            const naturalRight = targetLeft + menuWidth;
+            const viewportRightLimit = viewportWidth - padding;
+            if (naturalRight > viewportRightLimit) {
+              targetLeft = triggerRect.right - menuWidth;
+            }
+
+            if (targetLeft < minLeft) targetLeft = minLeft;
+            if (targetLeft > maxLeft) targetLeft = maxLeft;
+
+            // Use fixed positioning in viewport space so the listbox is
+            // independent of scroll containers and always anchors to the
+            // trigger's visual position.
+            listbox.style.position = 'fixed';
+            listbox.style.top = `${topInViewport}px`;
+            listbox.style.left = `${targetLeft}px`;
+            listbox.style.right = 'auto';
+          }
+
+          if (optionsEls.length) {
+            optionsEls[0].focus();
+          }
+        } else {
+          listbox.classList.remove('is-open');
+          trigger.classList.remove('is-open');
+          trigger.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      optionsEls.forEach((opt) => {
+        opt.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const method = opt.getAttribute('data-method') || 'standard';
+          const label = (opt.textContent || '').trim();
+          setMethod(method, label);
+          listbox.classList.remove('is-open');
+          trigger.classList.remove('is-open');
+          trigger.setAttribute('aria-expanded', 'false');
+        });
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!listbox.classList.contains('is-open')) return;
+        if (trigger.contains(e.target) || listbox.contains(e.target)) return;
+        listbox.classList.remove('is-open');
+        trigger.classList.remove('is-open');
+        trigger.setAttribute('aria-expanded', 'false');
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && listbox.classList.contains('is-open')) {
+          listbox.classList.remove('is-open');
+          trigger.classList.remove('is-open');
+          trigger.setAttribute('aria-expanded', 'false');
+          trigger.focus();
+        }
+      });
+
+      // Keyboard navigation for ability method listbox
+      const handleAbilityListboxKeydown = (e) => {
+        const isOpen = listbox.classList.contains('is-open');
+
+        const openAndFocus = (index) => {
+          listbox.classList.add('is-open');
+          trigger.classList.add('is-open');
+          trigger.setAttribute('aria-expanded', 'true');
+          if (optionsEls.length) {
+            const clamped = Math.max(
+              0,
+              Math.min(optionsEls.length - 1, index),
+            );
+            optionsEls[clamped].focus();
+          }
+        };
+
+        if (e.target === trigger) {
+          if ((e.key === 'Enter' || e.key === ' ') && !isOpen) {
+            e.preventDefault();
+            openAndFocus(0);
+            return;
+          }
+          if (e.key === 'ArrowDown' && !isOpen) {
+            e.preventDefault();
+            openAndFocus(0);
+            return;
+          }
+          if (e.key === 'ArrowUp' && !isOpen) {
+            e.preventDefault();
+            openAndFocus(optionsEls.length - 1);
+            return;
+          }
+        }
+
+        if (!isOpen) return;
+
+        if (e.key === 'Escape') {
+          // Global ESC handler above will close and refocus trigger
+          return;
+        }
+
+        if (!optionsEls.length) return;
+
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          const currentIndex = optionsEls.indexOf(document.activeElement);
+          let nextIndex = currentIndex;
+          if (currentIndex === -1) {
+            nextIndex = e.key === 'ArrowDown' ? 0 : optionsEls.length - 1;
+          } else {
+            nextIndex =
+              e.key === 'ArrowDown'
+                ? (currentIndex + 1) % optionsEls.length
+                : (currentIndex - 1 + optionsEls.length) % optionsEls.length;
+          }
+          optionsEls[nextIndex].focus();
+          return;
+        }
+
+        if (e.key === 'Enter' || e.key === ' ') {
+          const activeOption = optionsEls.find(
+            (opt) => opt === document.activeElement,
+          );
+          if (activeOption) {
+            e.preventDefault();
+            activeOption.click();
+          }
+        }
+      };
+
+      trigger.addEventListener('keydown', handleAbilityListboxKeydown);
+      listbox.addEventListener('keydown', handleAbilityListboxKeydown);
+
+      // Initialize selected state from initial method
+      setMethod(initialMethod, initialLabel);
+    }
+
+    // Activate keyboard navigation first
+    KeyboardNav.activate();
+
+    // Wait for DOM and keyboard nav to settle, then scroll
+    await Utils.sleep(150);
+    Utils.scrollToBottom(true);
+    
+    // Focus the roll button instead of the selector
+    const rollButton = document.querySelector('.ability-method-roll');
+    if (rollButton) {
+      rollButton.focus();
+    }
+  },
+
+  async showNameChoice(question) {
+    const narratorPanel = document.getElementById('narrator-panel');
+    const state = CharacterState.get();
+
+    // Show the question text with typewriter effect
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+    const messageEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(messageEl, question.text);
+
+    // Show progressive thinking message
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+    const nameThinkingEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    this.showProgressiveThinking(nameThinkingEl);
+
+    // Generate BOTH name suggestions and a backstory template using a single
+    // backend AI call. This front-loads the heavy work so the later backstory
+    // step can feel instant.
+    let names = [];
+    try {
+      const summary = await AIService.generateCharacterSummary(state.character, {
+        nameCount: 3,
+      });
+      if (summary && Array.isArray(summary.names) && summary.names.length) {
+        names = summary.names;
+      }
+      // Stash the backstory template (if provided) on the character so the
+      // backstory step can simply substitute {{NAME}} later without another
+      // API call.
+      if (summary && summary.backstoryTemplate) {
+        CharacterState.updateCharacter({
+          backstoryTemplate: summary.backstoryTemplate,
+        });
+      }
+      if (summary && summary.portraitGrantId) {
+        CharacterState.updateCharacter({
+          portraitGrantId: summary.portraitGrantId,
+        });
+      }
+    } catch (e) {
+      console.error('Name/backstory summary error; falling back to names-only flow:', e);
+    }
+
+    // Absolute fallback in case summary failed for any reason
+    if (!names.length) {
+      names = await AIService.generateNames(
+        state.character.race,
+        state.character.class,
+        3,
+      );
+    }
+
+    // Remove the thinking message
+    this.stopProgressiveThinking();
+    narratorPanel.lastElementChild.remove();
+
+    // Build the name selection UI with proper styling matching other sections
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      `
+      <div class="question-card" data-question-id="${question.id}">
+        <div class="options-container">
+          ${names
+            .map(
+              (name, index) =>
+                `<button class="button-primary" onclick="App.handleNameSelect(${index})">${name}</button>`,
+            )
+            .join('\n              ')}
+        </div>
+        <div class="name-input-container">
+          <input 
+            type="text" 
+            class="input-field" 
+            id="custom-name-input" 
+            placeholder="Or enter your own name..."
+            data-1p-ignore
+          >
+          <button class="button-primary" onclick="App.handleCustomName()">
+            SUBMIT
+          </button>
+        </div>
+      </div>`,
+    );
+
+    // Store generated names for later reference
+    this._generatedNames = names;
+
+    // Wire up custom name behavior:
+    // - When the input is focused, clear button keyboard focus so the
+    //   user's attention is on their custom entry.
+    // - Pressing Enter in the input submits the custom name.
+    const customInput = document.getElementById('custom-name-input');
+    if (customInput) {
+      customInput.addEventListener('focus', () => {
+        if (typeof KeyboardNav !== 'undefined' && KeyboardNav.clearFocus) {
+          KeyboardNav.clearFocus();
+        }
+      });
+
+      customInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          this.handleCustomName();
+        }
+      });
+    }
+
+    // Activate keyboard navigation
+    KeyboardNav.activate();
+
+    // Wait for DOM to settle, then scroll
+    await Utils.sleep(150);
+    Utils.scrollToBottom(true);
+  },
+
+  async showBackstory(question) {
+    const narratorPanel = document.getElementById('narrator-panel');
+    const state = CharacterState.get();
+
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+    const messageEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(messageEl, question.text);
+    Utils.scrollToBottom(true);
+
+    // Show progressive thinking message for backstory generation
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+    const backstoryThinkingEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    this.showProgressiveThinking(backstoryThinkingEl);
+
+    // Prefer using a cached backstory template (generated earlier during the
+    // name step) so this feels instant and does not require another AI call.
+    let backstory = state.character.backstory;
+    const template = state.character.backstoryTemplate;
+    const nameForTemplate = state.character.name || 'This character';
+
+    if (!backstory && template && typeof template === 'string') {
+      backstory = template
+        .replace(/{{\s*NAME\s*}}/g, nameForTemplate)
+        .replace(/{{\s*RACE\s*}}/g, state.character.race || 'adventurer')
+        .replace(/{{\s*CLASS\s*}}/g, state.character.class || 'hero');
+      CharacterState.updateCharacter({ backstory });
+    }
+
+    // Fallback: if we have no template or something went wrong, fall back to
+    // the original behavior and call the dedicated backstory endpoint.
+    if (!backstory) {
+      backstory = await AIService.generateBackstory(state.character);
+      CharacterState.updateCharacter({ backstory });
+    }
+
+    // Stop thinking and clear the element, then type out the backstory
+    this.stopProgressiveThinking();
+    backstoryThinkingEl.textContent = '';
+    await Utils.typewriter(backstoryThinkingEl, backstory);
+    Utils.scrollToBottom(true);
+
+    backstoryThinkingEl.classList.add('is-waiting');
+    await Utils.sleep(2000);
+    backstoryThinkingEl.classList.remove('is-waiting');
+    await this.showQuestion(question.next);
+  },
+
+  async showSpellSelection(question) {
+    const narratorPanel = document.getElementById('narrator-panel');
+    const state = CharacterState.get();
+    const classId = state.character.class;
+
+    // Show narrator message
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+
+    const messageEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+
+    let spells = null;
+
+    if (question.mode === 'quick') {
+      // Quick mode: auto-select spells
+      await Utils.typewriter(messageEl, question.text);
+      Utils.scrollToBottom(true);
+
+      await Utils.sleep(500);
+
+      // Get auto-selected spells
+      spells = SPELL_DATA.getQuickModeSpells(classId);
+
+      if (spells) {
+        const config = SPELL_DATA.getSpellcastingConfig(classId);
+        
+        // Show what was selected
+        narratorPanel.insertAdjacentHTML(
+          'beforeend',
+          Components.renderNarratorMessage(''),
+        );
+        Utils.scrollToBottom(true);
+        
+        const confirmEl =
+          narratorPanel.lastElementChild.querySelector('.narrator-text');
+        
+        const spellSummary = `> Selected ${spells.cantrips.length} cantrip${spells.cantrips.length !== 1 ? 's' : ''} and ${spells.firstLevel.length} 1st level spell${spells.firstLevel.length !== 1 ? 's' : ''}.
+> 
+> Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}
+> 1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
+        
+        await Utils.typewriter(confirmEl, spellSummary);
+        Utils.scrollToBottom(true);
+      }
+    } else {
+      // Guided mode: suggest based on preferences
+      await Utils.typewriter(messageEl, question.text);
+      Utils.scrollToBottom(true);
+
+      await Utils.sleep(500);
+
+      const preferences = {
+        style: state.answers.spellStyle || 'offense',
+        element: state.answers.spellElement || 'versatile',
+      };
+
+      spells = SPELL_DATA.getGuidedSpells(classId, preferences);
+
+      if (spells) {
+        // Show personalized recommendations
+        narratorPanel.insertAdjacentHTML(
+          'beforeend',
+          Components.renderNarratorMessage(''),
+        );
+        Utils.scrollToBottom(true);
+        
+        const confirmEl =
+          narratorPanel.lastElementChild.querySelector('.narrator-text');
+        
+        let flavorText = '';
+        if (preferences.style === 'offense') {
+          flavorText = "> Ah, a blaster. How... predictable. Here's your destruction kit:";
+        } else if (preferences.style === 'defense') {
+          flavorText = "> The cautious type, I see. Here are your survival tools:";
+        } else if (preferences.style === 'control') {
+          flavorText = "> A tactician. Interesting. Here's your battlefield control suite:";
+        } else {
+          flavorText = "> Utility over flash. Practical. Here's your toolkit:";
+        }
+        
+        const spellSummary = `${flavorText}
+> 
+> Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}
+> 1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
+        
+        await Utils.typewriter(confirmEl, spellSummary);
+        Utils.scrollToBottom(true);
+      }
+    }
+
+    // Save spells to character
+    if (spells) {
+      const config = SPELL_DATA.getSpellcastingConfig(classId);
+      CharacterState.updateCharacter({
+        spellcastingAbility: config.ability,
+        cantrips: spells.cantrips,
+        spellsKnown: spells.firstLevel,
+        spellsPrepared: config.preparedSpells ? spells.firstLevel : [],
+        spellSlots: config.spellSlots,
+      });
+    }
+
+    await Utils.sleep(1500);
+    await this.showQuestion(question.next);
+  },
+
+  async showComplete(question) {
+    // Track that we're on the complete question (important for quick-create which 
+    // calls showComplete directly, bypassing showQuestion)
+    CharacterState.setCurrentQuestion(question.id);
+    
+    const narratorPanel = document.getElementById('narrator-panel');
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+
+    // Use narrator-specific completion text
+    const narratorId = StorageService.getNarratorId();
+    const narrator = getNarrator(narratorId);
+    const completionText = narrator.completeText || question.text;
+
+    const messageEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(messageEl, completionText);
+    Utils.scrollToBottom(true);
+
+    // NOTE: AI portrait generation now starts after name selection (earlier in flow)
+    // since we removed backstory from the prompt. This gives it more time to complete.
+    
+    // NOTE: We don't save here anymore - we wait for portrait to load first
+    // This prevents creating duplicate characters in cloud storage
+
+    // Check if user can create another character after this one.
+    // We enforce the daily creation quota (reset daily) for both guest + logged-in.
+    // remaining === 0 means exhausted, -1 means unlimited.
+    const quotaExhausted =
+      this._creationQuotaInfo &&
+      this._creationQuotaInfo.remaining !== -1 &&
+      this._creationQuotaInfo.remaining <= 0;
+    const canCreateAnother = !quotaExhausted;
+
+    // Show completion options
+    const createAnotherBtn = canCreateAnother
+      ? `<button class="button-primary" id="completion-new-btn" onclick="App.startNew()">&gt;\u00A0CREATE ANOTHER CHARACTER</button>`
+      : '';
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      `
+      <div class="question-card mt-lg" data-question-id="${question.id}">
+        <button class="button-primary" id="completion-save-btn" onclick="App.saveAndExit()">&gt;\u00A0SAVE AND EXIT</button>
+        ${createAnotherBtn}
+      </div>`,
+    );
+    Utils.scrollToBottom(true);
+
+    // Activate keyboard navigation
+    KeyboardNav.activate();
+    
+    // Re-render character panel now that we're on the complete step
+    // This ensures the overflow menu shows up if portrait is already ready
+    // Clear the render cache so we force a re-render even if character data hasn't changed
+    this._lastRenderedCharacter = null;
+    const state = CharacterState.get();
+    if (state.character) {
+      this.updateCharacterPanel(state.character);
+    }
+  },
+
+  /**
+   * Stop the portrait loading animation interval.
+   */
+  _stopPortraitLoadingAnimation() {
+    if (this._portraitLoadingInterval) {
+      clearInterval(this._portraitLoadingInterval);
+      this._portraitLoadingInterval = null;
+    }
+    this._portraitElapsed = 0;
+  },
+
+  /**
+   * Render the standard AI portrait loading state in the portrait panel.
+   * Uses the glowing, fast-spinning cube plus animated dots matching
+   * the manager view and shared PortraitUI helper.
+   */
+  _renderPortraitGeneratingLoader(portraitEl) {
+    if (!portraitEl) return;
+
+    // Stop any existing animation interval before starting a new one.
+    this._stopPortraitLoadingAnimation();
+
+    // Normalize the portrait container into a loading state so the cube + text
+    // layout matches the shared portrait styles in `portraits.css`.
+    // - Ensure the placeholder variant (16:9 flex box) is present so the cube
+    //   stays centered and the 3D context is correct even after custom art
+    //   has been rendered previously.
+    // - Also add the loading variant, which loosens white-space/overflow and
+    //   guarantees a minimum height for the spinner + status text.
+    portraitEl.classList.add('ascii-portrait--placeholder');
+    portraitEl.classList.add('ascii-portrait--loading');
+    // Clear any custom inline sizing overrides from previous renders.
+    portraitEl.style.fontSize = '';
+    portraitEl.style.whiteSpace = '';
+    portraitEl.style.textAlign = '';
+    portraitEl.style.overflowX = '';
+    portraitEl.style.overflowY = '';
+
+    // Use standardized message matching manager view.
+    const baseMessage = 'Generating character art';
+    
+    // Model-aware subtext: GPT Image 1 takes longer than DALL·E 3.
+    let subtext = '(This usually takes 20–30 seconds)';
+    try {
+      if (
+        window.PortraitUI &&
+        typeof PortraitUI.getImageModelSubtext === 'function'
+      ) {
+        subtext = PortraitUI.getImageModelSubtext();
+      } else {
+        // Inline fallback if PortraitUI not available.
+        let imageModel = 'dall-e-3';
+        if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+          imageModel = StorageService.getImageModel();
+        } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_IMAGE_MODEL) {
+          imageModel = CONFIG.DEFAULT_IMAGE_MODEL;
+        }
+        if (imageModel === 'gpt-image-1') {
+          subtext = '(This can take up to a minute)';
+        } else if (imageModel === 'gpt-image-1.5') {
+          subtext = '(GPT Image 1.5 – usually 15–30 seconds)';
+        } else if (imageModel === 'flux-1.1-pro') {
+          subtext = '(Flux Pro – usually 10–20 seconds)';
+        } else if (imageModel === 'flux-schnell') {
+          subtext = '(Flux Schnell – usually 5–10 seconds)';
+        }
+      }
+    } catch (e) {
+      // Fall back to default subtext on any error.
+    }
+
+    // Initialize elapsed counter for dot animation.
+    this._portraitElapsed = 0;
+
+    // Update function that animates the dots (cycles 1→2→3).
+    const updatePortraitLoading = () => {
+      if (!portraitEl) return;
+      const dotCount = (this._portraitElapsed % 3) + 1;
+
+      if (
+        window.PortraitUI &&
+        typeof PortraitUI.renderGeneratingLoader === 'function'
+      ) {
+        PortraitUI.renderGeneratingLoader(portraitEl, {
+          baseMessage,
+          subtext,
+          dotCount,
+          isLoading: true,
+        });
+      } else {
+        // Fallback: update dot state manually if shared helper unavailable.
+        // Check for the generating-specific class to know if loader is already rendered.
+        let cubeEl = portraitEl.querySelector('.portrait-placeholder-cube--generating');
+        let textEl = portraitEl.querySelector('.portrait-placeholder-text');
+        if (!cubeEl) {
+          // Loader not yet rendered - replace the placeholder with loader HTML
+          portraitEl.innerHTML = `
+            <div class="portrait-placeholder-content">
+              <div class="portrait-placeholder-cube-container">
+                <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                </div>
+              </div>
+              <div class="portrait-placeholder-text" data-dots="${dotCount}">
+                <span class="portrait-placeholder-message">${baseMessage}</span>
+                <span class="portrait-placeholder-dots">
+                  <span class="dot dot-1">.</span>
+                  <span class="dot dot-2">.</span>
+                  <span class="dot dot-3">.</span>
+                </span>
+                <div class="portrait-placeholder-subtext">
+                  ${subtext}
+                </div>
+              </div>
+            </div>
+          `;
+          textEl = portraitEl.querySelector('.portrait-placeholder-text');
+        } else if (textEl) {
+          // Loader already rendered - just update dot count
+          textEl.setAttribute('data-dots', String(dotCount));
+        }
+      }
+
+      this._portraitElapsed++;
+    };
+
+    // Render immediately, then start interval for animation.
+    updatePortraitLoading();
+    this._portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
+  },
+
+  // In guided (co-create) mode, automatically generate a custom AI portrait
+  // once we have the essential character context (race, class, name).
+  // Triggered after name selection since backstory is no longer used in prompts.
+  // This runs in the background and doesn't block the conversational flow.
+  async autoGenerateGuidedAIPortraitIfReady() {
+    try {
+      if (
+        !window.CharacterState ||
+        typeof CharacterState.get !== 'function' ||
+        !window.AsciiArtService ||
+        !CONFIG.ENABLE_AI
+      ) {
+        return;
+      }
+
+      const state = CharacterState.get() || {};
+      const character = state.character || {};
+      const answers = state.answers || {};
+      const entryMode = answers['entry-mode'];
+
+      // Only run this logic for guided (co-create) mode.
+      if (entryMode !== 'guided') {
+        return;
+      }
+
+      // Require the core fields that we include in portrait prompts.
+      // Name is now the trigger point (backstory removed from prompts).
+      // We also have race, class, background, and alignment at this point.
+      const hasCoreFields =
+        character.race &&
+        character.class &&
+        character.name;
+
+      if (!hasCoreFields) {
+        return;
+      }
+
+      // If we already have a custom AI portrait, don't regenerate.
+      if (character.customPortraitAscii || (character.customPortraitCount || 0) > 0) {
+        return;
+      }
+
+      // Mark that portrait generation is in progress (used by updateCharacterPanel)
+      this._guidedPortraitGenerating = true;
+
+      const portraitEl = document.getElementById('character-portrait');
+
+      // Show a loading state in the portrait panel while the AI image is
+      // being generated and converted to ASCII. Use the placeholder container
+      // with the cube spinning faster and glowing.
+      if (portraitEl) {
+        this._renderPortraitGeneratingLoader(portraitEl);
+      }
+
+      const result = await AsciiArtService.generateCustomAIPortrait(character, {
+        creationGrantId: character && character.portraitGrantId,
+      });
+
+      if (result && result.asciiArt) {
+        const currentCount = character.customPortraitCount || 0;
+
+        // Get the current style theme for tagging
+        let guidedStyle = null;
+        try {
+          if (window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
+            guidedStyle = StorageService.getPortraitPromptTheme();
+          }
+        } catch (e) {
+          // Non-fatal
+        }
+
+        // Capture the model and quality that were used for generation
+        let generationModel = 'dall-e-3';
+        let generationQuality = null;
+        try {
+          if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+            generationModel = StorageService.getImageModel();
+          } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_IMAGE_MODEL) {
+            generationModel = CONFIG.DEFAULT_IMAGE_MODEL;
+          }
+          if (window.StorageService && typeof StorageService.getImageQuality === 'function') {
+            generationQuality = StorageService.getImageQuality(generationModel);
+          }
+        } catch (e) {
+          // Non-fatal: use defaults
+        }
+
+        const updatedMetadata =
+          window.PortraitHistory && typeof PortraitHistory.addVersion === 'function'
+            ? PortraitHistory.addVersion(
+                character,
+                result.asciiArt,
+                result.imageUrl || null,
+                {
+                  source: 'guided-auto',
+                  prompt:
+                    (AIService.buildPortraitPrompt &&
+                      AIService.buildPortraitPrompt(character)) ||
+                    null,
+                  style: guidedStyle,
+                  model: generationModel,
+                  quality: generationQuality,
+                },
+              )
+            : character.portraitMetadata || {};
+
+        CharacterState.updateCharacter({
+          originalPortraitUrl: result.imageUrl || null,
+          customPortraitAscii: result.asciiArt,
+          customPortraitCount: currentCount + 1,
+          portraitMetadata: updatedMetadata,
+          // Grant was successfully redeemed; clear it so later regenerations
+          // (Customize portrait) always count against custom image quota.
+          portraitGrantId: null,
+        });
+
+        // Reset last portrait so the new AI art re-animates in the panel.
+        this._lastPortraitArt = null;
+      }
+    } catch (error) {
+      console.error('Guided-mode AI portrait generation error:', error);
+      
+      // Show user-facing error message based on error type
+      if (error.isSafetyRejection) {
+        console.group('🚫 OpenAI Content Safety Rejection - Guided Mode');
+        console.error('Rejected prompt:', error.rejectedPrompt || 'Unknown');
+        console.error('Original error:', error.originalMessage);
+        if (error.promptAnalysis) {
+          console.log('Analysis included above ↑');
+        }
+        console.groupEnd();
+        
+        // Build user message with helpful context
+        let userMessage = 'OpenAI flagged this portrait request. ';
+        
+        if (error.promptAnalysis && error.promptAnalysis.hasKnownProblematicTerms) {
+          const issues = error.promptAnalysis.potentialIssues;
+          const categories = issues.map(i => i.category).join(', ');
+          userMessage += `Possible triggers: ${categories}. `;
+        }
+        
+        userMessage += 'Check browser console for detailed analysis and suggestions.';
+        
+        this.showSystemMessage(userMessage);
+      } else if (error.isRateLimit) {
+        this.showSystemMessage(
+          "You've reached today's portrait limit, so we're using a simple fallback portrait for now. You can create a custom one tomorrow from the character sheet.",
+        );
+      } else {
+        this.showSystemMessage(
+          'AI portrait generation failed, so we\'re using a simple fallback portrait for now. You can still create a custom one later from the character sheet.',
+        );
+      }
+      
+      // Ensure we at least have a basic portrait to fall back to.
+      await this._ensurePreGeneratedPortraitFallback(character);
+    } finally {
+      // Clear the generating flag so future re-renders work normally
+      this._guidedPortraitGenerating = false;
+      
+      // Stop the animated dots interval.
+      this._stopPortraitLoadingAnimation();
+      
+      const portraitEl = document.getElementById('character-portrait');
+      if (portraitEl) {
+        portraitEl.style.fontSize = '';
+        portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
+      }
+    }
+  },
+
+  // Persist changes to shared storage only after a character has been saved once.
+  // This keeps manager in sync for post-completion edits (rename, level, portrait, etc.)
+  async persistIfAlreadySaved() {
+    const state = CharacterState.get();
+    const character = state.character;
+    
+    // If there's no ID yet, this character hasn't been saved to shared storage.
+    if (!character || !character.id) {
+      return;
+    }
+    
+    try {
+      await StorageService.saveCharacter(character);
+    } catch (error) {
+      console.error('Error persisting character changes:', error);
+    }
+  },
+
+  async handleListAnswer(questionId, displayIndex) {
+    // Check if this is a previous question being changed.
+    // We consider any question card that is NOT the last one in the narrator
+    // panel to be "previous", regardless of current state.answers contents.
+    const narratorPanel = document.getElementById('narrator-panel');
+    const state = CharacterState.get();
+    const cards = narratorPanel?.querySelectorAll(
+      '.question-card[data-question-id]',
+    );
+    const lastCard = cards && cards[cards.length - 1];
+    const lastQuestionId = lastCard?.getAttribute('data-question-id');
+    const isChangingPrevious = lastQuestionId && lastQuestionId !== questionId;
+
+    if (isChangingPrevious) {
+      // Show confirmation overlay
+      await this.showChangeConfirmation(questionId, displayIndex, true);
+      return;
+    }
+
+    // Translate display index to original index using the mapping
+    const originalIndex =
+      this._optionIndexMapping?.[questionId]?.[displayIndex] ??
+      displayIndex;
+
+    const question = QUESTIONS.find((q) => q.id === questionId);
+    const option = question.options[originalIndex];
+
+    // Mark the selected button using the DISPLAY index
+    const card =
+      document.querySelector(
+        `.question-card[data-question-id="${questionId}"]`,
+      ) || document.querySelector('.question-card:last-child');
+    const buttons = card
+      ? card.querySelectorAll('.button-primary')
+      : document.querySelectorAll('.question-card:last-child .button-primary');
+
+    // Clear previous selection/lock state in this card
+    buttons.forEach((btn) => {
+      btn.classList.remove('is-selected', 'is-locked');
+    });
+    buttons.forEach((btn, idx) => {
+      if (idx === displayIndex) {
+        btn.classList.add('is-selected');
+      } else {
+        btn.classList.add('is-locked');
+      }
+    });
+
+    // Save answer
+    state.answers[questionId] = option.value;
+
+    if (question.saveTo) {
+      CharacterState.updateCharacter({ [question.saveTo]: option.value });
+      
+      // Apply background benefits if a background was selected
+      if (question.saveTo === 'background') {
+        const backgroundData = DND_DATA.backgrounds.find(b => b.id === option.value);
+        if (backgroundData) {
+          CharacterState.updateCharacter({
+            skillProficiencies: backgroundData.skillProficiencies || [],
+            toolProficiencies: backgroundData.toolProficiencies || [],
+            equipment: backgroundData.equipment || [],
+            backgroundFeature: backgroundData.feature || null,
+            // Note: languages is a number (choices to make), not automatically assigned
+            languageChoices: backgroundData.languages || 0,
+          });
+        }
+      }
+    }
+
+    // Get AI commentary if configured
+    if (question.aiPromptContext) {
+      const narratorPanel = document.getElementById('narrator-panel');
+      narratorPanel.insertAdjacentHTML(
+        'beforeend',
+        Components.renderNarratorMessage(''),
+      );
+      Utils.scrollToBottom(true);
+
+      const commentEl =
+        narratorPanel.lastElementChild.querySelector('.narrator-text');
+      
+      // Show progressive thinking messages
+      this.showProgressiveThinking(commentEl);
+      Utils.scrollToBottom(true);
+
+      const comment = await AIService.generateNarratorComment({
+        question: question.aiPromptContext,
+        choice: option.text,
+        characterSoFar: state.character,
+      });
+
+      // Stop thinking animation and clear
+      this.stopProgressiveThinking();
+      commentEl.textContent = '';
+      await Utils.typewriter(commentEl, comment);
+      Utils.scrollToBottom(true);
+      commentEl.classList.add('is-waiting');
+      await Utils.sleep(750);
+      commentEl.classList.remove('is-waiting');
+    }
+
+    // Move to next question
+    if (question.next) {
+      await this.showQuestion(question.next);
+    }
+  },
+
+  async handleAnswer(questionId, optionIndex) {
+    // Check if this is a previous question being changed (see comment in
+    // handleListAnswer for rationale).
+    const narratorPanel = document.getElementById('narrator-panel');
+    const cards = narratorPanel?.querySelectorAll(
+      '.question-card[data-question-id]',
+    );
+    const lastCard = cards && cards[cards.length - 1];
+    const lastQuestionId = lastCard?.getAttribute('data-question-id');
+    const isChangingPrevious = lastQuestionId && lastQuestionId !== questionId;
+
+    if (isChangingPrevious) {
+      // Show confirmation overlay
+      await this.showChangeConfirmation(questionId, optionIndex, false);
+      return;
+    }
+
+    const state = CharacterState.get();
+    const question = QUESTIONS.find((q) => q.id === questionId);
+    const option = question.options[optionIndex];
+
+    // Special handling for entry mode selection
+    if (questionId === 'entry-mode') {
+      if (option.value === 'quick') {
+        // Record the selected entry mode in state so downstream logic
+        // (like updateCharacterPanel) can detect that we're in quick mode
+        // before any character renders happen.
+        state.answers[questionId] = option.value;
+        await this.quickCreateCharacter();
+        return;
+      }
+      // Guided mode just continues into the normal flow below.
+    }
+
+    // Mark the selected button
+    const card =
+      document.querySelector(
+        `.question-card[data-question-id="${questionId}"]`,
+      ) || document.querySelector('.question-card:last-child');
+    const buttons = card
+      ? card.querySelectorAll('.button-primary')
+      : document.querySelectorAll('.question-card:last-child .button-primary');
+
+    // Clear previous selection/lock state in this card
+    buttons.forEach((btn, idx) => {
+      btn.classList.remove('is-selected', 'is-locked');
+      if (idx === optionIndex) {
+        btn.classList.add('is-selected');
+      } else {
+        btn.classList.add('is-locked');
+      }
+    });
+
+    // Save answer
+    state.answers[questionId] = option.value;
+
+    if (question.saveTo) {
+      CharacterState.updateCharacter({ [question.saveTo]: option.value });
+    }
+
+    // Get AI commentary if configured
+    if (question.aiPromptContext) {
+      const narratorPanel = document.getElementById('narrator-panel');
+      narratorPanel.innerHTML += Components.renderNarratorMessage('');
+      Utils.scrollToBottom(true);
+
+      const commentEl =
+        narratorPanel.lastElementChild.querySelector('.narrator-text');
+      
+      // Show progressive thinking messages
+      this.showProgressiveThinking(commentEl);
+      Utils.scrollToBottom(true);
+
+      const comment = await AIService.generateNarratorComment({
+        question: question.aiPromptContext,
+        choice: option.text,
+        characterSoFar: state.character,
+      });
+
+      // Stop thinking animation and clear
+      this.stopProgressiveThinking();
+      commentEl.textContent = '';
+      await Utils.typewriter(commentEl, comment);
+      Utils.scrollToBottom(true);
+      commentEl.classList.add('is-waiting');
+      await Utils.sleep(750);
+      commentEl.classList.remove('is-waiting');
+    }
+
+    // Move to next question
+    if (question.next) {
+      await this.showQuestion(question.next);
+    }
+  },
+
+  async handleAbilityMethod(method) {
+    // Mark the selected button
+    const buttons = document.querySelectorAll(
+      '.question-card:last-child .button-primary',
+    );
+    buttons.forEach((btn) => {
+      if (
+        btn.textContent.includes(
+          method === 'standard' ? 'Standard Array' : 'Roll 4d6',
+        )
+      ) {
+        btn.classList.add('is-selected');
+      } else {
+        btn.classList.add('is-locked');
+      }
+    });
+
+    const state = CharacterState.get();
+    let classData = DND_DATA.classes.find(
+      (c) => c.id === state.character.class,
+    );
+
+    // Guard against missing or invalid class data so the flow never stalls
+    // on the ability generation step. If something went wrong earlier and we
+    // don't have a valid class, fall back to a generic Fighter-like profile.
+    if (!classData) {
+      console.error(
+        'handleAbilityMethod: missing class data for',
+        state.character?.class,
+      );
+      classData = {
+        id: 'fighter',
+        name: 'Fighter (fallback)',
+        hitDie: 10,
+        primaryAbility: ['str'],
+        savingThrows: ['str', 'con'],
+        equipment: [],
+      };
+    }
+
+    let abilities = {};
+
+    if (method === 'standard') {
+      // Standard array: let user assign them (for now, auto-assign based on class)
+      const scores = [15, 14, 13, 12, 10, 8];
+      const primary = classData.primaryAbility[0];
+
+      // Simple auto-assignment based on class
+      abilities = {
+        str: primary === 'str' ? 15 : 10,
+        dex: primary === 'dex' ? 15 : 12,
+        con: 14,
+        int: primary === 'int' ? 15 : 8,
+        wis: primary === 'wis' ? 15 : 13,
+        cha: primary === 'cha' ? 15 : 10,
+      };
+    } else {
+      // Roll 4d6 drop lowest
+      abilities = {
+        str: this.rollAbility(),
+        dex: this.rollAbility(),
+        con: this.rollAbility(),
+        int: this.rollAbility(),
+        wis: this.rollAbility(),
+        cha: this.rollAbility(),
+      };
+    }
+
+    // Apply racial bonuses (with a safe fallback if race data is missing)
+    const race =
+      DND_DATA.races.find((r) => r.id === state.character.race) || {
+        abilityBonuses: {},
+      };
+    Object.keys(race.abilityBonuses || {}).forEach((ability) => {
+      const bonus = race.abilityBonuses[ability] || 0;
+      abilities[ability] = (abilities[ability] || 0) + bonus;
+    });
+
+    // Infer a coarse armor loadout from class equipment
+    // Infer a coarse armor loadout from class equipment. The helper lives
+    // on KeyboardNav (where the armor helpers are defined), so delegate to it.
+    const { armorCategory, hasShield } = KeyboardNav.inferArmorLoadoutForClass(
+      state.character.class,
+    );
+
+    // Calculate HP (level 1)
+    const conMod = Utils.abilityModifier(abilities.con);
+    const hitPoints = classData.hitDie + conMod;
+
+    // Calculate a default Armor Class based on class + abilities + armor,
+    // delegating to the shared armor helper on KeyboardNav.
+    const armorClass = KeyboardNav.calculateArmorClassForClass(
+      state.character.class,
+      abilities,
+      armorCategory,
+      hasShield,
+    );
+
+    // Store both base (level 1) abilities and current abilities
+    CharacterState.updateCharacter({
+      baseAbilities: { ...abilities },
+      abilities,
+      hitPoints,
+      armorClass,
+      armorCategory,
+      hasShield,
+    });
+    CharacterState.set({ abilityMethod: method });
+
+    // Tailor narrator tone based on how sturdy this character looks at level 1
+    let hpComment;
+    if (hitPoints <= Math.max(4, Math.floor(classData.hitDie * 0.5))) {
+      hpComment = 'Ouch. I hope you like making death saves.';
+    } else if (hitPoints >= classData.hitDie + 2) {
+      hpComment = 'All meat, no subtlety. The healer will be proud.';
+    } else {
+      hpComment = 'Respectable. You might even survive the tutorial.';
+    }
+
+    // Also make a quick remark about other standout abilities
+    const abilityNames = {
+      str: 'Strength',
+      dex: 'Dexterity',
+      con: 'Constitution',
+      int: 'Intelligence',
+      wis: 'Wisdom',
+      cha: 'Charisma',
+    };
+
+    const abilityEntries = Object.entries(abilities);
+    const highest = abilityEntries.reduce(
+      (best, current) => (current[1] > best[1] ? current : best),
+      abilityEntries[0],
+    );
+    const lowest = abilityEntries.reduce(
+      (worst, current) => (current[1] < worst[1] ? current : worst),
+      abilityEntries[0],
+    );
+
+    let abilityComment = '';
+    if (highest && highest[1] >= 16) {
+      abilityComment += ` Your ${abilityNames[highest[0]]} is doing a lot of heavy lifting.`;
+    }
+    if (lowest && lowest[1] <= 8) {
+      abilityComment += ` Maybe don't advertise that ${abilityNames[lowest[0]]} score.`;
+    }
+
+    const narratorPanel = document.getElementById('narrator-panel');
+    narratorPanel.innerHTML += Components.renderNarratorMessage(
+      `Your abilities have been determined. HP: ${hitPoints}. ${hpComment}${abilityComment}`,
+    );
+    Utils.scrollToBottom(true);
+
+    await Utils.sleep(2000);
+    // Decide next question dynamically:
+    // - If class is a spellcaster, branch into spell selection
+    //   (guided vs quick based on entry mode).
+    // - Otherwise, continue to background selection.
+    const latestState = CharacterState.get();
+    const classId = latestState.character.class;
+    let nextQuestionId = this.currentQuestion.next || 'background-choice';
+
+    if (typeof SPELL_DATA !== 'undefined' && SPELL_DATA.isSpellcaster(classId)) {
+      const entryMode = latestState.answers['entry-mode'];
+      if (entryMode === 'guided') {
+        nextQuestionId = 'spell-style-intro';
+      } else {
+        nextQuestionId = 'spell-quick-mode';
+      }
+    } else {
+      nextQuestionId = 'background-choice';
+    }
+
+    await this.showQuestion(nextQuestionId);
+  },
+
+  async handleAbilityFromSelect() {
+    const trigger = document.getElementById('ability-method-trigger');
+    const method =
+      trigger?.getAttribute('data-selected-method') || 'standard';
+    await this.handleAbilityMethod(method);
+  },
+
+  rollAbility() {
+    const rolls = [
+      Utils.rollDice(6),
+      Utils.rollDice(6),
+      Utils.rollDice(6),
+      Utils.rollDice(6),
+    ].sort((a, b) => b - a);
+
+    // Drop lowest, sum the rest
+    return rolls[0] + rolls[1] + rolls[2];
+  },
+
+  async handleNameSelect(nameIndex) {
+    // Get the selected name from the generated names array
+    const name = this._generatedNames[nameIndex];
+
+    if (!name) {
+      console.error('Name not found at index:', nameIndex);
+      return;
+    }
+
+    // Find all buttons in the last question card
+    const questionCard = document.querySelector('.question-card:last-child');
+    const buttons = questionCard.querySelectorAll('.button-primary');
+
+    // Mark the selected button and lock others
+    buttons.forEach((btn, index) => {
+      // Skip the submit button (last button in the card)
+      if (btn.textContent.includes('SUBMIT')) return;
+
+      if (index === nameIndex) {
+        btn.classList.add('is-selected');
+      } else {
+        btn.classList.add('is-locked');
+      }
+    });
+
+    // Disable and lock the custom name input
+    const customInput = document.getElementById('custom-name-input');
+    if (customInput) {
+      customInput.disabled = true;
+      customInput.classList.add('is-locked');
+    }
+
+    // Disable the custom name submit button
+    const submitButton = questionCard.querySelector(
+      '.name-input-container .button-primary',
+    );
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.classList.add('is-locked');
+    }
+
+    CharacterState.updateCharacter({ name });
+
+    // Start generating AI portrait in background now that we have name, race, class
+    if (typeof this.autoGenerateGuidedAIPortraitIfReady === 'function') {
+      this.autoGenerateGuidedAIPortraitIfReady();
+    }
+
+    const narratorPanel = document.getElementById('narrator-panel');
+    narratorPanel.innerHTML += Components.renderNarratorMessage(
+      `${name}. Sure. Why not.`,
+    );
+    Utils.scrollToBottom(true);
+
+    // Continue to next question
+    await Utils.sleep(1500);
+    await this.showQuestion(this.currentQuestion.next);
+  },
+
+  async handleCustomName() {
+    const customInput = document.getElementById('custom-name-input');
+    const name = customInput.value.trim();
+
+    if (!name) {
+      // Optionally provide feedback to the user
+      console.log('Custom name cannot be empty.');
+      return;
+    }
+
+    // Disable all name buttons and the input field
+    const questionCard = document.querySelector('.question-card:last-child');
+    const buttons = questionCard.querySelectorAll('.button-primary');
+    buttons.forEach((btn) => {
+      btn.classList.add('is-locked');
+      btn.disabled = true;
+    });
+
+    if (customInput) {
+      customInput.disabled = true;
+      customInput.classList.add('is-selected'); // Mark custom input as selected
+    }
+
+    CharacterState.updateCharacter({ name });
+
+    // Start generating AI portrait in background now that we have name, race, class
+    if (typeof this.autoGenerateGuidedAIPortraitIfReady === 'function') {
+      this.autoGenerateGuidedAIPortraitIfReady();
+    }
+
+    const narratorPanel = document.getElementById('narrator-panel');
+    narratorPanel.innerHTML += Components.renderNarratorMessage(
+      `${name}. Sure. Why not.`,
+    );
+    Utils.scrollToBottom(true);
+
+    // Continue to next question
+    await Utils.sleep(1500);
+    await this.showQuestion(this.currentQuestion.next);
+  },
+
+  async checkBackendStatus() {
+    // Backend status indicator has been removed from the settings modal UI.
+    // This method is kept as a no-op for backwards compatibility.
+    return;
+  },
+
+  // Legacy settings helpers are now routed through the shared SettingsModal
+  // so both builder + manager use a single implementation.
+  async openSettings() {
+    if (window.SettingsModal && typeof SettingsModal.open === 'function') {
+      SettingsModal.open();
+    }
+  },
+
+  closeSettings() {
+    if (window.SettingsModal && typeof SettingsModal.close === 'function') {
+      SettingsModal.close();
+    }
+  },
+
+  saveSettings() {
+    if (window.SettingsModal && typeof SettingsModal.save === 'function') {
+      SettingsModal.save();
+    }
+  },
+
+  // Build the inner HTML for the portrait history modal body. This is shared
+  // between the initial open and any in-place "reload" after a delete.
+  _buildPortraitHistoryBody(normalized) {
+    const metadata = normalized.metadata || {};
+    const versions = Array.isArray(normalized.versions)
+      ? normalized.versions
+      : [];
+    const hasVersions = !!normalized.hasVersions;
+    const hasCustomPortraitWithoutHistory =
+      !!normalized.hasCustomPortraitWithoutHistory;
+
+    const listHtml = hasVersions
+      ? versions
+          .map((v) => {
+            const isActive = metadata.activeVersionId === v.id;
+            const createdLabel = v.createdAt
+              ? new Date(v.createdAt).toLocaleString()
+              : '';
+            // Use only the generation date/time as the label for each version
+            const title = createdLabel || 'Unknown time';
+            const infoText = '';
+
+            const hasImage = !!v.url;
+            const hasPrompt = !!v.prompt;
+            const thumbHtml = `
+            <div class="card-thumbnail">
+              <div class="ascii-portrait portrait-history-preview" data-version-id="${v.id}"></div>
+              ${
+                hasImage
+                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image is-hidden" data-version-id="${v.id}">`
+                  : ''
+              }
+            </div>`;
+
+            // Overflow menu for per-version actions (View, Prompt, Delete)
+            const actionItems = [];
+
+            if (hasImage) {
+              actionItems.push(`
+                <button
+                  class="selector-option"
+                  type="button"
+                  role="menuitem"
+                  onclick="event.stopPropagation(); App.togglePortraitHistoryView('${v.id}')"
+                  data-toggle-version-id="${v.id}"
+                >
+                  <span class="selector-option-icon">◉</span>
+                  <span class="selector-option-label">View original</span>
+                </button>
+              `);
+            }
+
+            // Always show Image Info - displays date, style, model, and prompt (if available)
+            actionItems.push(`
+              <button
+                class="selector-option"
+                type="button"
+                role="menuitem"
+                onclick="event.stopPropagation(); App.viewPortraitImageInfo('${v.id}')"
+                title="View image generation details"
+              >
+                <span class="selector-option-icon">ℹ︎</span>
+                <span class="selector-option-label">Image info</span>
+              </button>
+            `);
+
+            actionItems.push(`
+              <button
+                class="selector-option portrait-history-delete-option"
+                type="button"
+                role="menuitem"
+                onclick="event.stopPropagation(); App.deletePortraitVersion('${v.id}')"
+                title="Delete this portrait version"
+                aria-label="Delete portrait version"
+              >
+                <span class="selector-option-icon">×</span>
+                <span class="selector-option-label">Delete version</span>
+              </button>
+            `);
+
+            const actionsMenu =
+              actionItems.length > 0
+                ? `
+                <div class="portrait-history-actions selector-shell selector-shell--actions">
+                  <button
+                    class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-label="More portrait actions"
+                    onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"
+                  >
+                    <span class="sheet-actions-icon" aria-hidden="true">
+                      <span class="sheet-actions-dot dot-1"></span>
+                      <span class="sheet-actions-dot dot-2"></span>
+                      <span class="sheet-actions-dot dot-3"></span>
+                    </span>
+                  </button>
+                  <div class="selector-menu portrait-history-menu" role="menu" aria-hidden="true">
+                    ${actionItems.join('')}
+                  </div>
+                </div>
+              `
+                : '';
+
+            return `
+            <div class="character-card portrait-history-card${
+              isActive ? ' is-selected' : ''
+            }" data-version-id="${v.id}" onclick="App.selectPortraitHistoryCard('${
+              v.id
+            }')">
+              ${thumbHtml}
+              <div class="card-details portrait-history-details">
+                <div class="portrait-history-meta">
+                  <div class="card-name">${title}</div>
+                  <div class="card-info">${infoText || '&nbsp;'}</div>
+                </div>
+                ${actionsMenu}
+              </div>
+            </div>
+          `;
+          })
+          .join('')
+      : hasCustomPortraitWithoutHistory
+        ? `<div class="terminal-text-small terminal-text-dim portrait-history-callout">
+              <p><strong>No portrait history yet.</strong></p>
+              <p>This character's portrait was created before the history feature was added.</p>
+              <p>Generate a new custom AI portrait to:</p>
+              <ul class="portrait-history-callout-list">
+                <li>Save your current portrait as Version 1</li>
+                <li>Add the new portrait as Version 2</li>
+                <li>Enable portrait version switching</li>
+              </ul>
+            </div>`
+        : `<p class="terminal-text-small terminal-text-dim portrait-history-callout">
+              No saved portraits yet.<br><br>
+              Generate a custom AI portrait to start building a history.
+            </p>`;
+
+    return `
+      <p class="terminal-text-small terminal-text-dim">
+        View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
+      </p>
+      <div class="portrait-history-card-row${
+        versions.length === 1 ? ' is-single' : ''
+      }">
+        ${listHtml}
+      </div>
+    `;
+  },
+
+  // Smoothly animate a modal's content height when its body is "reloaded"
+  // (e.g., after deleting a portrait history entry). This uses a simple FLIP
+  // pattern: measure -> update -> animate height from old to new.
+  _animateModalContentResize(modalId, updateFn) {
+    const modal = document.getElementById(modalId);
+    if (!modal || typeof updateFn !== 'function') {
+      if (typeof updateFn === 'function') {
+        updateFn();
+      }
+      return;
+    }
+
+    const content = modal.querySelector('.modal-content');
+    if (!content) {
+      updateFn();
+      return;
+    }
+
+    const startHeight = content.offsetHeight;
+
+    // Apply DOM updates synchronously so we can measure the new height.
+    updateFn();
+
+    const endHeight = content.offsetHeight;
+
+    if (!startHeight || !endHeight || startHeight === endHeight) {
+      return;
+    }
+
+    // Lock the current height, then animate to the new height.
+    content.style.height = `${startHeight}px`;
+    // Force reflow so the browser registers the starting height.
+    // eslint-disable-next-line no-unused-expressions
+    content.offsetHeight;
+
+    content.style.transition =
+      'height 220ms cubic-bezier(0.2, 0.8, 0.2, 1.05)';
+    content.style.height = `${endHeight}px`;
+
+    const cleanup = () => {
+      content.style.height = '';
+      content.style.transition = '';
+      content.removeEventListener('transitionend', cleanup);
+    };
+
+    content.addEventListener('transitionend', cleanup);
+  },
+
+  openPortraitHistory() {
+    const state = CharacterState.get();
+    const character = state.character || {};
+    // Normalize portrait metadata + versions using the shared helper so the
+    // builder and manager stay in sync.
+    const normalized =
+      window.PortraitHistory &&
+      typeof PortraitHistory.normalizeForDisplay === 'function'
+        ? PortraitHistory.normalizeForDisplay(character)
+        : (() => {
+            const fallbackMetadata = character.portraitMetadata || {};
+            const fallbackRaw = Array.isArray(fallbackMetadata.versions)
+              ? fallbackMetadata.versions
+              : [];
+            return {
+              metadata: fallbackMetadata,
+              versions: fallbackRaw,
+              hasVersions: fallbackRaw.length > 0,
+              hasCustomPortraitWithoutHistory: !fallbackRaw.length,
+            };
+          })();
+
+    const metadata = normalized.metadata || {};
+    const versions = Array.isArray(normalized.versions)
+      ? normalized.versions
+      : [];
+
+    if (document.getElementById('portraitHistoryModal')) {
+      return;
+    }
+
+    const bodyInnerHtml = this._buildPortraitHistoryBody(normalized);
+
+    const modalHTML = `
+      <div id="portraitHistoryModal" class="modal show" onclick="App.closePortraitHistory()">
+        <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
+          <div class="modal-header">
+            <h2 class="modal-title">Portrait History</h2>
+            <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>
+          </div>
+          <div class="modal-body">
+            ${bodyInnerHtml}
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" onclick="App.closePortraitHistory()">Cancel</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmPortraitHistorySelection()">Use selected</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const appRoot = document.querySelector('.app-root') || document.querySelector('.terminal-container');
+    appRoot.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Populate ASCII previews (for versions without an image URL) as plain
+    // text, cropped to the same thumbnail framing as the main character cards.
+    // Shared helper batches this work across animation frames.
+    if (
+      Array.isArray(versions) &&
+      versions.length > 0 &&
+      window.PortraitHistory &&
+      typeof PortraitHistory.batchPopulateAsciiPreviews === 'function'
+    ) {
+      PortraitHistory.batchPopulateAsciiPreviews(versions, (ascii) =>
+        this.cropAsciiForThumbnail(ascii),
+      );
+    }
+
+    // Initialize keyboard-style focus on the currently active portrait card,
+    // falling back to the first card if no active version is set.
+    const cards = this.getPortraitHistoryCards();
+    if (cards.length > 0) {
+      let initialIndex = 0;
+      if (metadata.activeVersionId) {
+        const matchIndex = cards.findIndex(
+          (card) =>
+            card.getAttribute('data-version-id') === metadata.activeVersionId,
+        );
+        if (matchIndex >= 0) {
+          initialIndex = matchIndex;
+        }
+      }
+
+      this._portraitHistoryFocusIndex = initialIndex;
+      this.updatePortraitHistoryFocus();
+    }
+
+    // ESC / arrow keys / Enter inside the history modal
+    this._portraitHistoryEscHandler = (e) => {
+      if (e.key === 'Escape') this.closePortraitHistory();
+    };
+    this._portraitHistoryKeyHandler = (e) => {
+      const modal = document.getElementById('portraitHistoryModal');
+      if (!modal) return;
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        this.movePortraitHistoryFocus(-1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        this.movePortraitHistoryFocus(1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        this.movePortraitHistoryFocus(-1);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        this.movePortraitHistoryFocus(1);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        this.confirmPortraitHistorySelection();
+      }
+    };
+
+    document.addEventListener('keydown', this._portraitHistoryEscHandler);
+    document.addEventListener('keydown', this._portraitHistoryKeyHandler);
+  },
+
+  closePortraitHistory() {
+    const modal = document.getElementById('portraitHistoryModal');
+    if (!modal) {
+      if (this._portraitHistoryEscHandler) {
+        document.removeEventListener('keydown', this._portraitHistoryEscHandler);
+        this._portraitHistoryEscHandler = null;
+      }
+      if (this._portraitHistoryKeyHandler) {
+        document.removeEventListener('keydown', this._portraitHistoryKeyHandler);
+        this._portraitHistoryKeyHandler = null;
+      }
+      this._portraitHistoryFocusIndex = 0;
+      return;
+    }
+
+    const content = modal.querySelector('.modal-content') || modal;
+
+    const handleClose = () => {
+      if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
+
+      if (this._portraitHistoryEscHandler) {
+        document.removeEventListener('keydown', this._portraitHistoryEscHandler);
+        this._portraitHistoryEscHandler = null;
+      }
+      if (this._portraitHistoryKeyHandler) {
+        document.removeEventListener('keydown', this._portraitHistoryKeyHandler);
+        this._portraitHistoryKeyHandler = null;
+      }
+      this._portraitHistoryFocusIndex = 0;
+    };
+
+    if (!modal.classList.contains('closing')) {
+      modal.classList.add('closing');
+    }
+
+    if (content && content.addEventListener) {
+      content.addEventListener('animationend', handleClose, { once: true });
+    } else {
+      handleClose();
+    }
+
+    if (this._portraitHistoryEscHandler) {
+      document.removeEventListener('keydown', this._portraitHistoryEscHandler);
+      this._portraitHistoryEscHandler = null;
+    }
+    if (this._portraitHistoryKeyHandler) {
+      document.removeEventListener('keydown', this._portraitHistoryKeyHandler);
+      this._portraitHistoryKeyHandler = null;
+    }
+    this._portraitHistoryFocusIndex = 0;
+  },
+
+  getPortraitHistoryCards() {
+    return Array.from(
+      document.querySelectorAll('#portraitHistoryModal .character-card'),
+    );
+  },
+
+  updatePortraitHistoryFocus() {
+    const cards = this.getPortraitHistoryCards();
+    if (cards.length === 0) return;
+
+    const index =
+      typeof this._portraitHistoryFocusIndex === 'number'
+        ? this._portraitHistoryFocusIndex
+        : 0;
+
+    cards.forEach((card, i) => {
+      const isFocused = i === index;
+      card.classList.toggle('is-keyboard-focused', isFocused);
+      card.classList.toggle('is-selected', isFocused);
+    });
+  },
+
+  movePortraitHistoryFocus(delta) {
+    const cards = this.getPortraitHistoryCards();
+    if (cards.length === 0) return;
+
+    const current =
+      typeof this._portraitHistoryFocusIndex === 'number'
+        ? this._portraitHistoryFocusIndex
+        : 0;
+    const next = Math.max(0, Math.min(cards.length - 1, current + delta));
+    this._portraitHistoryFocusIndex = next;
+    this.updatePortraitHistoryFocus();
+  },
+
+  selectPortraitHistoryCard(versionId) {
+    const cards = this.getPortraitHistoryCards();
+    if (cards.length === 0) return;
+
+    let targetIndex = 0;
+    cards.forEach((card, i) => {
+      const matches = card.getAttribute('data-version-id') === versionId;
+      if (matches) {
+        targetIndex = i;
+      }
+    });
+
+    this._portraitHistoryFocusIndex = targetIndex;
+    this.updatePortraitHistoryFocus();
+  },
+
+  togglePortraitHistoryView(versionId) {
+    const asciiEl = document.querySelector(
+      `.portrait-history-preview.ascii-portrait[data-version-id="${versionId}"]`,
+    );
+    const imgEl = document.querySelector(
+      `.portrait-history-image[data-version-id="${versionId}"]`,
+    );
+    const btn = document.querySelector(
+      `.portrait-history-actions button[data-toggle-version-id="${versionId}"]`,
+    );
+
+    if (!imgEl || !asciiEl || !btn) return;
+
+    const showingAscii = imgEl.classList.contains('is-hidden');
+
+    if (showingAscii) {
+      // Switch to original image
+      asciiEl.classList.add('is-hidden');
+      imgEl.classList.remove('is-hidden');
+      btn.textContent = 'View ASCII';
+    } else {
+      // Switch back to ASCII art
+      imgEl.classList.add('is-hidden');
+      asciiEl.classList.remove('is-hidden');
+      btn.textContent = 'View Original';
+    }
+  },
+
+  cropAsciiForThumbnail(asciiArt, heightLines = 80, widthChars = 160) {
+    // Split into lines
+    const lines = asciiArt.split('\n');
+
+    // VERTICAL: Crop from bottom only (keep top pinned for faces/heads)
+    const totalLines = lines.length;
+    const startLine = 0;
+    const endLine = Math.min(totalLines, heightLines);
+
+    // HORIZONTAL: Crop equally from both sides to stay centered
+    const topLines = lines.slice(startLine, endLine).map((line) => {
+      if (line.length <= widthChars) return line;
+      const excess = line.length - widthChars;
+      const cropLeft = Math.floor(excess / 2);
+      return line.slice(cropLeft, cropLeft + widthChars);
+    });
+
+    return topLines.join('\n');
+  },
+
+  async confirmPortraitHistorySelection() {
+    const cards = this.getPortraitHistoryCards();
+    if (cards.length === 0) {
+      this.closePortraitHistory();
+      return;
+    }
+
+    const index =
+      typeof this._portraitHistoryFocusIndex === 'number'
+        ? this._portraitHistoryFocusIndex
+        : 0;
+    const card = cards[index];
+    if (!card) {
+      this.closePortraitHistory();
+      return;
+    }
+
+    const versionId = card.getAttribute('data-version-id');
+    if (!versionId) {
+      this.closePortraitHistory();
+      return;
+    }
+
+    // Show a lightweight loading state on the primary button while we apply
+    // the selected portrait. The modal will close once the operation finishes.
+    const modal = document.getElementById('portraitHistoryModal');
+    const useBtn =
+      modal && modal.querySelector('.modal-footer .terminal-btn-primary');
+    const originalLabel = useBtn ? useBtn.textContent : null;
+    if (useBtn) {
+      useBtn.disabled = true;
+      useBtn.textContent = 'Applying...';
+    }
+
+    try {
+      await this.usePortraitVersion(versionId);
+    } catch (error) {
+      console.error(
+        'App.confirmPortraitHistorySelection: failed to apply portrait version',
+        error,
+      );
+      if (useBtn) {
+        useBtn.disabled = false;
+        useBtn.textContent = originalLabel || 'USE SELECTED';
+      }
+      this.showSystemMessage(
+        'Failed to switch portrait. Please try again in a moment.',
+      );
+    }
+  },
+
+  async usePortraitVersion(versionId) {
+    const state = CharacterState.get();
+    const character = state.character || {};
+    const metadata = character.portraitMetadata || {};
+    const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+    const version = versions.find((v) => v.id === versionId);
+
+    if (!version) {
+      this.showSystemMessage('Portrait version not found.');
+      return;
+    }
+
+    const updatedMetadata = {
+      ...metadata,
+      activeVersionId: version.id,
+    };
+
+    CharacterState.updateCharacter({
+      originalPortraitUrl:
+        version.url || character.originalPortraitUrl || null,
+      customPortraitAscii: version.ascii || character.customPortraitAscii || '',
+      portraitMetadata: updatedMetadata,
+    });
+
+    // Persist in the background if the character is already saved to shared storage.
+    await this.persistIfAlreadySaved();
+
+    // Force an immediate refresh of the in-builder character sheet so the new
+    // portrait is visible even if any listeners were missed.
+    try {
+      const latestState = CharacterState.get();
+      if (
+        latestState &&
+        latestState.character &&
+        typeof this.updateCharacterPanel === 'function'
+      ) {
+        await this.updateCharacterPanel(latestState.character);
+      }
+    } catch (e) {
+      console.error(
+        'App.usePortraitVersion: failed to refresh character panel after version switch',
+        e,
+      );
+    }
+
+    this.closePortraitHistory();
+  },
+
+  async deletePortraitVersion(versionId) {
+    const state = CharacterState.get();
+    const character = state.character || {};
+    const metadata = character.portraitMetadata || {};
+    const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+
+    if (!versions.length) {
+      this.closePortraitHistory();
+      return;
+    }
+
+    const modal = document.getElementById('portraitHistoryModal');
+    if (!modal) return;
+
+    const modalBody = modal.querySelector('.modal-body');
+    const modalTitle = modal.querySelector('.modal-title');
+    const modalFooter = modal.querySelector('.modal-footer');
+    if (!modalBody) return;
+
+    // Store original content to restore on cancel
+    const originalBodyHtml = modalBody.innerHTML;
+    const originalTitle = modalTitle ? modalTitle.textContent : '';
+    const originalFooterHtml = modalFooter ? modalFooter.innerHTML : '';
+
+    // If this is the only portrait, show "create new" prompt instead of delete confirmation
+    if (versions.length === 1) {
+      const createNewBodyHtml = `
+        <p class="terminal-text">
+          To delete this portrait, create a new one first.
+        </p>
+      `;
+
+      const createNewFooterHtml = `
+        <button class="terminal-btn" id="portrait-delete-cancel">Cancel</button>
+        <button class="terminal-btn terminal-btn-primary" id="portrait-create-new">Create new</button>
+      `;
+
+      this._animateModalContentResize('portraitHistoryModal', () => {
+        if (modalTitle) modalTitle.textContent = 'Create a New Portrait?';
+        modalBody.innerHTML = createNewBodyHtml;
+        if (modalFooter) modalFooter.innerHTML = createNewFooterHtml;
+      });
+
+      const cancelBtn = document.getElementById('portrait-delete-cancel');
+      const createNewBtn = document.getElementById('portrait-create-new');
+
+      if (cancelBtn) {
+        cancelBtn.onclick = () => {
+          this._animateModalContentResize('portraitHistoryModal', () => {
+            if (modalTitle) modalTitle.textContent = originalTitle;
+            modalBody.innerHTML = originalBodyHtml;
+            if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+          });
+
+          // Re-populate ASCII previews after restoring
+          if (Array.isArray(versions) && versions.length > 0 &&
+              window.PortraitHistory &&
+              typeof PortraitHistory.batchPopulateAsciiPreviews === 'function') {
+            PortraitHistory.batchPopulateAsciiPreviews(versions, (ascii) =>
+              this.cropAsciiForThumbnail(ascii),
+            );
+          }
+
+          const cards = this.getPortraitHistoryCards();
+          if (cards.length > 0) {
+            this._portraitHistoryFocusIndex = 0;
+            this.updatePortraitHistoryFocus();
+          }
+        };
+      }
+
+      if (createNewBtn) {
+        createNewBtn.onclick = () => {
+          this.closePortraitHistory();
+          this.generateCustomAIPortrait();
+        };
+      }
+
+      return;
+    }
+
+    // Build the confirmation view using standard modal structure
+    const confirmationBodyHtml = `
+      <p class="terminal-text">
+        Delete this saved portrait version? This cannot be undone.
+      </p>
+    `;
+
+    const confirmationFooterHtml = `
+      <button class="terminal-btn" id="portrait-delete-cancel">No</button>
+      <button class="terminal-btn terminal-btn-primary" id="portrait-delete-confirm">Yes</button>
+    `;
+
+    // Transform modal to confirmation view
+    this._animateModalContentResize('portraitHistoryModal', () => {
+      if (modalTitle) modalTitle.textContent = 'Confirm Delete';
+      modalBody.innerHTML = confirmationBodyHtml;
+      if (modalFooter) modalFooter.innerHTML = confirmationFooterHtml;
+    });
+
+    // Handle cancel - restore original content
+    const cancelBtn = document.getElementById('portrait-delete-cancel');
+    const confirmBtn = document.getElementById('portrait-delete-confirm');
+
+    const restoreOriginal = () => {
+      this._animateModalContentResize('portraitHistoryModal', () => {
+        if (modalTitle) modalTitle.textContent = originalTitle;
+        modalBody.innerHTML = originalBodyHtml;
+        if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+      });
+
+      // Re-populate ASCII previews after restoring
+      if (
+        Array.isArray(versions) &&
+        versions.length > 0 &&
+        window.PortraitHistory &&
+        typeof PortraitHistory.batchPopulateAsciiPreviews === 'function'
+      ) {
+        PortraitHistory.batchPopulateAsciiPreviews(versions, (ascii) =>
+          this.cropAsciiForThumbnail(ascii),
+        );
+      }
+
+      const cards = this.getPortraitHistoryCards();
+      if (cards.length > 0) {
+        this._portraitHistoryFocusIndex = 0;
+        this.updatePortraitHistoryFocus();
+      }
+    };
+
+    if (cancelBtn) {
+      cancelBtn.onclick = restoreOriginal;
+    }
+
+    if (confirmBtn) {
+      confirmBtn.onclick = async () => {
+        const remaining = versions.filter((v) => v.id !== versionId);
+        const deletedWasActive = metadata.activeVersionId === versionId;
+
+        const updatedMetadata = {
+          ...metadata,
+          versions: remaining,
+          activeVersionId: deletedWasActive
+            ? remaining[0]?.id || null
+            : metadata.activeVersionId,
+        };
+
+        const updates = {
+          portraitMetadata: updatedMetadata,
+        };
+
+        if (deletedWasActive) {
+          if (remaining[0]) {
+            updates.originalPortraitUrl =
+              remaining[0].url || character.originalPortraitUrl || null;
+            updates.customPortraitAscii =
+              remaining[0].ascii || character.customPortraitAscii || '';
+          } else {
+            // No remaining custom versions – clear custom portrait so we fall back to template/pre-generated art
+            updates.originalPortraitUrl = null;
+            updates.customPortraitAscii = '';
+          }
+        }
+
+        CharacterState.updateCharacter(updates);
+        await this.persistIfAlreadySaved();
+
+        // If no remaining versions, close the modal entirely
+        if (!remaining.length) {
+          this.closePortraitHistory();
+          return;
+        }
+
+        // Rebuild normalized metadata from the latest state
+        const latestState = CharacterState.get();
+        const latestCharacter = latestState.character || {};
+        const latestNormalized =
+          window.PortraitHistory &&
+          typeof PortraitHistory.normalizeForDisplay === 'function'
+            ? PortraitHistory.normalizeForDisplay(latestCharacter)
+            : (() => {
+                const fallbackMetadata = latestCharacter.portraitMetadata || {};
+                const fallbackRaw = Array.isArray(fallbackMetadata.versions)
+                  ? fallbackMetadata.versions
+                  : [];
+                return {
+                  metadata: fallbackMetadata,
+                  versions: fallbackRaw,
+                  hasVersions: fallbackRaw.length > 0,
+                  hasCustomPortraitWithoutHistory: !fallbackRaw.length,
+                };
+              })();
+
+        // Transform back to history view with updated content
+        this._animateModalContentResize('portraitHistoryModal', () => {
+          if (modalTitle) modalTitle.textContent = originalTitle;
+          modalBody.innerHTML = this._buildPortraitHistoryBody(latestNormalized);
+          if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+        });
+
+        // Re-run ASCII thumbnail population & focus wiring for the updated list
+        const nextVersions = Array.isArray(latestNormalized.versions)
+          ? latestNormalized.versions
+          : [];
+        if (
+          Array.isArray(nextVersions) &&
+          nextVersions.length > 0 &&
+          window.PortraitHistory &&
+          typeof PortraitHistory.batchPopulateAsciiPreviews === 'function'
+        ) {
+          PortraitHistory.batchPopulateAsciiPreviews(nextVersions, (ascii) =>
+            this.cropAsciiForThumbnail(ascii),
+          );
+        }
+
+        const cards = this.getPortraitHistoryCards();
+        if (cards.length > 0) {
+          this._portraitHistoryFocusIndex = 0;
+          this.updatePortraitHistoryFocus();
+        }
+      };
+    }
+  },
+
+  viewPortraitImageInfo(versionId) {
+    const state = CharacterState.get();
+    const character = state.character || {};
+    const metadata = character.portraitMetadata || {};
+    const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+    const version = versions.find((v) => v.id === versionId);
+
+    if (!version) {
+      this.showToast('No info available for this portrait.');
+      return;
+    }
+
+    const modal = document.getElementById('portraitHistoryModal');
+    if (!modal) return;
+
+    const modalBody = modal.querySelector('.modal-body');
+    const modalTitle = modal.querySelector('.modal-title');
+    const modalFooter = modal.querySelector('.modal-footer');
+    if (!modalBody) return;
+
+    // Store original content to restore on back
+    const modalHeader = modal.querySelector('.modal-header');
+    const originalBodyHtml = modalBody.innerHTML;
+    const originalHeaderHtml = modalHeader ? modalHeader.innerHTML : '';
+    const originalFooterHtml = modalFooter ? modalFooter.innerHTML : '';
+
+    // Helper to format labels to title case
+    const formatLabel = (str) => {
+      if (!str) return null;
+      // Replace dashes/underscores with spaces
+      let cleaned = str.replace(/[-_]/g, ' ');
+      // Title case: capitalize first letter of each word
+      if (cleaned.length > 0) {
+        cleaned = cleaned.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
+      }
+      return cleaned;
+    };
+
+    // Format model name for display
+    const formatModelName = (model) => {
+      if (!model) return null;
+      const modelNames = {
+        'dall-e-3': 'DALL·E 3',
+        'gpt-image-1': 'GPT Image 1',
+        'gpt-image-1.5': 'GPT Image 1.5',
+        'flux-1.1-pro': 'Flux 1.1 Pro',
+        'flux-schnell': 'Flux Schnell',
+      };
+      return modelNames[model] || formatLabel(model);
+    };
+
+    // Format quality for display
+    const formatQuality = (quality) => {
+      if (!quality) return null;
+      const qualityNames = {
+        'standard': 'Standard',
+        'medium': 'Medium',
+        'high': 'High',
+        'hd': 'HD',
+      };
+      return qualityNames[quality] || formatLabel(quality);
+    };
+
+    // Format date/time for display
+    const formatDateTime = (isoString) => {
+      if (!isoString) return null;
+      try {
+        const date = new Date(isoString);
+        return date.toLocaleString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      } catch (e) {
+        return isoString;
+      }
+    };
+
+    const styleLabel = formatLabel(version.style) || 'Default';
+    const modelLabel = formatModelName(version.model);
+    const qualityLabel = formatQuality(version.quality);
+    const dateTimeLabel = formatDateTime(version.createdAt);
+
+    // Escape prompt text for safe display
+    const escapedPrompt = (version.prompt || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const infoHeaderHtml = `
+      <h2 class="modal-title">Image Info</h2>
+      <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>
+    `;
+
+    // Build the info sections
+    let infoSections = '';
+
+    // Date/Time
+    if (dateTimeLabel) {
+      infoSections += `
+        <div class="image-info-row">
+          <span class="image-info-label">Created</span>
+          <span class="image-info-value">${dateTimeLabel}</span>
+        </div>
+      `;
+    }
+
+    // Style
+    infoSections += `
+      <div class="image-info-row">
+        <span class="image-info-label">Style</span>
+        <span class="image-info-value">${styleLabel}</span>
+      </div>
+    `;
+
+    // Model and Quality
+    if (modelLabel) {
+      let modelDisplay = modelLabel;
+      if (qualityLabel) {
+        modelDisplay = modelDisplay + ' (' + qualityLabel + ')';
+      }
+      infoSections += `
+        <div class="image-info-row">
+          <span class="image-info-label">Model</span>
+          <span class="image-info-value">${modelDisplay}</span>
+        </div>
+      `;
+    }
+
+    // Prompt section
+    let promptSection = '';
+    if (escapedPrompt) {
+      promptSection = `
+        <div class="image-info-prompt-section">
+          <div class="image-info-prompt-label">Prompt</div>
+          <pre class="terminal-text portrait-prompt-display">${escapedPrompt}</pre>
+        </div>
+      `;
+    } else {
+      promptSection = `
+        <div class="image-info-prompt-section">
+          <div class="image-info-prompt-label">Prompt</div>
+          <p class="terminal-text-dim">No prompt saved for this portrait.</p>
+        </div>
+      `;
+    }
+
+    const infoBodyHtml = `
+      <div class="image-info-container">
+        <div class="image-info-metadata">
+          ${infoSections}
+        </div>
+        ${promptSection}
+      </div>
+    `;
+
+    const infoFooterHtml = `
+      <button class="terminal-btn" id="portrait-info-back">Back</button>
+      ${escapedPrompt ? '<button class="terminal-btn" id="portrait-info-copy">Copy prompt</button>' : ''}
+    `;
+
+    // Transform modal to info view
+    this._animateModalContentResize('portraitHistoryModal', () => {
+      if (modalHeader) modalHeader.innerHTML = infoHeaderHtml;
+      modalBody.innerHTML = infoBodyHtml;
+      if (modalFooter) modalFooter.innerHTML = infoFooterHtml;
+    });
+
+    const backBtn = document.getElementById('portrait-info-back');
+    const copyBtn = document.getElementById('portrait-info-copy');
+
+    const goBack = () => {
+      this._animateModalContentResize('portraitHistoryModal', () => {
+        if (modalHeader) modalHeader.innerHTML = originalHeaderHtml;
+        modalBody.innerHTML = originalBodyHtml;
+        if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+      });
+
+      // Re-populate ASCII previews after restoring
+      if (Array.isArray(versions) && versions.length > 0 &&
+          window.PortraitHistory &&
+          typeof PortraitHistory.batchPopulateAsciiPreviews === 'function') {
+        PortraitHistory.batchPopulateAsciiPreviews(versions, (ascii) =>
+          this.cropAsciiForThumbnail(ascii),
+        );
+      }
+
+      const cards = this.getPortraitHistoryCards();
+      if (cards.length > 0) {
+        this._portraitHistoryFocusIndex = 0;
+        this.updatePortraitHistoryFocus();
+      }
+    };
+
+    if (backBtn) {
+      backBtn.onclick = goBack;
+    }
+
+    if (copyBtn) {
+      copyBtn.onclick = async () => {
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(version.prompt);
+          } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = version.prompt;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+              document.execCommand('copy');
+            } finally {
+              document.body.removeChild(textarea);
+            }
+          }
+          this.showToast('Prompt copied.');
+        } catch (error) {
+          console.error('Failed to copy portrait prompt:', error);
+          this.showToast('Could not copy prompt.', 5000);
+        }
+      };
+    }
+  },
+
+  // Legacy alias for backwards compatibility
+  viewPortraitPrompt(versionId) {
+    return this.viewPortraitImageInfo(versionId);
+  },
+
+  async generateCustomAIPortrait() {
+    const state = CharacterState.get();
+    const character = state.character;
+
+    // Block custom art generation for sample (demo) characters
+    if (window.DemoCharacters && DemoCharacters.isDemo(character)) {
+      this.showSystemMessage(
+        'Custom art generation is not available for sample characters. ' +
+        'Create your own character to generate custom portraits!'
+      );
+      return;
+    }
+
+    // Note: Daily portrait limits are now enforced by the backend.
+    // Demo users get 5/day, logged-in users get 20/day.
+    // The backend returns appropriate error messages when limits are hit.
+
+    if (!character.race || !character.class) {
+      this.showSystemMessage(
+        'Select both a race and a class before generating a custom portrait.',
+      );
+      return;
+    }
+
+    // Check if backend is available (API key check now handled server-side)
+    try {
+      const statusCheck = await fetch(`${CONFIG.BACKEND_URL}/api/ai/status`);
+      if (!statusCheck.ok) {
+      this.showSystemMessage(
+          'Backend server is not available. Make sure the backend is running on port 8000.',
+        );
+        return;
+      }
+      const statusData = await statusCheck.json();
+      if (!statusData.available) {
+        this.showSystemMessage(
+          'AI features are not available. The backend server is not configured.',
+        );
+        return;
+      }
+    } catch (error) {
+      this.showSystemMessage(
+        'Cannot connect to backend server. Make sure it is running on http://localhost:8000',
+      );
+      return;
+    }
+
+    // Show prompt modal
+    this.openPromptModal(character);
+  },
+
+  /**
+   * Ensure we have at least a basic ASCII fallback portrait for the given
+   * character. Used when custom AI portrait generation fails (rate limits,
+   * backend errors, etc.) so we don't leave the frame empty.
+   *
+   * Important: this intentionally does NOT load any pre-generated portrait
+   * assets (ASCII or images). It only uses the simple template portrait.
+   */
+  async _ensurePreGeneratedPortraitFallback(character, options = {}) {
+    const force = !!(options && options.force);
+
+    try {
+      if (!window.AsciiArtService || !character || !character.race) {
+        return;
+      }
+
+      const currentState = CharacterState.get();
+      const existing = currentState && currentState.character ? currentState.character : {};
+
+      if (
+        !force &&
+        (existing.customPortraitAscii ||
+          (existing.portrait && (existing.portrait.ascii || existing.portrait.url)) ||
+          existing.asciiPortrait)
+      ) {
+        // We already have some kind of portrait attached; don't overwrite it.
+        return;
+      }
+
+      // Use the simple template portrait only (no pre-generated file loads).
+      const fallbackArt = AsciiArtService.getFullPortrait
+        ? AsciiArtService.getFullPortrait(character)
+        : '';
+
+      // In guided/quick mode, updateCharacterPanel only shows customPortraitAscii,
+      // not asciiPortrait. So we also set customPortraitAscii here to ensure the
+      // fallback portrait actually displays in those modes.
+      if (fallbackArt && window.CharacterState) {
+        CharacterState.updateCharacter({
+          customPortraitAscii: fallbackArt,
+          // Explicitly clear any existing original image URL so pre-generated
+          // images (or stale URLs) cannot appear as a fallback.
+          originalPortraitUrl: null,
+          portrait: {
+            ...(existing.portrait || {}),
+            url: null,
+          },
+        });
+      }
+
+      // Clear last-portrait cache so the pre-generated art will animate in.
+      this._lastPortraitArt = null;
+
+      const latest = CharacterState.get().character;
+      await this.updateCharacterPanel(latest);
+    } catch (fallbackError) {
+      console.error('Failed to apply fallback portrait:', fallbackError);
+    }
+  },
+
+  async openPromptModal(character) {
+    // Show only the character description to the user (not the rendering instructions)
+    const defaultPrompt = AIService.buildCharacterDescription
+      ? AIService.buildCharacterDescription(character)
+      : ''; // backwards compat if renamed
+    
+    // Get active style from portrait version or user's saved preference
+    let activeStyle = null;
+    try {
+      // Check if character has an active portrait version with a style
+      const metadata = character.portraitMetadata || {};
+      const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+      if (versions.length) {
+        const activeId = metadata.activeVersionId;
+        let active =
+          (activeId && versions.find((v) => v && v.id === activeId)) ||
+          versions[versions.length - 1];
+        if (active && active.style) {
+          activeStyle = active.style;
+        }
+      }
+      // Fall back to user's saved preference
+      if (!activeStyle && window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
+        activeStyle = StorageService.getPortraitPromptTheme();
+      }
+    } catch (e) {
+      // Non-fatal
+    }
+
+    const modalHTML = `
+      <div id="promptModal" class="modal show" onclick="App.closePromptModal(false)">
+        <div class="modal-content portrait-customize-modal" onclick="event.stopPropagation();">
+          <div class="modal-header">
+            <h2 class="modal-title">Customize portrait</h2>
+            <button class="modal-close" onclick="App.closePromptModal(false)">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="portrait-style-row">
+              <div class="portrait-style-label">Style</div>
+              <div class="selector-shell selector-shell--listbox portrait-style-selector" id="builderPortraitStyleShell">
+                <button 
+                  type="button"
+                  class="terminal-btn selector-trigger"
+                  id="builderPortraitStyleTrigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  onclick="CharacterSheet.toggleSelectorMenu(this)"
+                >
+                  <span class="selector-trigger-label" id="builderPortraitStyleLabel">Cinematic inks</span>
+                </button>
+                <div class="selector-menu portrait-style-menu" id="builderPortraitStyleMenu" role="listbox" aria-label="Portrait style" aria-hidden="true">
+                  <!-- Options populated by JS -->
+                </div>
+              </div>
+            </div>
+            <div class="image-quota-info is-blinking" id="builderImageQuotaLine">Checking image quota…</div>
+            <textarea
+              class="terminal-textarea portrait-prompt-textarea"
+              id="custom-prompt"
+              placeholder="Enter custom description..."
+            >${defaultPrompt}</textarea>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" onclick="App.surpriseMePortrait()">Surprise me</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmPromptModal()">Generate portrait</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const appRoot = document.querySelector('.app-root') || document.querySelector('.terminal-container');
+    appRoot.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Populate the style dropdown (await to ensure API sync completes first)
+    // This ensures global/shared styles are loaded for all authenticated users
+    await populateBuilderPortraitStyleDropdown(activeStyle);
+
+    const modal = document.getElementById('promptModal');
+    if (modal && Utils.focusFirstFieldInModal) {
+      Utils.focusFirstFieldInModal(modal);
+    }
+
+    // Populate the quota line (and keep it updated while the modal is open).
+    try {
+      const quotaLine = document.getElementById('builderImageQuotaLine');
+      const updateQuotaLine = (detail) => {
+        const el = document.getElementById('builderImageQuotaLine');
+        if (!el) return;
+        const remaining = detail && typeof detail.remaining === 'number' ? detail.remaining : null;
+        const limit = detail && typeof detail.limit === 'number' ? detail.limit : null;
+        const resetAt = detail && detail.resetAt ? detail.resetAt : null;
+
+        let resetText = '';
+        if (resetAt) {
+          try {
+            const resetDate = new Date(resetAt);
+            const now = new Date();
+            const hoursUntil = Math.max(0, Math.ceil((resetDate - now) / (1000 * 60 * 60)));
+            if (hoursUntil <= 1) resetText = ' (resets in ~1 hour)';
+            else if (hoursUntil < 24) resetText = ' (resets in ~' + hoursUntil + ' hours)';
+          } catch (_) {}
+        }
+
+        // Find and update Generate button state based on quota
+        const generateBtn = document.querySelector('#promptModal .terminal-btn-primary');
+        const surpriseBtn = document.querySelector('#promptModal .terminal-btn:not(.terminal-btn-primary)');
+
+        if (remaining === -1) {
+          el.textContent = 'Image quota: unlimited (admin/dev)';
+          if (generateBtn) {
+            generateBtn.disabled = false;
+            generateBtn.title = '';
+          }
+          if (surpriseBtn) {
+            surpriseBtn.disabled = false;
+            surpriseBtn.title = '';
+          }
+          return;
+        }
+
+        if (remaining === 0 && limit != null) {
+          el.textContent = 'Custom portraits left today: 0/' + limit + resetText;
+          if (generateBtn) {
+            generateBtn.disabled = true;
+            generateBtn.title = 'Daily custom portrait limit reached';
+          }
+          if (surpriseBtn) {
+            surpriseBtn.disabled = true;
+            surpriseBtn.title = 'Daily custom portrait limit reached';
+          }
+          return;
+        }
+
+        if (remaining != null && limit != null) {
+          el.textContent = 'Custom portraits left today: ' + remaining + '/' + limit + resetText;
+          if (generateBtn) {
+            generateBtn.disabled = false;
+            generateBtn.title = '';
+          }
+          if (surpriseBtn) {
+            surpriseBtn.disabled = false;
+            surpriseBtn.title = '';
+          }
+          return;
+        }
+
+        el.textContent = 'Image quota: unavailable';
+      };
+
+      // Store handler so we can remove it on close.
+      this._promptModalQuotaHandler = (e) => updateQuotaLine(e && e.detail);
+      window.addEventListener('danddy:imageQuotaUpdate', this._promptModalQuotaHandler);
+
+      // Initial fetch for current quota status.
+      if (window.AIService && typeof AIService.getImageQuotaStatus === 'function') {
+        const quota = await AIService.getImageQuotaStatus();
+        if (quotaLine && quota) {
+          updateQuotaLine({
+            limit: quota.limit,
+            remaining: quota.remaining,
+            resetAt: quota.resetAt,
+          });
+        }
+      }
+    } catch (e) {
+      // Non-fatal
+    }
+
+    // ESC key to close
+    this._promptModalEscHandler = (e) => {
+      if (e.key === 'Escape') this.closePromptModal(false);
+    };
+    document.addEventListener('keydown', this._promptModalEscHandler);
+  },
+
+  closePromptModal(regenerate = false) {
+    // Close the style menu if open (using standard selector toggle)
+    const trigger = document.getElementById('builderPortraitStyleTrigger');
+    if (trigger && trigger.classList.contains('is-open') && window.CharacterSheet) {
+      CharacterSheet.toggleSelectorMenu(trigger);
+    }
+    
+    const modal = document.getElementById('promptModal');
+    if (!modal) {
+      // Reset style state even if modal is gone
+      currentBuilderPortraitStyle = null;
+      return;
+    }
+
+    // If the modal is already in the process of closing, don't re-run animation.
+    if (modal.classList.contains('closing')) return;
+
+    modal.classList.add('closing');
+
+    const content = modal.querySelector('.modal-content') || modal;
+
+    const handleClose = () => {
+      // Remove the modal from the DOM after the close animation completes.
+      if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
+
+      // Remove ESC key listener
+      if (this._promptModalEscHandler) {
+        document.removeEventListener('keydown', this._promptModalEscHandler);
+        this._promptModalEscHandler = null;
+      }
+
+      // Remove quota listener
+      if (this._promptModalQuotaHandler) {
+        window.removeEventListener('danddy:imageQuotaUpdate', this._promptModalQuotaHandler);
+        this._promptModalQuotaHandler = null;
+      }
+      
+      // Reset the style selection state
+      currentBuilderPortraitStyle = null;
+
+      if (regenerate) {
+        // Trigger portrait regeneration if confirmed
+        const state = CharacterState.get();
+        this.updateCharacterPanel(state.character);
+      }
+    };
+
+    // If we have a modal-content element, wait for the close animation to finish.
+    if (content && content.addEventListener) {
+      content.addEventListener('animationend', handleClose, { once: true });
+    } else {
+      // Fallback: no animation support, just close immediately.
+      handleClose();
+    }
+  },
+
+  async confirmPromptModal() {
+    const customPromptInput = document.getElementById('custom-prompt');
+    const customPrompt = customPromptInput.value.trim();
+    
+    // Capture the selected style before closing the modal (which resets it)
+    const selectedStyle = currentBuilderPortraitStyle;
+
+    if (!customPrompt) {
+      this.showSystemMessage('Portrait prompt cannot be empty.');
+      return;
+    }
+
+    this.closePromptModal(false); // Close modal without regenerating yet
+
+    const portraitEl = document.getElementById('character-portrait');
+    const originalPortraitEl = document.getElementById('original-portrait');
+
+    // If the user prefers original images, temporarily switch the visible
+    // frame from original → ASCII so they see the cube loader + status while
+    // the new portrait is being generated. The shared sheet will re-read the
+    // global preference on re-render and switch back to original afterward.
+    if (portraitEl && originalPortraitEl) {
+      const container = portraitEl.closest('.portrait-container');
+      const toggleBtn = document.getElementById('toggle-portrait-btn');
+
+      let portraitViewMode = 'original';
+      try {
+        if (window.StorageService && StorageService.getPortraitViewMode) {
+          portraitViewMode = StorageService.getPortraitViewMode();
+        } else if (
+          typeof CONFIG !== 'undefined' &&
+          CONFIG.DEFAULT_PORTRAIT_VIEW_MODE
+        ) {
+          portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+        }
+      } catch (e) {
+        // Non-fatal: keep default
+      }
+
+      const isAsciiHidden = portraitEl.classList.contains('is-hidden');
+      const isOriginalVisible = !originalPortraitEl.classList.contains(
+        'is-hidden',
+      );
+      const isContainerOriginal =
+        !!container &&
+        container.classList.contains('portrait-container--original-mode');
+
+      if (
+        portraitViewMode === 'original' &&
+        isAsciiHidden &&
+        isOriginalVisible &&
+        isContainerOriginal
+      ) {
+        // Temporarily switch the DOM to ASCII view so the loader is visible.
+        portraitEl.classList.remove('is-hidden');
+        originalPortraitEl.classList.add('is-hidden');
+        if (container) {
+          container.classList.remove('portrait-container--original-mode');
+        }
+
+        // Update the toggle label to reflect that ASCII is currently shown.
+        if (toggleBtn) {
+          const iconSpan = toggleBtn.querySelector('.selector-option-icon');
+          const labelSpan = toggleBtn.querySelector('.selector-option-label');
+          if (iconSpan && labelSpan) {
+            iconSpan.textContent = '◉';
+            labelSpan.textContent = 'View Original Art';
+          } else {
+            toggleBtn.textContent = '◉ View Original Art';
+          }
+        }
+      }
+    }
+
+    if (portraitEl) {
+      // While generating, scroll the character sheet back to the top so the
+      // user immediately sees the portrait frame and loading status message.
+      const characterPanel = document.getElementById('character-panel');
+      if (characterPanel) {
+        characterPanel.scrollTo({
+          top: 0,
+          behavior: 'smooth',
+        });
+      }
+
+      // Show the standard loading state with glowing, spinning cube and unified text.
+      this._renderPortraitGeneratingLoader(portraitEl);
+    }
+
+    try {
+      // Add rendering instructions to the user's character description
+      // (hidden system-level guidance for the image model)
+      // Use shared pose + camera data from PortraitPoseData module
+      const character = CharacterState.get().character || {};
+      const classKey = (character.class || 'default').toLowerCase();
+
+      const { pose: posePrompt, camera: cameraPrompt } =
+        window.PortraitPoseData && typeof PortraitPoseData.getRandomPoseAndCamera === 'function'
+          ? PortraitPoseData.getRandomPoseAndCamera(classKey)
+          : {
+              pose: 'standing in a relaxed but heroic stance',
+              camera: 'Camera angle: three-quarter view that clearly shows the full silhouette.',
+            };
+
+      let renderingInstructions;
+      if (
+        typeof window !== 'undefined' &&
+        window.PortraitPrompt &&
+        typeof window.PortraitPrompt.buildCustomPortraitInstructions ===
+          'function'
+      ) {
+        // Use the style selected from the modal dropdown
+        renderingInstructions =
+          window.PortraitPrompt.buildCustomPortraitInstructions({
+            posePrompt,
+            cameraPrompt,
+            themeId: selectedStyle,
+          });
+      } else {
+        // Fallback if PortraitPrompt is not loaded for some reason.
+        // Note: Camera temporarily disabled - may interfere with pose
+        renderingInstructions = [
+          'Create a high-contrast black-and-white fantasy illustration.',
+          'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
+          'Include some controlled, directional hatching to define form (light mid-tone texture only).',
+          `Pose: ${posePrompt}`,
+          // cameraPrompt,
+          'Background should be simple, entirely black, and free of symbols or text.',
+          'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+          'Aspect ratio 3:4.',
+        ];
+      }
+      
+      // Combine character description with rendering instructions.
+      // Character info comes first, then style/pose/camera instructions.
+      // The backend has a 4000 character limit on prompts, so we need to truncate
+      // if necessary. Prioritize keeping the character description (customPrompt)
+      // and trim style instructions if we exceed the limit.
+      const MAX_PROMPT_LENGTH = 3900; // Leave some margin below the 4000 limit
+      let fullPrompt = [customPrompt, ...renderingInstructions].join(' ');
+      
+      if (fullPrompt.length > MAX_PROMPT_LENGTH) {
+        console.warn(`Portrait prompt exceeds ${MAX_PROMPT_LENGTH} chars (${fullPrompt.length}), truncating...`);
+        // Try to keep the custom prompt intact and reduce style instructions
+        const styleInstructionsText = renderingInstructions.join(' ');
+        const availableForStyle = MAX_PROMPT_LENGTH - customPrompt.length - 50; // 50 chars buffer
+        
+        if (availableForStyle > 200) {
+          // We have room for some style instructions
+          const truncatedStyle = styleInstructionsText.substring(0, availableForStyle);
+          fullPrompt = truncatedStyle + ' ' + customPrompt;
+        } else {
+          // Not much room - just use the custom prompt with minimal style
+          const minimalStyle = 'High-contrast black-and-white fantasy ink illustration.';
+          fullPrompt = minimalStyle + ' ' + customPrompt.substring(0, MAX_PROMPT_LENGTH - minimalStyle.length - 1);
+        }
+        console.log(`Truncated prompt length: ${fullPrompt.length}`);
+      }
+      
+      // Generate custom portrait with full prompt (including hidden rendering instructions)
+      const result =
+        await AsciiArtService.generateCustomAIPortraitWithPrompt(
+          fullPrompt,
+        );
+
+      // Store both the original image URL and custom ASCII art in character state
+      // Also increment the custom portrait counter and append to portrait history
+      const current = CharacterState.get().character;
+      const currentCount = current.customPortraitCount || 0;
+
+      // Capture the model and quality that were used for generation
+      let generationModel = 'dall-e-3';
+      let generationQuality = null;
+      try {
+        if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+          generationModel = StorageService.getImageModel();
+        } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_IMAGE_MODEL) {
+          generationModel = CONFIG.DEFAULT_IMAGE_MODEL;
+        }
+        if (window.StorageService && typeof StorageService.getImageQuality === 'function') {
+          generationQuality = StorageService.getImageQuality(generationModel);
+        }
+      } catch (e) {
+        // Non-fatal: use defaults
+      }
+
+      const updatedMetadata = window.PortraitHistory
+        ? window.PortraitHistory.addVersion(
+            current,
+            result.asciiArt,
+            result.imageUrl,
+            {
+              source: 'custom-ai',
+              prompt: fullPrompt,
+              style: selectedStyle,
+              model: generationModel,
+              quality: generationQuality,
+            },
+          )
+        : current.portraitMetadata || {};
+
+      // Respect the player's portrait view preference:
+      // - If they prefer original images, keep that mode.
+      // - If they prefer ASCII, continue to show ASCII first.
+      // We do not forcibly flip the global portrait view mode here.
+
+      CharacterState.updateCharacter({
+        originalPortraitUrl: result.imageUrl,
+        customPortraitAscii: result.asciiArt,
+        customPortraitCount: currentCount + 1,
+        portraitMetadata: updatedMetadata,
+      });
+
+      if (portraitEl) {
+        // Stop the animated dots interval and restore portrait font size back
+        // to ASCII default; the sheet will re-render for the newly generated art.
+        this._stopPortraitLoadingAnimation();
+        portraitEl.style.fontSize = '';
+        portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
+      }
+
+      // Update the last portrait art to trigger animation
+      this._lastPortraitArt = null;
+
+      // Re-render to show the toggle button and trigger animation
+      const state = CharacterState.get();
+      await this.updateCharacterPanel(state.character);
+    } catch (error) {
+      console.error('Error generating custom AI portrait with prompt:', error);
+
+      // Check error type and show appropriate message
+      if (error.isSafetyRejection) {
+        console.group('🚫 OpenAI Content Safety Rejection - Custom Prompt Mode');
+        console.error('Rejected prompt:', error.rejectedPrompt || 'Unknown');
+        console.error('Original error:', error.originalMessage);
+        if (error.promptAnalysis) {
+          console.log('Analysis included above ↑');
+        }
+        console.groupEnd();
+        
+        // Build user message with helpful context
+        let userMessage = 'OpenAI flagged this portrait request. ';
+        
+        if (error.promptAnalysis && error.promptAnalysis.hasKnownProblematicTerms) {
+          const issues = error.promptAnalysis.potentialIssues;
+          const categories = issues.map(i => i.category).join(', ');
+          userMessage += `Possible triggers: ${categories}. `;
+        }
+        
+        userMessage += 'Check browser console for detailed analysis and suggestions.';
+        
+        this.showSystemMessage(userMessage);
+      } else if (error.isRateLimit) {
+        this.showSystemMessage(
+          "You've reached today's portrait limit, so we're using a simple fallback portrait for now. You can create a custom one tomorrow from the character sheet.",
+        );
+      } else {
+        this.showSystemMessage(
+          'AI portrait generation failed, so we\'re using a simple fallback portrait for now. You can still create a custom one later from the character sheet.',
+        );
+      }
+      
+      // Restore portrait font sizing and swap back to a safe fallback portrait.
+      const state = CharacterState.get();
+      if (portraitEl) {
+        portraitEl.style.fontSize = '';
+        portraitEl.classList.remove(
+          'ascii-portrait--loading',
+          'ascii-portrait--placeholder',
+        );
+      }
+
+      // If we already have some portrait art, just re-render the sheet;
+      // otherwise, apply a basic fallback portrait now.
+      await this._ensurePreGeneratedPortraitFallback(state.character, {
+        force: !(
+          state.character &&
+          (state.character.customPortraitAscii ||
+            state.character.asciiPortrait ||
+            (state.character.portrait &&
+              (state.character.portrait.ascii || state.character.portrait.url)))
+        ),
+      });
+    }
+  },
+
+  // "Surprise Me" - generate a fresh randomized prompt and immediately generate portrait
+  async surpriseMePortrait() {
+    const state = CharacterState.get();
+    const character = state && state.character ? state.character : {};
+
+    if (!character.race || !character.class) {
+      this.showSystemMessage('Select a race and class first.');
+      return;
+    }
+
+    // Build a fresh randomized character description for the user to edit.
+    // NOTE: Use buildCharacterDescription (not buildPortraitPrompt) so that
+    // rendering instructions (Pose/Camera/STYLE/Scene) are only added once
+    // by confirmPromptModal, avoiding duplication in the final prompt.
+    let templatePrompt = '';
+    try {
+      if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
+        templatePrompt = AIService.buildCharacterDescription(character);
+      } else {
+        templatePrompt = `${character.race}\u0020${character.class}`;
+      }
+    } catch (e) {
+      templatePrompt = `${character.race}\u0020${character.class}`;
+    }
+
+    // Update the prompt input field so user can see what was generated
+    const promptInput = document.getElementById('custom-prompt');
+    if (promptInput) {
+      promptInput.value = templatePrompt;
+    }
+
+    // Immediately trigger generation with the new prompt
+    await this.confirmPromptModal();
+  },
+
+  togglePortraitView() {
+    const asciiPortrait = document.getElementById('character-portrait');
+    const originalPortrait = document.getElementById('original-portrait');
+    const toggleBtn = document.getElementById('toggle-portrait-btn');
+    const container = asciiPortrait
+      ? asciiPortrait.closest('.portrait-container')
+      : null;
+
+    if (!asciiPortrait || !originalPortrait || !toggleBtn) return;
+
+    // Use the shared "is-hidden" class to determine visibility so we stay
+    // consistent with the manager + shared character sheet markup. Relying on
+    // inline style.display can get out of sync with the initial render, which
+    // applies visibility purely via classes.
+    const isShowingAscii = !asciiPortrait.classList.contains('is-hidden');
+
+    const iconSpan = toggleBtn.querySelector('.selector-option-icon');
+    const labelSpan = toggleBtn.querySelector('.selector-option-label');
+
+    if (isShowingAscii) {
+      // Switch to original
+      asciiPortrait.classList.add('is-hidden');
+      originalPortrait.classList.remove('is-hidden');
+      if (container) {
+        container.classList.add('portrait-container--original-mode');
+      }
+
+      if (iconSpan && labelSpan) {
+        iconSpan.textContent = '≡';
+        labelSpan.textContent = 'View ASCII Art';
+      } else {
+        toggleBtn.textContent = '≡ View ASCII Art';
+      }
+
+      toggleBtn.title = 'Toggle between ASCII and original art';
+    } else {
+      // Switch to ASCII
+      asciiPortrait.classList.remove('is-hidden');
+      originalPortrait.classList.add('is-hidden');
+      if (container) {
+        container.classList.remove('portrait-container--original-mode');
+      }
+
+      if (iconSpan && labelSpan) {
+        iconSpan.textContent = '◉';
+        labelSpan.textContent = 'View Original Art';
+      } else {
+        toggleBtn.textContent = '◉ View Original Art';
+      }
+
+      toggleBtn.title = 'Toggle between ASCII and original art';
+    }
+  },
+
+  /**
+   * (Deprecated) Kept for backwards compatibility. The shared character sheet
+   * now applies the default portrait view (ASCII vs Original) during initial
+   * render based on StorageService.getPortraitViewMode(), so this helper is
+   * no longer needed. It is intentionally a no-op.
+   */
+  _applyPreferredPortraitViewBuilder(character) {
+    try {
+      const asciiPortrait = document.getElementById('character-portrait');
+      const originalPortrait = document.getElementById('original-portrait');
+      if (!asciiPortrait || !originalPortrait) return;
+
+      const container = asciiPortrait.closest('.portrait-container');
+
+      // Respect global preference (shared with manager).
+      let portraitViewMode = 'original';
+      try {
+        if (window.StorageService && StorageService.getPortraitViewMode) {
+          portraitViewMode = StorageService.getPortraitViewMode();
+        } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+          portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+        }
+      } catch (e) {
+        // Non-fatal
+      }
+
+      // Only show the original image if we actually have a URL resolved for it.
+      let hasOriginalUrl = false;
+      try {
+        if (window.CharacterSheet && typeof CharacterSheet.getOriginalPortraitUrl === 'function') {
+          hasOriginalUrl = !!CharacterSheet.getOriginalPortraitUrl(character);
+        } else {
+          hasOriginalUrl = !!originalPortrait.getAttribute('src');
+        }
+      } catch (e) {
+        hasOriginalUrl = !!originalPortrait.getAttribute('src');
+      }
+
+      if (portraitViewMode === 'original' && hasOriginalUrl) {
+        asciiPortrait.classList.add('is-hidden');
+        originalPortrait.classList.remove('is-hidden');
+        if (container) {
+          container.classList.add('portrait-container--original-mode');
+        }
+      } else {
+        asciiPortrait.classList.remove('is-hidden');
+        originalPortrait.classList.add('is-hidden');
+        if (container) {
+          container.classList.remove('portrait-container--original-mode');
+        }
+      }
+    } catch (e) {
+      // Non-fatal: if anything goes wrong, don't block the render path.
+      console.warn('App._applyPreferredPortraitViewBuilder failed', e);
+    }
+  },
+
+  // Track if we've shown the guest save notice this session
+  _guestSaveNoticeShown: false,
+
+  // Explicit save entry point for the completion screen.
+  async saveCharacter(showMessage = true) {
+    const state = CharacterState.get();
+    const character = state.character;
+
+    if (!character || !window.StorageService) {
+      this.showSystemMessage(
+        'Unable to save character right now. Please try again shortly.',
+      );
+      return;
+    }
+
+    // Note: guest mode no longer has a local-storage character cap; daily quota
+    // is enforced server-side and surfaced via _creationQuotaInfo.
+
+    // Validate character has minimum required fields before saving
+    if (!character.name || !character.race || !character.class) {
+      if (showMessage) {
+        this.showSystemMessage(
+          'Character must have at least a name, race, and class before saving.',
+        );
+      }
+      return;
+    }
+
+    try {
+      console.log('💾 Saving character to shared storage (explicit save)...');
+      // Saving should be a non-disruptive action – we don't want to re-animate
+      // the ASCII portrait when the only change is an assigned ID/timestamps.
+      this._suppressNextPortraitAnimation = true;
+
+      // Build a complete character snapshot with derived stats (AC, speed, etc.)
+      const completeCharacter = this.buildCompleteCharacter(character);
+      const saved = await window.StorageService.saveCharacter(completeCharacter);
+      CharacterState.updateCharacter(saved);
+
+      // Clear the in-progress session since character is now saved
+      CharacterState.clearSession();
+
+      if (showMessage) {
+        // Use a short, non-intrusive toast instead of an inline narrator system line.
+        this.showToast('Character saved');
+      }
+
+      // Focus the "Create Another Character" button for keyboard navigation
+      const newBtn = document.getElementById('completion-new-btn');
+      if (newBtn) {
+        newBtn.focus();
+      }
+
+      // Show reminder to log in if in guest mode (only once per session)
+      if (!this._guestSaveNoticeShown && window.AuthService && !window.AuthService.isAuthenticated()) {
+        this._guestSaveNoticeShown = true;
+        // Set flag to show guest notice banner when returning to character manager
+        sessionStorage.setItem('showGuestNoticeOnReturn', 'true');
+        setTimeout(() => {
+          this.showNotification('Log in or create an account to save your character to the cloud', 'info');
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error saving character:', error);
+      this.showSystemMessage('Save failed: ' + error.message);
+    }
+  },
+
+  // Save character and exit to character manager
+  async saveAndExit() {
+    const state = CharacterState.get();
+    const character = state.character;
+
+    if (!character || !window.StorageService) {
+      this.showSystemMessage(
+        'Unable to save character right now. Please try again shortly.',
+      );
+      return;
+    }
+
+    // Validate character has minimum required fields before saving
+    if (!character.name || !character.race || !character.class) {
+      this.showSystemMessage(
+        'Character must have at least a name, race, and class before saving.',
+      );
+      return;
+    }
+
+    try {
+      console.log('💾 Saving character and exiting...');
+      this._suppressNextPortraitAnimation = true;
+
+      // Build a complete character snapshot with derived stats (AC, speed, etc.)
+      const completeCharacter = this.buildCompleteCharacter(character);
+      const saved = await window.StorageService.saveCharacter(completeCharacter);
+      CharacterState.updateCharacter(saved);
+
+      // Clear the in-progress session since character is now saved
+      CharacterState.clearSession();
+
+      this.showToast('Character saved');
+
+      // Show reminder to log in if in guest mode
+      if (!this._guestSaveNoticeShown && window.AuthService && !window.AuthService.isAuthenticated()) {
+        this._guestSaveNoticeShown = true;
+        sessionStorage.setItem('showGuestNoticeOnReturn', 'true');
+      }
+
+      // Navigate to character manager after a brief moment
+      setTimeout(() => {
+        window.suppressBeforeunloadWarning();
+        window.location.href = 'index.html?from=builder';
+      }, 500);
+    } catch (error) {
+      console.error('Error saving character:', error);
+      this.showSystemMessage('Save failed: ' + error.message);
+    }
+  },
+
+  buildCompleteCharacter(character) {
+    // Get data from DND_DATA
+    const race = DND_DATA.races.find((r) => r.id === character.race);
+    const classData = DND_DATA.classes.find((c) => c.id === character.class);
+    const background = DND_DATA.backgrounds.find((b) => b.id === character.background);
+
+    // Calculate ability modifiers
+    const abilityMods = {
+      str: Utils.abilityModifier(character.abilities.str),
+      dex: Utils.abilityModifier(character.abilities.dex),
+      con: Utils.abilityModifier(character.abilities.con),
+      int: Utils.abilityModifier(character.abilities.int),
+      wis: Utils.abilityModifier(character.abilities.wis),
+      cha: Utils.abilityModifier(character.abilities.cha)
+    };
+
+    // Calculate derived stats
+    const proficiencyBonus = Math.ceil(character.level / 4) + 1;
+    const initiative = abilityMods.dex;
+    // Prefer any armorClass already stored on the character (e.g., from builder),
+    // otherwise derive a reasonable default based on class + abilities + armor.
+    const armorClass =
+      character.armorClass != null
+        ? character.armorClass
+        : KeyboardNav.calculateArmorClassForClass(
+            character.class,
+            character.abilities,
+            character.armorCategory,
+            character.hasShield,
+          );
+    const speed = race?.speed || 30;
+
+    // Calculate HP (if not already set)
+    const hitPoints = character.hitPoints || (classData ? classData.hitDie + abilityMods.con : 0);
+
+    // Build skill modifiers
+    const skills = {};
+    if (character.skillProficiencies) {
+      character.skillProficiencies.forEach(skill => {
+        const abilityForSkill = this.getSkillAbility(skill);
+        const abilityMod = abilityMods[abilityForSkill];
+        skills[skill] = abilityMod + proficiencyBonus;
+      });
+    }
+
+    // Build starting armor items based on armorCategory/hasShield
+    // Note: armor helpers live on `KeyboardNav` for now, so call through that namespace.
+    const armorItems = KeyboardNav.getStartingArmorItems(
+      character.class,
+      character.armorCategory,
+      character.hasShield,
+    );
+
+    // Merge armor items into explicit equipment (without duplicating)
+    const explicitEquipment = [...(character.equipment || [])];
+    armorItems.forEach((item) => {
+      if (!explicitEquipment.includes(item)) {
+        explicitEquipment.push(item);
+      }
+    });
+
+    // For martial classes, ensure they have weapons from their class equipment
+    if (classData?.isMartial) {
+      const weaponKeywords = [
+        'weapon', 'sword', 'axe', 'mace', 'hammer', 'spear', 'dagger',
+        'bow', 'crossbow', 'rapier', 'scimitar', 'javelin', 'glaive',
+        'halberd', 'pike', 'trident', 'whip', 'flail', 'morningstar',
+        'quarterstaff', 'sickle', 'club', 'greatclub', 'handaxe',
+        'light hammer', 'sling', 'dart', 'shortbow', 'longbow',
+        'martial arts', 'simple weapons', 'martial weapons'
+      ];
+      
+      const hasWeapon = explicitEquipment.some(item => 
+        weaponKeywords.some(keyword => item.toLowerCase().includes(keyword))
+      );
+      
+      if (!hasWeapon && classData.equipment) {
+        // Add weapons from class equipment
+        classData.equipment.forEach(item => {
+          const isWeapon = weaponKeywords.some(keyword => 
+            item.toLowerCase().includes(keyword)
+          );
+          if (isWeapon && !explicitEquipment.includes(item)) {
+            explicitEquipment.push(item);
+          }
+        });
+      }
+    }
+
+    // Get portrait data
+    const portraitContainer = document.getElementById('character-portrait');
+    const portraitElement = portraitContainer
+      ? portraitContainer.querySelector('pre')
+      : null;
+    const asciiArt = portraitElement
+      ? portraitElement.textContent
+      : portraitContainer
+      ? portraitContainer.textContent.trim()
+      : null;
+    
+    const originalPortrait = character.portrait?.url || character.portraitUrl || character.originalPortraitUrl || null;
+    
+    // Get ASCII art from various possible sources
+    const portraitAscii = character.customPortraitAscii || character.asciiPortrait || asciiArt || null;
+
+    // Ensure character has a stable UID for cross-app identity
+    let stableUid = character.characterUid;
+    if (!stableUid) {
+      stableUid = `danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      if (window.CharacterState) {
+        window.CharacterState.updateCharacter({ characterUid: stableUid });
+      } else {
+        character.characterUid = stableUid;
+      }
+    }
+
+    // Build complete character object
+    return {
+      // Export metadata (used by Character Manager to detect true duplicates)
+      metadata: {
+        exportVersion: '1.1',
+        exportDate: new Date().toISOString(),
+        exportedBy: 'DandDy Character Builder v1.4',
+        characterUid: stableUid,
+        source: 'builder',
+      },
+
+      // Basic info (original)
+      ...character,
+
+      // Normalized portrait object for compatibility with character manager
+      portrait: portraitAscii || originalPortrait ? {
+        ascii: portraitAscii,
+        url: originalPortrait
+      } : null,
+
+      // Calculated stats
+      abilityModifiers: abilityMods,
+      proficiencyBonus,
+      initiative,
+      armorClass,
+      speed,
+      hitPoints,
+      armorCategory: character.armorCategory || null,
+      hasShield: !!character.hasShield,
+
+      // Skills with modifiers
+      skillModifiers: skills,
+
+      // Saving throws
+      savingThrows: classData?.savingThrows || [],
+      savingThrowModifiers: this.calculateSavingThrows(abilityMods, classData?.savingThrows || [], proficiencyBonus),
+
+      // Derived data from DND_DATA
+      raceData: race ? {
+        name: race.name,
+        size: race.size,
+        speed: race.speed,
+        traits: race.traits,
+        languages: race.languages
+      } : null,
+
+      classData: classData ? {
+        name: classData.name,
+        hitDie: classData.hitDie,
+        primaryAbility: classData.primaryAbility,
+        savingThrows: classData.savingThrows,
+        skills: classData.skills,
+        equipment: classData.equipment,
+        spellcaster: classData.spellcaster || false
+      } : null,
+
+      backgroundData: background ? {
+        name: background.name,
+        description: background.description,
+        feature: background.feature,
+        skillProficiencies: background.skillProficiencies,
+        toolProficiencies: background.toolProficiencies,
+        languages: background.languages,
+        equipment: background.equipment
+      } : null,
+
+      // Equipment (including any inferred armor/shield items)
+      equipment: explicitEquipment,
+
+      // Portrait data
+      portrait: {
+        ascii: asciiArt,
+        original: originalPortrait
+      }
+    };
+  },
+
+  getSkillAbility(skill) {
+    const skillAbilities = {
+      'acrobatics': 'dex',
+      'animal-handling': 'wis',
+      'arcana': 'int',
+      'athletics': 'str',
+      'deception': 'cha',
+      'history': 'int',
+      'insight': 'wis',
+      'intimidation': 'cha',
+      'investigation': 'int',
+      'medicine': 'wis',
+      'nature': 'int',
+      'perception': 'wis',
+      'performance': 'cha',
+      'persuasion': 'cha',
+      'religion': 'int',
+      'sleight-of-hand': 'dex',
+      'stealth': 'dex',
+      'survival': 'wis'
+    };
+    return skillAbilities[skill] || 'str';
+  },
+
+  calculateSavingThrows(abilityMods, savingThrows, proficiencyBonus) {
+    const saves = {};
+    ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(ability => {
+      const isProficient = savingThrows.includes(ability);
+      saves[ability] = abilityMods[ability] + (isProficient ? proficiencyBonus : 0);
+    });
+    return saves;
+  },
+
+  printCharacterSheet() {
+    const panel = document.getElementById('character-panel');
+    if (!panel || !panel.querySelector('.character-sheet')) {
+      this.showSystemMessage('No character sheet to print yet.');
+      return;
+    }
+
+    // Defer to the browser's print dialog, with print-specific CSS handling
+    // what is visible on the page.
+    window.print();
+  },
+
+  // Render a system-style message in the narrator panel instead of using
+  // window.alert. Keeps all feedback in-universe.
+  showSystemMessage(text) {
+    const narratorPanel = document.getElementById('narrator-panel');
+    if (!narratorPanel) return;
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(`<span class="text-warning">[ SYSTEM ] ${text}</span>`),
+    );
+    Utils.scrollToBottom(true);
+  },
+
+  // Toast used for quick, non-blocking feedback (e.g. "Prompt copied"), anchored to the terminal container.
+  showToast(rawMessage, duration = 4000) {
+    const message = (rawMessage == null) ? '' : String(rawMessage);
+    // Remove any leading glyphs (checkmarks, warning icons, etc.) so builder
+    // toasts stay clean and rely only on text + the "×" close button. Also
+    // trim stray leading/trailing whitespace so messages render cleanly.
+    const cleanedMessage = message
+      .replace(
+        /^[\s\u200b]*(?:[✓✔✕✖✗★⚠💡❌⏰🔌]+[\s\u00a0\u200b]*)+/u,
+        ''
+      )
+      .trim();
+
+    // Normalize overly-emphatic punctuation so toast messages stay calm and
+    // readable. We keep question marks intact but strip trailing exclamation
+    // marks (including "!!" etc.) which tend to feel shouty in short toasts.
+    const displayMessage = cleanedMessage
+      // Collapse any run of exclamation marks to a single one
+      .replace(/!{2,}/g, '!')
+      // Remove a trailing exclamation mark (or run of them) while preserving
+      // any final period or closing paren that may follow.
+      .replace(/!+(\s*[\.\)])?$/u, '$1')
+      .trim();
+
+    let toast = document.getElementById('toastNotification');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'toastNotification';
+      toast.className = 'toast-notification';
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+
+      // Inner structure: message + dismiss "X" pinned to the right in its own wrapper
+      // The inner span gets the shared spin treatment used elsewhere in the app.
+      toast.innerHTML = `
+        <span class="toast-message"></span>
+        <div class="toast-dismiss-wrapper">
+          <button type="button" class="toast-dismiss" aria-label="Dismiss notification">
+            <span class="toast-dismiss-icon">&times;</span>
+          </button>
+        </div>
+      `;
+
+      const container = document.querySelector('.app-root') || document.querySelector('.terminal-container') || document.body;
+      container.appendChild(toast);
+
+      const dismissBtn = toast.querySelector('.toast-dismiss');
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+          toast.classList.remove('show');
+          // Clear any pending show/hide timers
+          if (App._toastShowTimeout) {
+            clearTimeout(App._toastShowTimeout);
+            App._toastShowTimeout = null;
+          }
+          if (App._toastTimeout) {
+            clearTimeout(App._toastTimeout);
+            App._toastTimeout = null;
+          }
+        });
+      }
+    }
+
+    const messageEl = toast.querySelector('.toast-message');
+    if (messageEl) {
+      messageEl.textContent = displayMessage;
+    } else {
+      // Fallback in case markup is missing for any reason
+      toast.textContent = displayMessage;
+    }
+
+    // Reset any in-flight timers so we can replay the entrance animation
+    if (App._toastShowTimeout) {
+      clearTimeout(App._toastShowTimeout);
+      App._toastShowTimeout = null;
+    }
+    if (App._toastTimeout) {
+      clearTimeout(App._toastTimeout);
+      App._toastTimeout = null;
+    }
+
+    // Ensure we start from the hidden state so the transition always plays,
+    // even immediately after a page reload.
+    toast.classList.remove('show');
+    // Force a reflow so the browser acknowledges the hidden state
+    // before we add the "show" class.
+    void toast.offsetWidth; // eslint-disable-line no-unused-expressions
+
+    App._toastShowTimeout = setTimeout(() => {
+      toast.classList.add('show');
+      App._toastShowTimeout = null;
+
+      // Auto-dismiss after specified duration (default 4s for success messages)
+      App._toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+        App._toastTimeout = null;
+      }, duration);
+    }, 80);
+  },
+
+  // ===== LEVEL CHANGE =====
+  openLevelModal() {
+    const state = CharacterState.get();
+    const character = state.character;
+
+    if (!character.race || !character.class) {
+      this.showSystemMessage(
+        'Select a race and class before changing level.',
+      );
+      return;
+    }
+
+    const currentLevel = character.level || 1;
+
+    const modalHTML = `
+      <div id="levelModal" class="modal show" onclick="App.closeLevelModal()">
+        <div class="modal-content" onclick="event.stopPropagation();">
+          <div class="modal-header">
+            <h2 class="modal-title">Change Character Level</h2>
+            <button class="modal-close" onclick="App.closeLevelModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text">
+              Changing level will <span class="terminal-text-strong">adjust your ability scores and hit points</span>
+              as if your character had gained Ability Score Increases at higher levels.
+            </p>
+            <p class="terminal-text-small terminal-text-dim">
+              This cannot be undone. Choose a new level between 1 and 99.
+            </p>
+            <div class="level-modal-row modal-section">
+              <label for="level-input" class="terminal-text-small modal-section-label">New Level:</label>
+              <input
+                type="number"
+                id="level-input"
+                class="terminal-input"
+                min="1"
+                max="99"
+                value="${currentLevel}"
+                data-1p-ignore
+              >
+            </div>
+            <div id="level-modal-error" class="terminal-text-error level-modal-error is-hidden"></div>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" onclick="App.closeLevelModal()">Cancel</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmLevelModal()">Apply level</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const appRoot = document.querySelector('.app-root') || document.querySelector('.terminal-container');
+    appRoot.insertAdjacentHTML('beforeend', modalHTML);
+
+    const modal = document.getElementById('levelModal');
+    if (modal && Utils.focusFirstFieldInModal) {
+      Utils.focusFirstFieldInModal(modal);
+    }
+
+    // ESC key to close
+    this._levelModalEscHandler = (e) => {
+      if (e.key === 'Escape') this.closeLevelModal();
+    };
+    document.addEventListener('keydown', this._levelModalEscHandler);
+  },
+
+  closeLevelModal() {
+    const modal = document.getElementById('levelModal');
+    if (!modal) {
+      if (this._levelModalEscHandler) {
+        document.removeEventListener('keydown', this._levelModalEscHandler);
+        this._levelModalEscHandler = null;
+      }
+      return;
+    }
+
+    const content = modal.querySelector('.modal-content') || modal;
+
+    const handleClose = () => {
+      if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
+
+      if (this._levelModalEscHandler) {
+        document.removeEventListener('keydown', this._levelModalEscHandler);
+        this._levelModalEscHandler = null;
+      }
+    };
+
+    if (!modal.classList.contains('closing')) {
+      modal.classList.add('closing');
+    }
+
+    if (content && content.addEventListener) {
+      content.addEventListener('animationend', handleClose, { once: true });
+    } else {
+      handleClose();
+    }
+  },
+
+  async confirmLevelModal() {
+    const input = document.getElementById('level-input');
+    if (!input) {
+      this.closeLevelModal();
+      return;
+    }
+
+    const errorEl = document.getElementById('level-modal-error');
+    const showError = (msg) => {
+      if (!errorEl) return;
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+    };
+    const clearError = () => {
+      if (!errorEl) return;
+      errorEl.textContent = '';
+      errorEl.style.display = 'none';
+    };
+
+    let newLevel = parseInt(input.value, 10);
+    if (isNaN(newLevel) || newLevel < 1 || newLevel > 99) {
+      showError('Level must be a number between 1 and 99.');
+      return;
+    }
+
+    clearError();
+
+    this.closeLevelModal();
+    await this.applyLevelChange(newLevel);
+  },
+
+  async applyLevelChange(newLevel) {
+    const state = CharacterState.get();
+    const character = state.character;
+
+    if (!character.race || !character.class) {
+      this.showSystemMessage(
+        'Select a race and class before changing level.',
+      );
+      return;
+    }
+
+    const classData = DND_DATA.classes.find((c) => c.id === character.class);
+    const race = DND_DATA.races.find((r) => r.id === character.race);
+
+    if (!classData || !race) {
+      this.showSystemMessage(
+        'Unable to change level because race or class data is missing.',
+      );
+      return;
+    }
+
+    // Start from base (level 1) abilities, falling back to current if missing
+    const base = character.baseAbilities || character.abilities;
+    let abilities = { ...base };
+
+    // Simulate Ability Score Increases at levels 4, 8, 12, 16, 19
+    const asiLevels = [4, 8, 12, 16, 19];
+    const asiCount = asiLevels.filter((lvl) => lvl <= newLevel).length;
+    let remainingPoints = asiCount * 2;
+
+    const primary = classData.primaryAbility?.[0] || 'str';
+    const secondary = classData.primaryAbility?.[1] || null;
+
+    // Distribute ASI points across primary/secondary, capped at 20
+    while (remainingPoints > 0) {
+      const candidates = [];
+      if (abilities[primary] < 20) candidates.push(primary);
+      if (secondary && abilities[secondary] < 20) candidates.push(secondary);
+
+      if (candidates.length === 0) {
+        break;
+      }
+
+      const target = candidates[0];
+      abilities[target] += 1;
+      remainingPoints -= 1;
+    }
+
+    // Approximate HP across levels:
+    // Level 1: full hit die + CON mod
+    // Each additional level: average die (rounded up) + CON mod
+    const conMod = Utils.abilityModifier(abilities.con);
+    const baseHP = classData.hitDie + conMod;
+    const averageDie = Math.floor(classData.hitDie / 2) + 1;
+    const perLevel = Math.max(1, averageDie + conMod);
+    const hitPoints =
+      newLevel <= 1 ? baseHP : baseHP + (newLevel - 1) * perLevel;
+
+    // Recalculate Armor Class based on updated abilities + existing armor loadout
+    const armorClass = KeyboardNav.calculateArmorClassForClass(
+      character.class,
+      abilities,
+      character.armorCategory,
+      character.hasShield,
+    );
+
+    CharacterState.updateCharacter({
+      level: newLevel,
+      abilities,
+      hitPoints,
+      armorClass,
+    });
+
+    this.showSystemMessage(
+      `Level set to ${newLevel}. Ability scores and hit points have been re-rolled.`,
+    );
+
+    // Persist level/stat changes so manager stays in sync
+    await this.persistIfAlreadySaved();
+  },
+
+  // ===== NAME CHANGE =====
+  openNameModal() {
+    const state = CharacterState.get();
+    const character = state.character;
+
+    const currentName = character.name || '';
+
+    const modalHTML = `
+      <div id="nameModal" class="modal show" onclick="App.closeNameModal()">
+        <div class="modal-content" onclick="event.stopPropagation();">
+          <div class="modal-header">
+            <h2 class="modal-title">Change Character Name</h2>
+            <button class="modal-close" onclick="App.closeNameModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text">
+              Enter a new name for your character.
+            </p>
+            <div class="name-modal-row modal-section">
+              <label for="name-input" class="terminal-text-small modal-section-label">New Name:</label>
+              <input
+                type="text"
+                id="name-input"
+                class="terminal-input name-modal-input"
+                value="${currentName}"
+                placeholder="Enter character name"
+                data-1p-ignore
+              >
+            </div>
+            <div id="name-modal-error" class="terminal-text-error name-modal-error is-hidden"></div>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" onclick="App.closeNameModal()">Cancel</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmNameModal()">Apply name</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const appRoot = document.querySelector('.app-root') || document.querySelector('.terminal-container');
+    appRoot.insertAdjacentHTML('beforeend', modalHTML);
+
+    const modal = document.getElementById('nameModal');
+    if (modal && Utils.focusFirstFieldInModal) {
+      Utils.focusFirstFieldInModal(modal);
+    }
+
+    // ESC key to close
+    this._nameModalEscHandler = (e) => {
+      if (e.key === 'Escape') this.closeNameModal();
+    };
+    document.addEventListener('keydown', this._nameModalEscHandler);
+  },
+
+  closeNameModal() {
+    const modal = document.getElementById('nameModal');
+    if (!modal) {
+      if (this._nameModalEscHandler) {
+        document.removeEventListener('keydown', this._nameModalEscHandler);
+        this._nameModalEscHandler = null;
+      }
+      return;
+    }
+
+    const content = modal.querySelector('.modal-content') || modal;
+
+    const handleClose = () => {
+      if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
+
+      if (this._nameModalEscHandler) {
+        document.removeEventListener('keydown', this._nameModalEscHandler);
+        this._nameModalEscHandler = null;
+      }
+    };
+
+    if (!modal.classList.contains('closing')) {
+      modal.classList.add('closing');
+    }
+
+    if (content && content.addEventListener) {
+      content.addEventListener('animationend', handleClose, { once: true });
+    } else {
+      handleClose();
+    }
+  },
+
+  async confirmNameModal() {
+    const input = document.getElementById('name-input');
+    if (!input) {
+      this.closeNameModal();
+      return;
+    }
+
+    const errorEl = document.getElementById('name-modal-error');
+    const showError = (msg) => {
+      if (!errorEl) return;
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+    };
+    const clearError = () => {
+      if (!errorEl) return;
+      errorEl.textContent = '';
+      errorEl.style.display = 'none';
+    };
+
+    const newName = input.value.trim();
+    if (!newName) {
+      showError('Name cannot be empty.');
+      return;
+    }
+
+    clearError();
+
+    this.closeNameModal();
+    await this.applyNameChange(newName);
+  },
+
+  async applyNameChange(newName) {
+    // Update the character name in state (this will trigger observers)
+    CharacterState.updateCharacter({ name: newName });
+
+    const narratorPanel = document.getElementById('narrator-panel');
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(
+        `Character renamed to "${newName}". Identity crisis averted.`,
+      ),
+    );
+    Utils.scrollToBottom(true);
+
+    // Persist rename so manager sees updated name
+    await this.persistIfAlreadySaved();
+  },
+
+  // ===== QUICK CREATE MODE =====
+  
+  // Generate AI portrait for quick-create mode (runs in background)
+  async _generateQuickCreatePortrait() {
+    try {
+      const stateAfter = CharacterState.get();
+      const currentChar = stateAfter.character || {};
+
+      if (!CONFIG.ENABLE_AI || !currentChar.race || !currentChar.class || !window.AsciiArtService) {
+        return;
+      }
+
+      // Wait for DOM to update before trying to render the loader.
+      // The character sheet may not exist yet if state changes are still pending.
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+      let portraitEl = document.getElementById('character-portrait');
+
+      // Retry a few times if the element doesn't exist yet (DOM may still be updating)
+      if (!portraitEl) {
+        for (let i = 0; i < 5 && !portraitEl; i++) {
+          await Utils.sleep(100);
+          portraitEl = document.getElementById('character-portrait');
+        }
+      }
+
+      // Show a loading state in the portrait panel while the AI image
+      // is being generated and converted to ASCII. Use the placeholder container
+      // with the cube spinning faster and glowing.
+      if (portraitEl) {
+        this._renderPortraitGeneratingLoader(portraitEl);
+      }
+
+      const result = await AsciiArtService.generateCustomAIPortrait(currentChar, {
+        creationGrantId: currentChar && currentChar.portraitGrantId,
+      });
+
+      if (result && result.asciiArt) {
+        const currentCount = currentChar.customPortraitCount || 0;
+
+        // Get the current style theme for tagging
+        let quickStyle = null;
+        try {
+          if (window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
+            quickStyle = StorageService.getPortraitPromptTheme();
+          }
+        } catch (e) {
+          // Non-fatal
+        }
+
+        // Capture the model and quality that were used for generation
+        let generationModel = 'dall-e-3';
+        let generationQuality = null;
+        try {
+          if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+            generationModel = StorageService.getImageModel();
+          } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_IMAGE_MODEL) {
+            generationModel = CONFIG.DEFAULT_IMAGE_MODEL;
+          }
+          if (window.StorageService && typeof StorageService.getImageQuality === 'function') {
+            generationQuality = StorageService.getImageQuality(generationModel);
+          }
+        } catch (e) {
+          // Non-fatal: use defaults
+        }
+
+        const updatedMetadata = window.PortraitHistory
+          ? window.PortraitHistory.addVersion(
+              currentChar,
+              result.asciiArt,
+              result.imageUrl || null,
+              {
+                source: 'quick-ai',
+                prompt:
+                  (AIService.buildPortraitPrompt &&
+                    AIService.buildPortraitPrompt(currentChar)) ||
+                  null,
+                style: quickStyle,
+                model: generationModel,
+                quality: generationQuality,
+              },
+            )
+          : currentChar.portraitMetadata || {};
+
+        CharacterState.updateCharacter({
+          originalPortraitUrl: result.imageUrl || null,
+          customPortraitAscii: result.asciiArt,
+          customPortraitCount: currentCount + 1,
+          portraitMetadata: updatedMetadata,
+          // Grant was successfully redeemed; clear it so later regenerations
+          // (Customize portrait) always count against custom image quota.
+          portraitGrantId: null,
+        });
+
+        // Reset last portrait so the new AI art re-animates in the panel.
+        this._lastPortraitArt = null;
+      }
+    } catch (error) {
+      console.error('Quick-create AI portrait generation error:', error);
+      
+      // Show user-facing error message based on error type
+      if (error.isSafetyRejection) {
+        console.group('🚫 OpenAI Content Safety Rejection - Quick Create Mode');
+        console.error('Rejected prompt:', error.rejectedPrompt || 'Unknown');
+        console.error('Original error:', error.originalMessage);
+        if (error.promptAnalysis) {
+          console.log('Analysis included above ↑');
+        }
+        console.groupEnd();
+        
+        // Build user message with helpful context
+        let userMessage = 'OpenAI flagged this portrait request. ';
+        
+        if (error.promptAnalysis && error.promptAnalysis.hasKnownProblematicTerms) {
+          const issues = error.promptAnalysis.potentialIssues;
+          const categories = issues.map(i => i.category).join(', ');
+          userMessage += `Possible triggers: ${categories}. `;
+        }
+        
+        userMessage += 'Check browser console for detailed analysis and suggestions.';
+        
+        this.showSystemMessage(userMessage);
+      } else if (error.isRateLimit) {
+        this.showSystemMessage(
+          "You've reached today's portrait limit, so we're using a simple fallback portrait for now. You can create a custom one tomorrow from the character sheet.",
+        );
+      } else {
+        this.showSystemMessage(
+          'AI portrait generation failed, so we\'re using a simple fallback portrait for now. You can still create a custom one later from the character sheet.',
+        );
+      }
+      
+      // Ensure we at least have a basic portrait to fall back to.
+      await this._ensurePreGeneratedPortraitFallback(currentChar, { force: true });
+    } finally {
+      // Whatever happens above (success or failure), stop the animated dots
+      // and restore portrait font size so the ASCII art uses CSS defaults.
+      this._stopPortraitLoadingAnimation();
+      const portraitEl = document.getElementById('character-portrait');
+      if (portraitEl) {
+        portraitEl.style.fontSize = '';
+        portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
+      }
+    }
+  },
+
+  async quickCreateCharacter() {
+    const narratorPanel = document.getElementById('narrator-panel');
+    if (!narratorPanel) return;
+
+    // Clear any existing content for a clean quick-create experience
+    // Preserve the builder-panel-header if it exists
+    const header = narratorPanel.querySelector('.builder-panel-header');
+    narratorPanel.innerHTML = '';
+    if (header) narratorPanel.appendChild(header);
+    
+    // Reset portrait tracking to ensure animation happens
+    this._lastPortraitArt = null;
+
+    // In quick-create, we never want to show pre-generated portrait templates.
+    // Start by clearing any existing portrait fields on the in-progress
+    // character so the sheet renders with *no* art until custom AI kicks in.
+    if (window.CharacterState && typeof CharacterState.updateCharacter === 'function') {
+      CharacterState.updateCharacter({
+        asciiPortrait: null,
+        asciiPortraitKey: null,
+        customPortraitAscii: null,
+        originalPortraitUrl: null,
+        portrait: null,
+        portraitMetadata: null,
+        customPortraitCount: 0,
+      });
+    }
+
+    // Intro message for quick create (narrator-specific)
+    const narratorId = StorageService.getNarratorId();
+    const narrator = getNarrator(narratorId);
+    
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+    const introEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(
+      introEl,
+      narrator.quickCreateIntro,
+    );
+    Utils.scrollToBottom(true);
+
+    // Randomly choose race, class, background, alignment, sex
+    const race = Utils.randomChoice(DND_DATA.races);
+    const cls = Utils.randomChoice(DND_DATA.classes);
+    const background = Utils.randomChoice(DND_DATA.backgrounds);
+    const alignment = Utils.randomChoice(DND_DATA.alignments);
+    const sex = Utils.randomChoice(['male', 'female']);
+
+    // Roll abilities using the existing rollAbility helper and apply racial bonuses
+    let abilities = {
+      str: this.rollAbility(),
+      dex: this.rollAbility(),
+      con: this.rollAbility(),
+      int: this.rollAbility(),
+      wis: this.rollAbility(),
+      cha: this.rollAbility(),
+    };
+
+    Object.keys(race.abilityBonuses).forEach((ability) => {
+      abilities[ability] += race.abilityBonuses[ability];
+    });
+
+    // Infer a coarse armor loadout from class equipment using the shared
+    // helpers on KeyboardNav (where armor logic lives).
+    const { armorCategory, hasShield } = KeyboardNav.inferArmorLoadoutForClass(
+      cls.id,
+    );
+
+    // Calculate HP for level 1
+    const conMod = Utils.abilityModifier(abilities.con);
+    const hitPoints = cls.hitDie + conMod;
+
+    // Calculate a default Armor Class based on class + abilities + armor
+    const armorClass = KeyboardNav.calculateArmorClassForClass(
+      cls.id,
+      abilities,
+      armorCategory,
+      hasShield,
+    );
+
+    // Try to auto-generate name + backstory in a SINGLE API call
+    // (uses the combined /characters/summary endpoint to save rate limit)
+    let name = '';
+    let backstory = '';
+    
+    // Show thinking message for name + backstory generation
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+    const thinkingEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    this.showProgressiveThinking(thinkingEl);
+    
+    try {
+      // Build a temporary character object for the summary call
+      const tempChar = {
+        race: race.id,
+        class: cls.id,
+        background: background.id,
+        alignment: alignment.id,
+        sex: sex,
+      };
+      const summary = await AIService.generateCharacterSummary(tempChar, { nameCount: 3 });
+      
+      // Pick a random name from suggestions
+      if (summary && Array.isArray(summary.names) && summary.names.length) {
+        name = Utils.randomChoice(summary.names);
+      }
+      
+      // Substitute {{NAME}} in the backstory template
+      if (summary && summary.backstoryTemplate) {
+        backstory = summary.backstoryTemplate.replace(/\{\{NAME\}\}/g, name || 'The adventurer');
+      }
+
+      // Stash one-time included-portrait grant for this creation run.
+      if (summary && summary.portraitGrantId) {
+        CharacterState.updateCharacter({
+          portraitGrantId: summary.portraitGrantId,
+        });
+      }
+    } catch (e) {
+      // Ignore AI errors; we'll fall back below
+      console.error('Quick create summary error:', e);
+    }
+    
+    // Stop thinking and remove the message
+    this.stopProgressiveThinking();
+    thinkingEl.parentElement.remove();
+
+    // Fallback name if AI failed
+    if (!name) {
+      const fallbackNames = [
+        'Ashen Vale',
+        'Rin Thorn',
+        'Kael Brightwind',
+        'Lyra Nightbloom',
+      ];
+      name = Utils.randomChoice(fallbackNames);
+    }
+    
+    // Fallback backstory if AI failed
+    if (!backstory) {
+      backstory =
+        'A mysterious past, a questionable present, and a future that depends entirely on your dice.';
+    }
+
+    // Set flag BEFORE state update so updateCharacterPanel knows to show the loader
+    // instead of any stale/fallback image. The actual generation promise is set
+    // later, but this flag tells the panel "generation is coming".
+    this._quickCreatePortraitPending = true;
+
+    // Update character state with all basic info at once to avoid multiple renders
+    CharacterState.updateCharacter({
+      race: race.id,
+      class: cls.id,
+      background: background.id,
+      alignment: alignment.id,
+      sex: sex,
+      baseAbilities: { ...abilities },
+      abilities,
+      hitPoints,
+      armorClass,
+      armorCategory,
+      hasShield,
+      name,
+      backstory,
+      // Apply background benefits
+      skillProficiencies: background.skillProficiencies || [],
+      toolProficiencies: background.toolProficiencies || [],
+      equipment: background.equipment || [],
+      backgroundFeature: background.feature || null,
+      languageChoices: background.languages || 0,
+    });
+    CharacterState.set({ abilityMethod: 'roll' });
+
+    // Show a short summary of what we picked (narrator-specific)
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+    const summaryEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(
+      summaryEl,
+      narrator.quickCreateSummary(race.name, cls.name, background.name, alignment.name, sex.charAt(0).toUpperCase() + sex.slice(1)),
+    );
+    Utils.scrollToBottom(true);
+
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+    const nameEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(nameEl, narrator.quickCreateName(name));
+    Utils.scrollToBottom(true);
+
+    // Start generating AI portrait in background now (runs while backstory displays)
+    // IMPORTANT: Render the loader immediately (synchronously) before starting async generation
+    // to avoid race conditions where state updates overwrite the loader.
+    const portraitEl = document.getElementById('character-portrait');
+    if (portraitEl) {
+      this._renderPortraitGeneratingLoader(portraitEl);
+    }
+    // Clear the pending flag now that we're starting the actual generation
+    this._quickCreatePortraitPending = false;
+    this._quickCreatePortraitGeneration = this._generateQuickCreatePortrait();
+
+    // Show thinking message for backstory (just displaying, no API call needed)
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+    const backstoryThinkingEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    
+    // Show the actual backstory
+    await Utils.typewriter(backstoryThinkingEl, backstory);
+    Utils.scrollToBottom(true);
+
+    backstoryThinkingEl.classList.add('is-waiting');
+    await Utils.sleep(1500);
+    backstoryThinkingEl.classList.remove('is-waiting');
+
+    // Auto-select spells if character is a spellcaster
+    if (typeof SPELL_DATA !== 'undefined' && SPELL_DATA.isSpellcaster(cls.id)) {
+      const spells = SPELL_DATA.getQuickModeSpells(cls.id);
+      if (spells) {
+        const config = SPELL_DATA.getSpellcastingConfig(cls.id);
+        CharacterState.updateCharacter({
+          spellcastingAbility: config.ability,
+          cantrips: spells.cantrips,
+          spellsKnown: spells.firstLevel,
+          spellsPrepared: config.preparedSpells ? spells.firstLevel : [],
+          spellSlots: config.spellSlots,
+        });
+        
+        // Show a brief message about spell selection
+        narratorPanel.insertAdjacentHTML(
+          'beforeend',
+          Components.renderNarratorMessage(''),
+        );
+        Utils.scrollToBottom(true);
+        const spellsEl =
+          narratorPanel.lastElementChild.querySelector('.narrator-text');
+        await Utils.typewriter(
+          spellsEl,
+          `>${' '}Auto-selected ${spells.cantrips.length}${' '}cantrip${spells.cantrips.length !== 1 ? 's' : ''}${' '}and ${spells.firstLevel.length}${' '}1st level spell${spells.firstLevel.length !== 1 ? 's' : ''}${' '}for your ${cls.name}.`,
+        );
+        Utils.scrollToBottom(true);
+        
+        await Utils.sleep(1000);
+      }
+    }
+
+    // Wait for portrait generation to complete (if it was started)
+    if (this._quickCreatePortraitGeneration) {
+      try {
+        await this._quickCreatePortraitGeneration;
+      } catch (error) {
+        // Error already handled in _generateQuickCreatePortrait
+      }
+      this._quickCreatePortraitGeneration = null;
+    }
+
+    // Jump straight to the completion screen
+    const completeQuestion = QUESTIONS.find((q) => q.id === 'complete');
+    if (completeQuestion) {
+      await this.showComplete(completeQuestion);
+    }
+  },
+
+  startNew() {
+    const state = CharacterState.get();
+    const character = state.character;
+
+    // Only prompt to save if character is complete (has name, race, class) and unsaved
+    const isComplete = character && character.name && character.race && character.class;
+    const hasUnsavedChanges = character && !character.id && isComplete;
+
+    if (hasUnsavedChanges) {
+      // Ask the user if they want to save before starting over.
+      this.showConfirmationOverlay(
+        'You have not saved this character yet. What would you like to do?',
+        async () => {
+          // User chose SAVE: first attempt to save; if save fails, we keep the current character.
+          await this.saveCharacter(true);
+
+          // Re-check that we now have an ID before clearing.
+          const latest = CharacterState.get().character;
+          if (!latest || !latest.id) {
+            this.showSystemMessage(
+              'Character was not saved. Staying on the current character.',
+            );
+            return;
+          }
+
+          this._startNewInternal();
+        },
+        () => {
+          // User chose DISCARD: start a fresh character without saving.
+          this._startNewInternal();
+        },
+        {
+          primaryLabel: 'SAVE',
+          secondaryLabel: 'DISCARD',
+          // Both CTAs use the secondary visual style in this flow.
+          primaryClass: 'terminal-btn',
+        },
+      );
+    } else {
+      // Character is already saved or incomplete; immediately start a new one.
+      this._startNewInternal();
+    }
+  },
+
+  _startNewInternal() {
+    // User confirmed: clear current character and restart flow.
+    // Clear panels BEFORE resetting state so the state change listener can properly re-render
+    const narratorPanel = document.getElementById('narrator-panel');
+    const characterPanel = document.getElementById('character-panel');
+    if (narratorPanel) {
+      // Preserve the builder-panel-header if it exists
+      const header = narratorPanel.querySelector('.builder-panel-header');
+      narratorPanel.innerHTML = '';
+      if (header) narratorPanel.appendChild(header);
+    }
+    
+    // Reset state and caches
+    CharacterState.reset();
+    OptionVariationsCache.reset();
+    if (window.AIService && typeof AIService.resetNarratorSession === 'function') {
+      AIService.resetNarratorSession();
+    }
+    this._lastPortraitArt = null; // Reset portrait tracking for new character
+    
+    // Don't manually clear character panel - let the state change listener handle it
+    // The CharacterState.reset() above will trigger updateCharacterPanel via the subscriber
+    
+    // Skip intro and go directly to entry-mode for returning users
+    this.showQuestion('entry-mode');
+  },
+
+  showConfirmationOverlay(message, onConfirm, onCancel, options) {
+    // Support old signature where third param was an options object:
+    // showConfirmationOverlay(message, onConfirm, { ...options })
+    if (
+      options === undefined &&
+      typeof onCancel === 'object' &&
+      onCancel !== null
+    ) {
+      options = onCancel;
+      onCancel = null;
+    }
+
+    options = options || {};
+
+    const targetSelector = options.targetSelector;
+    const primaryLabel = options.primaryLabel || 'YES';
+    const secondaryLabel =
+      options.secondaryLabel === undefined ? 'NO' : options.secondaryLabel;
+    const hideSecondary = Boolean(options.hideSecondary);
+    const primaryClass =
+      options.primaryClass || 'terminal-btn terminal-btn-primary';
+    const secondaryClass = options.secondaryClass || 'terminal-btn';
+    const title = options.title || 'Confirm';
+
+    // While a confirmation dialog is open, pause keyboard navigation so
+    // arrow keys don't move focus behind the modal.
+    KeyboardNav.deactivate();
+
+    const secondaryBtnHTML =
+      hideSecondary || secondaryLabel === null
+        ? ''
+        : `<button class="${secondaryClass}" id="confirm-no">${secondaryLabel}</button>`;
+
+    const overlayHTML = `
+      <div id="confirmationModal" class="modal show confirmation-overlay">
+        <div class="modal-content" onclick="event.stopPropagation();">
+          <div class="modal-header">
+            <h2 class="modal-title">${title}</h2>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text">
+              ${message}
+            </p>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            ${secondaryBtnHTML}
+            <button class="${primaryClass}" id="confirm-yes">${primaryLabel}</button>
+          </div>
+        </div>
+      </div>`;
+    // Use .terminal-container if available (manager page), otherwise fall back to .app-root (builder page) or body
+    const terminalContainer = document.querySelector('.terminal-container') || document.querySelector('.app-root') || document.body;
+    terminalContainer.insertAdjacentHTML('beforeend', overlayHTML);
+
+    const overlay = document.getElementById('confirmationModal');
+    const primaryBtn = document.getElementById('confirm-yes');
+    const cancelBtn = document.getElementById('confirm-no');
+
+    // Mark this overlay as "just opened" so the same Enter key event that
+    // triggered it does NOT immediately auto-confirm. The flag is cleared
+    // on the next tick.
+    overlay.classList.add('just-opened');
+    setTimeout(() => {
+      if (overlay && overlay.classList) {
+        overlay.classList.remove('just-opened');
+      }
+    }, 0);
+
+    // Move keyboard focus into the modal so Enter presses are scoped correctly.
+    if (primaryBtn) {
+      primaryBtn.focus();
+    }
+
+    const runCloseAnimation = (onClosed) => {
+      if (!overlay || overlay.classList.contains('closing')) {
+        return;
+      }
+
+      overlay.classList.add('closing');
+
+      const content = overlay.querySelector('.modal-content') || overlay;
+
+      let finished = false;
+      const handleClose = () => {
+        // Prevent double-execution from both animationend and fallback timeout
+        if (finished) return;
+        finished = true;
+
+        if (overlay && overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+
+        // Reactivate keyboard navigation now that the modal is gone.
+        KeyboardNav.activate();
+
+        if (typeof onClosed === 'function') {
+          onClosed();
+        }
+      };
+
+      if (content && content.addEventListener) {
+        content.addEventListener('animationend', handleClose, { once: true });
+        // Fallback timeout in case animationend doesn't fire
+        // (e.g., no CSS animation defined or browser quirk)
+        setTimeout(handleClose, 400);
+      } else {
+        handleClose();
+      }
+    };
+
+    primaryBtn.addEventListener('click', () => {
+      runCloseAnimation(onConfirm);
+    });
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        runCloseAnimation(onCancel);
+      });
+    }
+  },
+
+  async showChangeConfirmation(questionId, selectedIndex, isListChoice) {
+    const message =
+      'Changing this answer will reset subsequent choices. Are you sure?';
+    const targetSelector = `.question-card[data-question-id="${questionId}"]`;
+
+    this.showConfirmationOverlay(message, async () => {
+      // User confirmed change
+      const state = CharacterState.get();
+
+      // Find the index of the current question in the QUESTIONS array
+      const currentQuestionIndex = QUESTIONS.findIndex(
+        (q) => q.id === questionId,
+      );
+
+      // Clear answers and character data for all subsequent questions
+      for (let i = currentQuestionIndex; i < QUESTIONS.length; i++) {
+        const q = QUESTIONS[i];
+        delete state.answers[q.id];
+        if (q.saveTo) {
+          CharacterState.updateCharacter({ [q.saveTo]: '' });
+        }
+      }
+      // Remove all narrator content AFTER this question card (dialog + options)
+      const narratorPanel = document.getElementById('narrator-panel');
+      if (narratorPanel) {
+        const anchorCard = narratorPanel.querySelector(targetSelector);
+        if (anchorCard) {
+          const children = Array.from(narratorPanel.children);
+          const anchorIndex = children.indexOf(anchorCard);
+          if (anchorIndex !== -1) {
+            const toRemove = children.slice(anchorIndex + 1);
+
+            // Fade out downstream elements, then remove them before
+            // replaying the flow from this question forward.
+            const fadeDurationMs = 400;
+            toRemove.forEach((el) => {
+              el.classList.add('fade-out');
+              // Rely on a simple timeout to guarantee removal
+              setTimeout(() => {
+                if (el.parentNode) {
+                  el.remove();
+                }
+              }, fadeDurationMs);
+            });
+
+            // Wait until after the fade + removal before continuing,
+            // so the new branch starts with a clean terminal.
+            await Utils.sleep(fadeDurationMs + 50);
+
+            // After cleanup, ensure the anchor question is centered and
+            // keyboard navigation starts from that card.
+            anchorCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }
+
+      // Reset recommendations and option variations cache
+      state.recommendations = {};
+      OptionVariationsCache.reset();
+
+      // Re-process the selected answer for the current question
+      if (isListChoice) {
+        await this.handleListAnswer(questionId, selectedIndex);
+      } else {
+        await this.handleAnswer(questionId, selectedIndex);
+      }
+    }, { targetSelector });
+  },
+
+  // Helper to update status text in header
+  updateStatus(text) {
+    const statusText = document.getElementById('status-text');
+    if (statusText) {
+      statusText.textContent = text;
+    }
+  },
+
+  // Character panel renderer (called on state changes)
+  async updateCharacterPanel(character) {
+    const panel = document.getElementById('character-panel');
+
+    // Determine entry mode (guided vs quick) and current question from shared state so we can
+    // adjust portrait behavior. In quick-create we suppress pre-generated
+    // portraits until an AI portrait generation has actually started.
+    let entryMode = null;
+    let currentQuestionId = null;
+    try {
+      if (window.CharacterState && typeof CharacterState.get === 'function') {
+        const state = CharacterState.get();
+        entryMode = state?.answers?.['entry-mode'] || null;
+        currentQuestionId = state?.currentQuestionId || null;
+      }
+    } catch (e) {
+      // If state lookup fails for any reason, fall back to default behavior.
+      entryMode = null;
+      currentQuestionId = null;
+    }
+    const isQuickMode = entryMode === 'quick';
+    const isGuidedMode = entryMode === 'guided';
+    const isCreationComplete = currentQuestionId === 'complete';
+
+    // If a portrait animation is in progress, queue this update for after animation completes
+    if (this._portraitAnimating) {
+      this._pendingCharacterUpdate = character;
+      return;
+    }
+
+    // Avoid redundant re-renders if the character has not actually changed.
+    // This keeps us from re-running portrait generation when only transient
+    // state (like answers or recommendations) changes.
+    try {
+      const serialized = JSON.stringify(character);
+      if (this._lastRenderedCharacter === serialized) {
+        return;
+      }
+      this._lastRenderedCharacter = serialized;
+    } catch (e) {
+      // If serialization fails for any reason, fall back to always rendering.
+    }
+    
+    // If we have a race, normally we load a pre-generated portrait
+    // (race+class combo or race-only) and fall back to the simple template.
+    if (character.race) {
+      // In quick-create and co-create (guided) modes, NEVER call the pre-generated 
+      // portrait loader. We either show the final custom AI portrait (when available) 
+      // or a placeholder message while gathering character information. We explicitly 
+      // ignore any asciiPortrait that may have been set by older exports or background 
+      // upgrades so templates/pre-generated art never appear during character creation.
+      if (isQuickMode || isGuidedMode) {
+        // Before custom AI portrait is generated, characters will not yet
+        // have a custom portrait. In that case render the sheet with a placeholder
+        // message in the portrait area. The placeholder will show:
+        // "Your portrait will be generated once we learn more about your character"
+        const portraitArt = character.customPortraitAscii || null;
+
+        // Decide whether to animate: only when we have new portrait art that
+        // differs from what was last rendered, and we're not explicitly
+        // suppressing animation (such as after a save).
+        const shouldAnimate =
+          !!portraitArt &&
+          !this._suppressNextPortraitAnimation &&
+          (!this._lastPortraitArt || this._lastPortraitArt !== portraitArt);
+
+        this._lastPortraitArt = portraitArt || null;
+        // Consume any pending suppression flag after we've decided.
+        this._suppressNextPortraitAnimation = false;
+
+        // Only show the "★ Custom AI Portrait" button once the initial custom 
+        // portrait has been generated and is ready to display. Until then, we 
+        // keep the portrait frame but hide the button to avoid suggesting an 
+        // action that is already in progress.
+        const hasCustomPortrait = !!portraitArt;
+
+        // Always show the portrait container so the placeholder message
+        // or custom portrait has a place to render.
+        
+        // IMPORTANT: If portrait generation is in progress (in either quick or guided mode),
+        // we need to preserve the current portrait HTML (the fast-spinning "Generating..." cube).
+        // Otherwise the re-render will replace it with the slow "Waiting..." cube.
+        // Also check _quickCreatePortraitPending which is set before the state update but
+        // before the actual generation promise is assigned.
+        const isGenerating =
+          !!this._quickCreatePortraitGeneration || !!this._guidedPortraitGenerating || !!this._quickCreatePortraitPending;
+        const portraitNode = document.getElementById('character-portrait');
+        // Only capture HTML if it's actually the loader (has the --generating class on the cube)
+        const hasLoaderRendered = portraitNode && 
+          portraitNode.querySelector('.portrait-placeholder-cube--generating');
+        const currentPortraitHTML = isGenerating && hasLoaderRendered
+          ? portraitNode.innerHTML
+          : null;
+        
+        // Hide overflow menu until character creation is complete AND portrait is ready
+        const shouldHideOverflow = !isCreationComplete || isGenerating || !hasCustomPortrait;
+        
+        panel.innerHTML = Components.renderCharacterSheet(
+          character,
+          null,
+          true,
+          {
+            showGeneratePortraitButton: hasCustomPortrait,
+            hideOverflowMenu: shouldHideOverflow,
+          },
+        );
+
+        const portraitEl = document.getElementById('character-portrait');
+        const originalPortraitEl = document.getElementById('original-portrait');
+        
+        // Restore the generating state if we captured it, OR render it fresh
+        // if we're generating but don't have captured HTML (first render after
+        // generation started). This ensures the loader shows even if the sheet
+        // is rendered for the first time after portrait generation began.
+        if (isGenerating && portraitEl) {
+          if (currentPortraitHTML) {
+            // Restore previously captured loader HTML
+            portraitEl.innerHTML = currentPortraitHTML;
+          } else {
+            // First render after generation started - render loader fresh
+            this._renderPortraitGeneratingLoader(portraitEl);
+          }
+          // Keep both placeholder + loading classes in sync with the initial
+          // loader render so the cube geometry doesn't get distorted after
+          // a sheet re-render.
+          portraitEl.classList.add('ascii-portrait--placeholder');
+          portraitEl.classList.add('ascii-portrait--loading');
+          // Ensure the ASCII portrait area is visible (not hidden behind the image)
+          portraitEl.classList.remove('is-hidden');
+          
+          // Hide any existing original image during generation so only the
+          // spinning cube loader is visible.
+          if (originalPortraitEl) {
+            originalPortraitEl.classList.add('is-hidden');
+          }
+          const portraitContainer = portraitEl.closest('.portrait-container');
+          if (portraitContainer) {
+            portraitContainer.classList.remove('portrait-container--original-mode');
+          }
+        }
+
+        if (originalPortraitEl && character.originalPortraitUrl && !isGenerating) {
+          originalPortraitEl.src = character.originalPortraitUrl;
+        }
+
+        if (portraitEl && portraitArt) {
+          if (shouldAnimate) {
+            // Animate portrait character-by-character so new custom portraits "type in"
+            this._portraitAnimating = true;
+            this.typePortrait(portraitEl, portraitArt).then(async () => {
+              this._portraitAnimating = false;
+              // Process any pending updates that came in during animation
+              if (this._pendingCharacterUpdate) {
+                const pending = this._pendingCharacterUpdate;
+                this._pendingCharacterUpdate = null;
+                await this.updateCharacterPanel(pending);
+              }
+            });
+          } else {
+            // Just set it immediately if it hasn't changed
+            if (window.CharacterSheet && typeof CharacterSheet.setPortraitContent === 'function') {
+              CharacterSheet.setPortraitContent(portraitEl, portraitArt);
+            }
+          }
+        }
+
+        // Apply preferred default portrait view (ASCII vs Original) in builder
+        // once elements are wired up so we don't flash the teal background.
+        this._applyPreferredPortraitViewBuilder(character);
+
+        return;
+      }
+
+      // Legacy mode: Load pre-generated or fallback portrait text
+      // This code path is only reached if entryMode is not set (shouldn't happen in normal flow)
+      try {
+        const portraitArt = await AsciiArtService.generateAIPortrait(character);
+        
+        // Check again if animation is in progress (might have started while we were loading)
+        if (this._portraitAnimating) {
+          return;
+        }
+        
+        // Check if portrait has changed (only animate if it's different or first time)
+        const shouldAnimate =
+          !this._suppressNextPortraitAnimation &&
+          (!this._lastPortraitArt || this._lastPortraitArt !== portraitArt);
+        
+        // If we're about to animate, set the flag BEFORE rendering to prevent race conditions
+        if (shouldAnimate) {
+          this._portraitAnimating = true;
+        }
+        
+        this._lastPortraitArt = portraitArt;
+        // Consume any pending suppression flag after we've decided.
+        this._suppressNextPortraitAnimation = false;
+
+        // Render sheet skeleton, then inject ASCII as text to avoid HTML parsing
+        panel.innerHTML = Components.renderCharacterSheet(
+          character,
+          portraitArt,
+          true,
+          {
+            // Legacy mode: hide overflow until creation complete
+            hideOverflowMenu: !isCreationComplete,
+          },
+        );
+        const portraitEl = document.getElementById('character-portrait');
+        const originalPortraitEl = document.getElementById('original-portrait');
+        
+        // Set the original portrait image if URL exists
+        if (originalPortraitEl && character.originalPortraitUrl) {
+          originalPortraitEl.src = character.originalPortraitUrl;
+        }
+        
+        if (portraitEl && portraitArt) {
+          if (shouldAnimate) {
+            // Animate portrait character-by-character
+            await this.typePortrait(portraitEl, portraitArt);
+            this._portraitAnimating = false;
+            
+            // Process any pending updates that came in during animation
+            if (this._pendingCharacterUpdate) {
+              const pending = this._pendingCharacterUpdate;
+              this._pendingCharacterUpdate = null;
+              await this.updateCharacterPanel(pending);
+            }
+          } else {
+            // Just set it immediately if it hasn't changed
+            if (window.CharacterSheet && typeof CharacterSheet.setPortraitContent === 'function') {
+              CharacterSheet.setPortraitContent(portraitEl, portraitArt);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error generating portrait:', error);
+
+        // Check again if animation is in progress
+        if (this._portraitAnimating) {
+          return;
+        }
+
+        const fallbackArt = AsciiArtService.getFullPortrait(character);
+        
+        // Check if portrait has changed (only animate if it's different or first time)
+        const shouldAnimate =
+          !this._suppressNextPortraitAnimation &&
+          (!this._lastPortraitArt || this._lastPortraitArt !== fallbackArt);
+        
+        // If we're about to animate, set the flag BEFORE rendering
+        if (shouldAnimate) {
+          this._portraitAnimating = true;
+        }
+        
+        this._lastPortraitArt = fallbackArt;
+        // Consume any pending suppression flag after we've decided.
+        this._suppressNextPortraitAnimation = false;
+        
+        panel.innerHTML = Components.renderCharacterSheet(
+          character,
+          fallbackArt,
+          true,
+          {
+            // Fallback/error mode: hide overflow until creation complete
+            hideOverflowMenu: !isCreationComplete,
+          },
+        );
+        const portraitEl = document.getElementById('character-portrait');
+        const originalPortraitEl = document.getElementById('original-portrait');
+        
+        // Set the original portrait image if URL exists
+        if (originalPortraitEl && character.originalPortraitUrl) {
+          originalPortraitEl.src = character.originalPortraitUrl;
+        }
+        
+        if (portraitEl && fallbackArt) {
+          if (shouldAnimate) {
+            // Animate portrait character-by-character
+            await this.typePortrait(portraitEl, fallbackArt);
+            this._portraitAnimating = false;
+            
+            // Process any pending updates that came in during animation
+            if (this._pendingCharacterUpdate) {
+              const pending = this._pendingCharacterUpdate;
+              this._pendingCharacterUpdate = null;
+              await this.updateCharacterPanel(pending);
+            }
+          } else {
+            // Just set it immediately if it hasn't changed
+            if (window.CharacterSheet && typeof CharacterSheet.setPortraitContent === 'function') {
+              CharacterSheet.setPortraitContent(portraitEl, fallbackArt);
+            }
+          }
+        }
+
+        // Apply preferred default portrait view (ASCII vs Original) in builder
+        this._applyPreferredPortraitViewBuilder(character);
+      }
+      return;
+    }
+
+    // No race yet – show portrait container with placeholder during character creation.
+    // Always show the placeholder in builder mode since user is actively creating a character.
+    // The placeholder will display: "Your portrait will be generated once we learn more about your character"
+    panel.innerHTML = Components.renderCharacterSheet(
+      character,
+      null,
+      true, // Always show portrait placeholder during initial character creation
+      {
+        // No race yet means creation not complete - hide overflow menu
+        hideOverflowMenu: true,
+      },
+    );
+  },
+
+  // Animate ASCII portrait character-by-character, line-by-line
+  async typePortrait(element, portraitText) {
+    const lines = portraitText.split('\n');
+    // Use a <pre> child element for proper CSS flex centering
+    element.innerHTML = '';
+    const pre = document.createElement('pre');
+    element.appendChild(pre);
+    
+    let currentText = '';
+    const charsPerFrame = 40; // Type multiple characters per frame for speed
+    let charCount = 0;
+    
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      const line = lines[lineIndex];
+      
+      // Type characters in batches
+      for (let charIndex = 0; charIndex < line.length; charIndex++) {
+        currentText += line[charIndex];
+        charCount++;
+
+        // Update DOM every N characters
+        if (charCount >= charsPerFrame) {
+          pre.textContent = currentText;
+          charCount = 0;
+          await new Promise(resolve => requestAnimationFrame(resolve));
+        }
+      }
+      
+      // Add newline after each line (except the last)
+      if (lineIndex < lines.length - 1) {
+        currentText += '\n';
+      }
+    }
+    
+    // Final update to ensure all text is shown
+    pre.textContent = currentText;
+  },
+
+});
+
+// ===== AUTHENTICATION & BOOTSTRAP (builder splash handling) =====
+
+let builderSplashActive = true;
+
+let loadingInterval = null;
+
+function startLoadingAnimation() {
+  const statusText = document.getElementById('status-text');
+  // Previously showed rotating \"fun\" boot messages; now we keep this area quiet.
+  if (statusText) {
+    statusText.textContent = '';
+  }
+}
+
+// Flag to suppress beforeunload warning during intentional navigation
+let allowNavigationFlag = false;
+window.suppressBeforeunloadWarning = () => {
+  allowNavigationFlag = true;
+};
+
+// Exit back to the Character Manager app from builder mode
+function exitToManager() {
+  // Check if exit is blocked (new user must create a character first)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('required') === 'true') {
+    App.showSystemMessage('Please create your first character to continue.');
+    return;
+  }
+  
+  const state = CharacterState.get();
+  const character = state.character;
+
+  // Only prompt to save if character is complete (has name, race, class) and unsaved
+  const isComplete = character && character.name && character.race && character.class;
+  const hasUnsavedChanges = character && !character.id && isComplete;
+
+  if (hasUnsavedChanges) {
+    // Ask the user if they want to save before exiting
+    App.showConfirmationOverlay(
+      'You have unsaved changes. What would you like to do?',
+      async () => {
+        // User clicked "SAVE" - attempt to save; if save fails, we stay in the builder
+        await App.saveCharacter(true);
+
+        // Re-check that we now have an ID before exiting
+        const latest = CharacterState.get().character;
+        if (!latest || !latest.id) {
+          App.showSystemMessage(
+            'Character was not saved. Staying in the builder.',
+          );
+          return;
+        }
+
+        // Character saved successfully, proceed to exit
+        window.suppressBeforeunloadWarning();
+        window.location.href = 'index.html?from=builder';
+      },
+      () => {
+        // User clicked "DISCARD" - exit without saving
+        window.suppressBeforeunloadWarning();
+        window.location.href = 'index.html?from=builder';
+      },
+      {
+        primaryLabel: 'SAVE',
+        secondaryLabel: 'DISCARD',
+        primaryClass: 'terminal-btn',
+        secondaryClass: 'terminal-btn'
+      }
+    );
+  } else {
+    // Character is already saved or incomplete; immediately exit
+    window.suppressBeforeunloadWarning();
+    window.location.href = 'index.html?from=builder';
+  }
+}
+
+function dismissBuilderSplash(instant = false) {
+  const splash = document.getElementById('splash-content');
+  const mainContent = document.getElementById('main-content');
+
+  if (!splash || !builderSplashActive) return;
+  builderSplashActive = false;
+
+  if (instant) {
+    splash.classList.add('is-hidden');
+    if (mainContent) {
+      mainContent.classList.remove('is-hidden');
+    }
+  } else {
+    splash.classList.add('fade-out');
+    setTimeout(() => {
+      splash.classList.add('is-hidden');
+      if (mainContent) {
+        mainContent.classList.remove('is-hidden');
+      }
+    }, 300);
+  }
+}
+
+// ========================================
+// PORTRAIT LIGHTBOX (Mobile)
+// Full-screen image viewer for character portraits on mobile/touch devices
+// ========================================
+const PortraitLightbox = {
+  _lightbox: null,
+  _isTouch: false,
+  _mobileBreakpoint: 768,
+  
+  /** Check if viewport is mobile-sized */
+  _isMobile() {
+    return window.innerWidth <= this._mobileBreakpoint;
+  },
+  
+  /** Create the lightbox element if it doesn't exist */
+  _ensureLightbox() {
+    if (this._lightbox) return this._lightbox;
+    
+    const lightbox = document.createElement('div');
+    lightbox.className = 'portrait-lightbox';
+    lightbox.innerHTML = `
+      <div class="portrait-lightbox-backdrop"></div>
+      <img class="portrait-lightbox-image" src="" alt="Portrait">
+      <div class="portrait-lightbox-name"></div>
+      <div class="portrait-lightbox-hint">Tap to close</div>
+    `;
+    document.body.appendChild(lightbox);
+    this._lightbox = lightbox;
+    
+    // Close on backdrop tap
+    const backdrop = lightbox.querySelector('.portrait-lightbox-backdrop');
+    backdrop.addEventListener('click', () => this.close());
+    
+    // Also close on lightbox tap (anywhere)
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox || e.target === backdrop) {
+        this.close();
+      }
+    });
+    
+    // Close on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.isOpen()) {
+        this.close();
+      }
+    });
+    
+    return lightbox;
+  },
+  
+  /** Check if lightbox is currently open */
+  isOpen() {
+    return this._lightbox && this._lightbox.classList.contains('is-open');
+  },
+  
+  /** Open the lightbox with the given image URL and optional character name */
+  open(imageUrl, characterName = '') {
+    if (!imageUrl) return;
+    
+    const lightbox = this._ensureLightbox();
+    const img = lightbox.querySelector('.portrait-lightbox-image');
+    const nameEl = lightbox.querySelector('.portrait-lightbox-name');
+    
+    img.src = imageUrl;
+    if (nameEl) {
+      nameEl.textContent = characterName;
+      nameEl.style.display = characterName ? '' : 'none';
+    }
+    document.body.style.overflow = 'hidden';
+    lightbox.classList.add('is-open');
+  },
+  
+  /** Close the lightbox */
+  close() {
+    if (!this._lightbox) return;
+    
+    this._lightbox.classList.remove('is-open');
+    document.body.style.overflow = '';
+  },
+  
+  /** Initialize portrait tap handlers for mobile */
+  init() {
+    this._isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    // Use event delegation for portrait clicks
+    document.addEventListener('click', (e) => {
+      // Guard against non-element targets (text nodes, etc.)
+      if (!e.target || typeof e.target.closest !== 'function') return;
+      
+      // Only handle on mobile/touch
+      if (!this._isMobile() && !this._isTouch) return;
+      
+      // Don't open lightbox if tapping on overlay tags (shared/demo/spell tags, status badges)
+      if (e.target.closest('.sheet-shared-tag, .sheet-status-badge, .sheet-demo-tag, .sheet-spell-tag, .custom-tooltip')) return;
+      
+      // Check if clicked element is a portrait image
+      const portrait = e.target.closest('.portrait-container--original-mode .original-portrait.is-loaded');
+      if (!portrait) return;
+      
+      // Don't open lightbox if it's already open
+      if (this.isOpen()) return;
+      
+      // Get the image URL
+      const imageUrl = portrait.src;
+      if (imageUrl) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Find character name from the sheet
+        const sheet = portrait.closest('.character-sheet');
+        const nameEl = sheet?.querySelector('.sheet-title');
+        const characterName = nameEl?.textContent?.trim() || '';
+        
+        this.open(imageUrl, characterName);
+      }
+    }, true);
+  }
+};
+
+// Initialize on page load
+window.addEventListener('DOMContentLoaded', async () => {
+  // Start loading animation
+  startLoadingAnimation();
+  
+  // 🔥 Wake up the backend server early (Render cold start can take 30-50s)
+  if (CONFIG.ENABLE_AI) {
+    console.log('%c🚀 BOOT: Waking up backend server early...', 'color: #0ff; font-weight: 500');
+    AIService.warmupBackend();
+  }
+
+  // Show main content immediately (behind splash)
+  const mainContent = document.getElementById('main-content');
+  if (mainContent) {
+    mainContent.classList.remove('is-hidden');
+  }
+
+  // Apply app version to header from global version config
+  const version = window.DANDDY_VERSION || '3.0.0';
+  const headerTitleText = document.querySelector('.terminal-title-text');
+  if (headerTitleText) {
+    headerTitleText.innerHTML = `D&amp;Dy v${version}`;
+  }
+
+  // Splash screen handlers (press any key / click to begin)
+  const splash = document.getElementById('splash-content');
+  if (splash) {
+    const keyHandler = (e) => {
+      if (!builderSplashActive) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dismissBuilderSplash();
+    };
+
+    window.addEventListener('keydown', keyHandler);
+    splash.addEventListener('click', () => dismissBuilderSplash(), { once: true });
+  }
+
+  // Initialize the builder app
+  await App.init();
+  
+  // Initialize portrait lightbox for mobile (tap-to-zoom)
+  PortraitLightbox.init();
+
+  // Stop loading animation once initialized
+  if (loadingInterval) {
+    clearInterval(loadingInterval);
+  }
+  const statusText = document.getElementById('status-text');
+  if (statusText) {
+    statusText.textContent = '';
+  }
+
+  // Keep narrator panel scrolled to bottom on resize
+  window.addEventListener('resize', () => {
+    Utils.scrollToBottom();
+  });
+
+  // Warn before leaving page if there are unsaved changes
+  window.addEventListener('beforeunload', (e) => {
+    // Skip warning if navigation is intentional (user clicked DISCARD/SAVE)
+    if (allowNavigationFlag) return;
+
+    const state = CharacterState.get();
+    const character = state.character;
+
+    // Only prompt if character is complete (has name, race, class) and unsaved
+    const isComplete = character && character.name && character.race && character.class;
+    const hasUnsavedChanges = character && !character.id && isComplete;
+
+    if (hasUnsavedChanges) {
+      // Modern browsers ignore custom messages and show a generic one
+      e.preventDefault();
+      e.returnValue = ''; // Chrome requires returnValue to be set
+      return ''; // Some browsers require a return value
+    }
+  });
+
+  // Keyboard navigation
+  window.addEventListener('keydown', (e) => {
+    // Don't interfere if there's any modal open
+    if (document.querySelector('.modal.show')) return;
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      KeyboardNav.moveUp();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      KeyboardNav.moveDown();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      KeyboardNav.moveLeft();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      KeyboardNav.moveRight();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      KeyboardNav.select();
+    }
+  });
+
+  // When a modal is open, pressing Cmd/Ctrl+Enter should trigger its primary action.
+  window.addEventListener('keydown', (e) => {
+    if (!(e.key === 'Enter' && (e.metaKey || e.ctrlKey))) return;
+    const modal = document.querySelector('.modal.show');
+    if (!modal || modal.classList.contains('just-opened')) return;
+
+    // Only trigger the modal's primary action if focus is currently inside
+    // the modal.
+    const activeElement = document.activeElement;
+    if (!activeElement || !modal.contains(activeElement)) return;
+
+    const primaryBtn = modal.querySelector('.modal-footer .terminal-btn-primary');
+    if (primaryBtn) {
+      e.preventDefault();
+      primaryBtn.click();
+    }
+  });
+});
+
+
+
+
+
+// ===== BUNDLE PART: builder-manager.js =====
+
+// ========================================
+// CHARACTER BUILDER - CLOUD INTEGRATION
+// ========================================
+// Handles authentication UI and cloud storage for Character Builder
+
+// ========================================
+// AUTHENTICATION UI HANDLERS
+// ========================================
+
+function showAuthModal() {
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        modal.classList.add('show');
+        // Add dark overlay to terminal frame
+        const host = document.querySelector('.terminal-frame') || document.querySelector('.app-root');
+        if (host) {
+            host.classList.add('auth-flow-dim');
+        }
+        showLoginForm();
+        return;
+    }
+    // Integrated builder page uses AuthUI full-screen overlay instead of manager modal.
+    if (window.App && typeof window.App.showAuthScreen === 'function') {
+        window.App.showAuthScreen();
+        return;
+    }
+    if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
+        window.AuthUI.showLogin(
+            () => location.reload(),
+            () => {},
+            () => {},
+        );
+    }
+}
+
+// The builder's auth modal markup uses the same cancel handler name as the manager.
+function cancelAuthFlow() {
+    closeAuthModal();
+}
+
+// Builder auth modal includes a "Forgot password?" link; route to manager reset UI.
+function openPasswordResetFromLogin() {
+    window.location.href = 'index.html#password-reset';
+}
+
+function closeAuthModal() {
+    const modal = document.getElementById('authModal');
+    const err = document.getElementById('authError');
+    if (!modal || !err) {
+        // No-op for builder page
+        return;
+    }
+    modal.classList.remove('show');
+    // Remove dark overlay from terminal frame
+    const host = document.querySelector('.terminal-frame') || document.querySelector('.app-root');
+    if (host) {
+        host.classList.remove('auth-flow-dim');
+    }
+    err.classList.add('is-hidden');
+    // Clear form fields
+    const loginEmail = document.getElementById('loginEmail');
+    const loginPassword = document.getElementById('loginPassword');
+    const registerEmail = document.getElementById('registerEmail');
+    const registerPassword = document.getElementById('registerPassword');
+    const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
+
+    if (loginEmail) loginEmail.value = '';
+    if (loginPassword) {
+        loginPassword.value = '';
+        loginPassword.type = 'password';
+    }
+    if (registerEmail) registerEmail.value = '';
+    if (registerPassword) {
+        registerPassword.value = '';
+        registerPassword.type = 'password';
+    }
+    if (registerPasswordConfirm) {
+        registerPasswordConfirm.value = '';
+        registerPasswordConfirm.type = 'password';
+    }
+
+    // Reset toggle labels back to SHOW
+    document.querySelectorAll('.password-toggle-btn').forEach((btn) => {
+        try {
+            btn.textContent = 'Show';
+            btn.setAttribute('aria-pressed', 'false');
+            btn.setAttribute('aria-label', 'Show password');
+        } catch (_) {}
+    });
+}
+
+function showLoginForm() {
+    if (shouldAnimateAuthFormSwap()) {
+        animateAuthFormSwap('login');
+        return;
+    }
+    applyAuthFormState('login');
+}
+
+function showRegisterForm() {
+    if (shouldAnimateAuthFormSwap()) {
+        animateAuthFormSwap('register');
+        return;
+    }
+    applyAuthFormState('register');
+}
+
+function applyAuthFormState(target) {
+    const isRegister = target === 'register';
+    document.getElementById('loginForm').classList.toggle('is-hidden', isRegister);
+    document.getElementById('registerForm').classList.toggle('is-hidden', !isRegister);
+    document.getElementById('authModalTitle').textContent = isRegister ? 'REGISTER' : 'LOG IN';
+    document.getElementById('loginBtn').classList.toggle('is-hidden', isRegister);
+    document.getElementById('registerBtn').classList.toggle('is-hidden', !isRegister);
+    document.getElementById('authError').classList.add('is-hidden');
+
+    const modal = document.getElementById('authModal');
+    if (modal && typeof window.focusFirstFieldInModal === 'function') {
+        window.focusFirstFieldInModal(modal);
+    }
+}
+
+function shouldAnimateAuthFormSwap() {
+    const modal = document.getElementById('authModal');
+    if (!modal) return false;
+    if (!modal.classList.contains('show')) return false;
+    if (modal.classList.contains('closing')) return false;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    return true;
+}
+
+function animateAuthFormSwap(target) {
+    const modal = document.getElementById('authModal');
+    if (!modal) {
+        applyAuthFormState(target);
+        return;
+    }
+
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const body = modal.querySelector('.modal-body');
+    if (!loginForm || !registerForm || !body) {
+        applyAuthFormState(target);
+        return;
+    }
+
+    const isRegister = target === 'register';
+    const fromEl = isRegister ? loginForm : registerForm;
+    const toEl = isRegister ? registerForm : loginForm;
+
+    if (!toEl.classList.contains('is-hidden')) {
+        applyAuthFormState(target);
+        return;
+    }
+
+    if (modal.dataset.authSwapAnimating === '1') return;
+    modal.dataset.authSwapAnimating = '1';
+
+    const startHeight = body.offsetHeight;
+    body.style.overflow = 'hidden';
+    body.style.height = `${startHeight}px`;
+
+    fromEl.style.transition = 'opacity 120ms ease-out';
+    fromEl.style.opacity = '0';
+
+    setTimeout(() => {
+        applyAuthFormState(target);
+
+        toEl.style.transition = 'none';
+        toEl.style.opacity = '0';
+
+        body.style.height = 'auto';
+        const endHeight = body.offsetHeight;
+        body.style.height = `${startHeight}px`;
+        void body.offsetHeight;
+
+        body.style.transition = 'height 260ms cubic-bezier(0.4, 0, 0.2, 1)';
+        body.style.height = `${endHeight}px`;
+
+        toEl.style.transition = 'opacity 180ms ease-out 80ms';
+        toEl.style.opacity = '1';
+
+        setTimeout(() => {
+            body.style.transition = '';
+            body.style.height = '';
+            body.style.overflow = '';
+            fromEl.style.transition = '';
+            fromEl.style.opacity = '';
+            toEl.style.transition = '';
+            toEl.style.opacity = '';
+            delete modal.dataset.authSwapAnimating;
+        }, 360);
+    }, 120);
+}
+
+async function handleLogin() {
+    console.log('[handleLogin] Function called');
+    const errorEl = document.getElementById('authError');
+
+    // If the login form is hidden (user is on the REGISTER tab), do nothing.
+    // This avoids showing "Please enter both email and password" errors on
+    // the register screen if some stray event fires the login handler.
+    const loginFormEl = document.getElementById('loginForm');
+    if (loginFormEl && loginFormEl.classList.contains('is-hidden')) {
+        console.log('[handleLogin] Aborted: loginForm is hidden');
+        return;
+    }
+
+    // See note in character-manager.js: password managers / autofill can race
+    // with our click handler. Wait briefly before reading values to avoid
+    // false "Please enter both email and password" errors.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const emailInput = document.getElementById('loginEmail');
+    const passwordInput = document.getElementById('loginPassword');
+
+    const email = emailInput ? emailInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
+    console.log('[handleLogin] Got email:', email ? '(provided)' : '(empty)');
+
+    if (!email || !password) {
+        errorEl.textContent = 'Please enter your username/email and password';
+        errorEl.classList.remove('is-hidden');
+        console.log('[handleLogin] Validation failed: missing identifier or password');
+        return;
+    }
+
+    console.log('[handleLogin] Calling AuthService.login...');
+    try {
+        const result = await window.AuthService.login(email, password);
+        console.log('[handleLogin] AuthService.login returned:', result);
+        if (result.success) {
+            console.log(`✓ Logged in as ${email}`);
+            
+            // Show notification in Builder's terminal
+            if (window.App && window.App.showNotification) {
+                window.App.showNotification(`✓ Logged in as ${email}`, 'success');
+            }
+            
+            // Refresh the page to ensure all data is fresh
+            // (quota counts, admin status, etc.)
+            setTimeout(() => {
+                window.location.reload();
+            }, 300);
+            return;
+        } else {
+            errorEl.textContent = result.error || 'Login failed';
+            errorEl.classList.remove('is-hidden');
+            console.log('[handleLogin] Login failed:', result.error);
+        }
+    } catch (error) {
+        console.error('[handleLogin] Exception:', error);
+        errorEl.textContent = 'Login failed. Please try again.';
+        errorEl.classList.remove('is-hidden');
+    }
+}
+
+async function handleRegister() {
+    const usernameEl = document.getElementById('registerUsername');
+    const username = usernameEl ? usernameEl.value.trim() : '';
+    const email = document.getElementById('registerEmail').value.trim();
+    const password = document.getElementById('registerPassword').value;
+    const passwordConfirmEl = document.getElementById('registerPasswordConfirm');
+    const passwordConfirm = passwordConfirmEl ? passwordConfirmEl.value : '';
+    const errorEl = document.getElementById('authError');
+
+    if (!username || !email || !password || (passwordConfirmEl && !passwordConfirm)) {
+        errorEl.textContent = 'Please fill in all fields';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
+    // Validate username format
+    const usernamePattern = /^[a-zA-Z0-9_]{3,30}$/;
+    if (!usernamePattern.test(username)) {
+        errorEl.textContent = 'Username must be 3-30 characters, using only letters, numbers, and underscores';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
+    if (passwordConfirmEl && password !== passwordConfirm) {
+        errorEl.textContent = 'Passwords do not match';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
+    try {
+        const result = await window.AuthService.register(username, email, password);
+        if (result.success) {
+            closeAuthModal();
+            updateAuthUI();
+            console.log(`✓ Registered as @${username}`);
+
+            // Start session monitoring now that user is logged in
+            if (typeof window.AuthService.startSessionMonitor === 'function') {
+                window.AuthService.startSessionMonitor();
+            }
+            
+            // Show notification in Builder's terminal
+            if (window.App && window.App.showNotification) {
+                window.App.showNotification(`✓ Registered as ${email}`, 'success');
+            }
+        } else {
+            errorEl.textContent = result.error || 'Registration failed';
+            errorEl.classList.remove('is-hidden');
+        }
+    } catch (error) {
+        errorEl.textContent = 'Registration failed. Please try again.';
+        errorEl.classList.remove('is-hidden');
+    }
+}
+
+async function handleLogout() {
+    // Save current character to cloud before logout if there is one
+    if (window.CharacterState && window.CharacterState.current.character.name) {
+        await saveCurrentCharacterToCloud();
+    }
+
+    window.AuthService.logout();
+    updateAuthUI();
+
+    if (window.App && window.App.showNotification) {
+        window.App.showNotification('✓ Logged out', 'success');
+    }
+    
+    // Show login modal after logout (consistent with manager page)
+    showAuthModal();
+}
+
+function updateAuthUI() {
+    const authBtn = document.getElementById('authBtn');
+    const userInfoDisplay = document.getElementById('userInfoDisplay');
+    const userStatusIcon = document.getElementById('userStatusIcon');
+    const userStatusText = document.getElementById('userStatusText');
+
+    // In the integrated app, these elements are missing. Delegate to the
+    // builder's unified header renderer if available.
+    if (!authBtn || !userInfoDisplay || !userStatusIcon || !userStatusText) {
+        if (typeof window.updateAuthUI === 'function') {
+            window.updateAuthUI();
+        }
+        return;
+    }
+
+    const userInfoTrigger = document.getElementById('userInfoTrigger');
+    
+    if (window.AuthService && window.AuthService.isAuthenticated()) {
+        const user = window.AuthService.getCurrentUser();
+        userStatusIcon.textContent = '☁';
+        // Show username if available, fall back to email
+        const displayName = user?.username ? `@${user.username}` : (user?.email || 'Logged In');
+        userStatusText.textContent = displayName;
+        authBtn.textContent = 'Log out';
+        authBtn.onclick = handleLogout;
+        
+        // Enable account popover trigger when authenticated
+        if (userInfoTrigger) {
+            userInfoTrigger.style.cursor = 'pointer';
+            userInfoTrigger.disabled = false;
+            userInfoTrigger.title = 'Manage account';
+        }
+    } else {
+        userStatusIcon.textContent = '▣';
+        userStatusText.textContent = 'Guest mode';
+        authBtn.textContent = 'LOG IN';
+        authBtn.onclick = showAuthModal;
+        
+        // Disable account popover trigger when not authenticated
+        if (userInfoTrigger) {
+            userInfoTrigger.style.cursor = 'default';
+            userInfoTrigger.disabled = true;
+            userInfoTrigger.title = '';
+        }
+    }
+}
+
+// ========================================
+// ACCOUNT POPOVER (builder version)
+// ========================================
+
+// ========================================
+// USERNAME EDIT MODAL (builder version)
+// ========================================
+
+/**
+ * Open the username edit modal.
+ */
+function openUsernameEditModal() {
+    const modal = document.getElementById('usernameEditModal');
+    const input = document.getElementById('usernameEditInput');
+    const errorEl = document.getElementById('usernameEditError');
+    
+    if (!modal) return;
+    
+    const user = window.AuthService ? window.AuthService.getCurrentUser() : null;
+    if (!user) return;
+    
+    if (input) {
+        input.value = user.username || '';
+    }
+    
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.classList.add('is-hidden');
+    }
+    
+    modal.classList.add('show');
+    
+    setTimeout(() => {
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 100);
+}
+
+/**
+ * Close the username edit modal.
+ */
+function closeUsernameEditModal() {
+    const modal = document.getElementById('usernameEditModal');
+    const input = document.getElementById('usernameEditInput');
+    const errorEl = document.getElementById('usernameEditError');
+    
+    if (!modal) return;
+    
+    if (input) input.value = '';
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.classList.add('is-hidden');
+    }
+    
+    modal.classList.remove('show');
+}
+
+// Legacy aliases for backwards compatibility
+function openAccountModal() {
+    // No-op - account info is now in overflow menu
+}
+
+function closeAccountModal() {
+    // No-op - account info is now in overflow menu
+}
+
+function cancelUsernameEdit() {
+    closeUsernameEditModal();
+}
+
+/**
+ * Save the new username.
+ */
+async function saveUsername() {
+    const input = document.getElementById('usernameEditInput');
+    const saveBtn = document.getElementById('saveUsernameBtn');
+    
+    if (!input) return;
+    
+    const newUsername = input.value.trim();
+    
+    if (!newUsername) {
+        showUsernameError('Username cannot be empty');
+        return;
+    }
+    
+    if (newUsername.length < 3) {
+        showUsernameError('Username must be at least 3 characters');
+        return;
+    }
+    
+    if (newUsername.length > 30) {
+        showUsernameError('Username must be 30 characters or less');
+        return;
+    }
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(newUsername)) {
+        showUsernameError('Only letters, numbers, and underscores allowed');
+        return;
+    }
+    
+    const user = window.AuthService ? window.AuthService.getCurrentUser() : null;
+    if (user && newUsername === user.username) {
+        showUsernameError('New username is the same as current');
+        return;
+    }
+    
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+    }
+    
+    try {
+        const result = await window.AuthService.updateUsername(newUsername);
+        
+        if (!result.success) {
+            showUsernameError(result.error || 'Failed to update username');
+            return;
+        }
+        
+        updateAuthUI();
+        closeUsernameEditModal();
+        
+        if (window.App && typeof window.App.showNotification === 'function') {
+            window.App.showNotification('Username updated successfully', 'success');
+        }
+        
+    } catch (error) {
+        console.error('Failed to update username:', error);
+        showUsernameError(error.message || 'Failed to update username');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save';
+        }
+    }
+}
+
+/**
+ * Show username error.
+ */
+function showUsernameError(message) {
+    const errorEl = document.getElementById('usernameEditError');
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.remove('is-hidden');
+    }
+}
+
+// Wire up auth modal keyboard + password visibility toggles (same behavior as manager).
+function initBuilderAuthModalWiring() {
+    const loginPasswordInput = document.getElementById('loginPassword');
+    const registerPasswordConfirmInput = document.getElementById('registerPasswordConfirm');
+
+    if (loginPasswordInput) {
+        loginPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleLogin();
+            }
+        });
+    }
+
+    if (registerPasswordConfirmInput) {
+        registerPasswordConfirmInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleRegister();
+            }
+        });
+    }
+
+    // Allow Escape to close modal if open
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const modal = document.getElementById('authModal');
+        if (modal && modal.classList.contains('show')) {
+            e.preventDefault();
+            cancelAuthFlow();
+        }
+    });
+
+    // Password visibility toggles
+    const passwordToggleButtons = document.querySelectorAll('.password-toggle-btn');
+    passwordToggleButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            if (!targetId) return;
+            const input = document.getElementById(targetId);
+            if (!input) return;
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            btn.textContent = isPassword ? 'HIDE' : 'SHOW';
+            btn.setAttribute('aria-pressed', String(isPassword));
+            btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+        });
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBuilderAuthModalWiring);
+} else {
+    initBuilderAuthModalWiring();
+}
+
+// ========================================
+// CLOUD STORAGE INTEGRATION
+// ========================================
+
+async function saveCurrentCharacterToCloud() {
+    try {
+        if (!window.AuthService || !window.AuthService.isAuthenticated()) {
+            console.log('💾 Not logged in - character saved to localStorage only');
+            return false;
+        }
+
+        if (!window.CharacterCloudStorage) {
+            console.error('☁️ CharacterCloudStorage not available');
+            return false;
+        }
+
+        const character = window.CharacterState.current.character;
+        
+        // Don't save if no name yet (character not complete)
+        if (!character.name) {
+            console.log('☁️ Character has no name yet - skipping cloud save');
+            return false;
+        }
+
+        console.log('☁️ Saving character to cloud:', character.name);
+
+        // Check if this character already exists in cloud (by characterUid)
+        const allCloudChars = await window.CharacterCloudStorage.getAll();
+        const existingChar = allCloudChars.find(c => 
+            c.characterUid === character.characterUid ||
+            c.metadata?.characterUid === character.characterUid
+        );
+
+        if (existingChar) {
+            // Update existing
+            console.log('☁️ Updating existing character in cloud:', existingChar.id);
+            await window.CharacterCloudStorage.update(existingChar.id, character);
+            console.log('☁️ Character updated in cloud successfully');
+        } else {
+            // Create new
+            console.log('☁️ Creating new character in cloud');
+            const result = await window.CharacterCloudStorage.add(character);
+            console.log('☁️ Character created in cloud with ID:', result.id);
+        }
+
+        return true;
+    } catch (error) {
+        console.error('☁️ Failed to save character to cloud:', error);
+        return false;
+    }
+}
+
+// ========================================
+// SESSION EXPIRED HANDLING
+// ========================================
+
+// Handle session expired events in the builder
+function handleSessionExpired() {
+    // Update the UI to reflect logged-out state
+    updateAuthUI();
+
+    // Show an informational overlay with option to log in or continue as guest
+    if (window.App && window.App.showConfirmationOverlay) {
+        window.App.showConfirmationOverlay(
+            'Your character is safe locally, but you\'ll need to log in again to sync with the cloud.',
+            () => {
+                // User chose to log in
+                showAuthModal();
+            },
+            () => {
+                // User chose to continue offline - just close the overlay
+                // Character is already saved locally, nothing else needed
+            },
+            {
+                title: '[!] Your session has expired',
+                primaryLabel: 'LOG IN',
+                secondaryLabel: 'CONTINUE OFFLINE'
+            }
+        );
+    } else if (window.App && window.App.showNotification) {
+        // Fallback: just show a notification
+        window.App.showNotification('Your session has expired. Please log in again.', 'warning');
+    }
+}
+
+// ========================================
+// INITIALIZATION
+// ========================================
+
+// Initialize auth UI and session monitor when DOM is ready
+function initBuilderAuth() {
+    updateAuthUI();
+
+    // Start session monitoring if authenticated
+    if (window.AuthService && window.AuthService.isAuthenticated()) {
+        if (typeof window.AuthService.startSessionMonitor === 'function') {
+            window.AuthService.startSessionMonitor();
+        }
+        
+        // Load user preferences from server (fire and forget)
+        if (window.StorageService && StorageService.loadPreferencesFromServer) {
+            StorageService.loadPreferencesFromServer();
+        }
+    }
+
+    // Listen for session expired events
+    window.addEventListener('danddy:sessionExpired', handleSessionExpired);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBuilderAuth);
+} else {
+    initBuilderAuth();
+}
+
+console.log('☁️ Character Builder Cloud Integration loaded');

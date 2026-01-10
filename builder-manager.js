@@ -342,6 +342,8 @@ function updateAuthUI() {
         return;
     }
 
+    const userInfoTrigger = document.getElementById('userInfoTrigger');
+    
     if (window.AuthService && window.AuthService.isAuthenticated()) {
         const user = window.AuthService.getCurrentUser();
         userStatusIcon.textContent = '☁';
@@ -350,11 +352,176 @@ function updateAuthUI() {
         userStatusText.textContent = displayName;
         authBtn.textContent = 'Log out';
         authBtn.onclick = handleLogout;
+        
+        // Enable account popover trigger when authenticated
+        if (userInfoTrigger) {
+            userInfoTrigger.style.cursor = 'pointer';
+            userInfoTrigger.disabled = false;
+            userInfoTrigger.title = 'Manage account';
+        }
     } else {
         userStatusIcon.textContent = '▣';
         userStatusText.textContent = 'Guest mode';
         authBtn.textContent = 'LOG IN';
         authBtn.onclick = showAuthModal;
+        
+        // Disable account popover trigger when not authenticated
+        if (userInfoTrigger) {
+            userInfoTrigger.style.cursor = 'default';
+            userInfoTrigger.disabled = true;
+            userInfoTrigger.title = '';
+        }
+    }
+}
+
+// ========================================
+// ACCOUNT POPOVER (builder version)
+// ========================================
+
+// ========================================
+// USERNAME EDIT MODAL (builder version)
+// ========================================
+
+/**
+ * Open the username edit modal.
+ */
+function openUsernameEditModal() {
+    const modal = document.getElementById('usernameEditModal');
+    const input = document.getElementById('usernameEditInput');
+    const errorEl = document.getElementById('usernameEditError');
+    
+    if (!modal) return;
+    
+    const user = window.AuthService ? window.AuthService.getCurrentUser() : null;
+    if (!user) return;
+    
+    if (input) {
+        input.value = user.username || '';
+    }
+    
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.classList.add('is-hidden');
+    }
+    
+    modal.classList.add('show');
+    
+    setTimeout(() => {
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 100);
+}
+
+/**
+ * Close the username edit modal.
+ */
+function closeUsernameEditModal() {
+    const modal = document.getElementById('usernameEditModal');
+    const input = document.getElementById('usernameEditInput');
+    const errorEl = document.getElementById('usernameEditError');
+    
+    if (!modal) return;
+    
+    if (input) input.value = '';
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.classList.add('is-hidden');
+    }
+    
+    modal.classList.remove('show');
+}
+
+// Legacy aliases for backwards compatibility
+function openAccountModal() {
+    // No-op - account info is now in overflow menu
+}
+
+function closeAccountModal() {
+    // No-op - account info is now in overflow menu
+}
+
+function cancelUsernameEdit() {
+    closeUsernameEditModal();
+}
+
+/**
+ * Save the new username.
+ */
+async function saveUsername() {
+    const input = document.getElementById('usernameEditInput');
+    const saveBtn = document.getElementById('saveUsernameBtn');
+    
+    if (!input) return;
+    
+    const newUsername = input.value.trim();
+    
+    if (!newUsername) {
+        showUsernameError('Username cannot be empty');
+        return;
+    }
+    
+    if (newUsername.length < 3) {
+        showUsernameError('Username must be at least 3 characters');
+        return;
+    }
+    
+    if (newUsername.length > 30) {
+        showUsernameError('Username must be 30 characters or less');
+        return;
+    }
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(newUsername)) {
+        showUsernameError('Only letters, numbers, and underscores allowed');
+        return;
+    }
+    
+    const user = window.AuthService ? window.AuthService.getCurrentUser() : null;
+    if (user && newUsername === user.username) {
+        showUsernameError('New username is the same as current');
+        return;
+    }
+    
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+    }
+    
+    try {
+        const result = await window.AuthService.updateUsername(newUsername);
+        
+        if (!result.success) {
+            showUsernameError(result.error || 'Failed to update username');
+            return;
+        }
+        
+        updateAuthUI();
+        closeUsernameEditModal();
+        
+        if (window.App && typeof window.App.showNotification === 'function') {
+            window.App.showNotification('Username updated successfully', 'success');
+        }
+        
+    } catch (error) {
+        console.error('Failed to update username:', error);
+        showUsernameError(error.message || 'Failed to update username');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save';
+        }
+    }
+}
+
+/**
+ * Show username error.
+ */
+function showUsernameError(message) {
+    const errorEl = document.getElementById('usernameEditError');
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.remove('is-hidden');
     }
 }
 

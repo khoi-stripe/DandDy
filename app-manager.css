@@ -4117,10 +4117,7 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     color: var(--ui-fg-color);
 }
 
-/* Underline on hover for user info display */
-.terminal-header #userInfoDisplay:hover {
-    text-decoration: underline;
-}
+/* userInfoDisplay is now non-interactive, no hover state needed */
 
 /* Dim the header auth button (LOGIN / LOGOUT) so it reads as secondary */
 .terminal-header .header-actions #authBtn {
@@ -4146,12 +4143,13 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     }
 }
 
-/* Mobile: hide account email in header */
+/* Mobile: hide account info in header (accessible via overflow menu instead) */
 @media (max-width: 768px) {
     .terminal-header #userInfoDisplay {
         display: none !important;
     }
 }
+
 
 /* Header primary buttons: always show filled style using header's theme.
    Works with ANY theme class (yellow, teal, green, pink, white, orange, red, violet, blue).
@@ -4206,23 +4204,13 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     margin-top: var(--spacing-lg);
 }
 
-/* Account modal styles */
-#accountModal .modal-content {
-    overflow: hidden;
-}
-
+/* Account styles */
 .account-mode {
     /* No special styles needed - transitions handled by JS */
 }
 
 .account-mode.is-hidden {
     display: none;
-}
-
-.account-modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
 }
 
 .account-username {
@@ -4271,6 +4259,61 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     letter-spacing: var(--tracking-wider);
     color: var(--ui-fg-color);
     opacity: 0.6;
+}
+
+/* ========================================
+   OVERFLOW ACCOUNT HEADER
+   ======================================== */
+
+.overflow-account-header {
+    padding: var(--spacing-sm) var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.overflow-account-header.is-hidden {
+    display: none;
+}
+
+.overflow-username {
+    font-size: 12px;
+    font-weight: var(--font-weight-bold);
+    color: var(--ui-fg-color);
+    line-height: var(--line-height-snug);
+}
+
+.overflow-email {
+    font-size: 12px;
+    font-weight: var(--font-weight-normal);
+    color: var(--ui-fg-color);
+    opacity: 0.8;
+    line-height: var(--line-height-snug);
+}
+
+.overflow-edit-username {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-normal);
+    color: var(--ui-fg-color);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    opacity: 0.6;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+    margin-top: var(--spacing-xs);
+}
+
+.overflow-edit-username:hover {
+    opacity: 1;
+}
+
+.overflow-separator {
+    border-bottom: 1px solid var(--ui-border-color);
+    margin: 0;
+}
+
+.overflow-separator.is-hidden {
+    display: none;
 }
 
 /* Ability + combat grids inside Edit Details modal */

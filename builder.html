@@ -67,6 +67,13 @@
                         </span>
                     </button>
                     <div class="selector-menu header-overflow-menu" role="menu" aria-hidden="true">
+                        <!-- Account header (shown when logged in) -->
+                        <div id="overflowAccountHeader" class="overflow-account-header is-hidden">
+                            <div class="overflow-username" id="overflowUsername">@username</div>
+                            <div class="overflow-email" id="overflowEmail">email@example.com</div>
+                            <a href="#" class="overflow-edit-username" id="overflowEditUsername" onclick="event.preventDefault(); openUsernameEditModal(); CharacterSheet.closeSelectorMenu(this.closest('.selector-shell').querySelector('.selector-trigger'));">Edit username</a>
+                        </div>
+                        <div id="overflowAccountSeparator" class="overflow-separator is-hidden"></div>
                         <button
                             class="selector-option"
                             type="button"
@@ -76,16 +83,6 @@
                         >
                             <span class="selector-option-icon">⚙︎</span>
                             <span class="selector-option-label">Settings</span>
-                        </button>
-                        <button
-                            class="selector-option is-hidden"
-                            type="button"
-                            role="menuitem"
-                            id="overflowAccountBtn"
-                            onclick="openAccountModal(); CharacterSheet.closeSelectorMenu(this.closest('.selector-shell').querySelector('.selector-trigger'));"
-                        >
-                            <span class="selector-option-icon">☁</span>
-                            <span class="selector-option-label">Account</span>
                         </button>
                         <button
                             class="selector-option is-hidden"
@@ -204,6 +201,34 @@
         <button id="authCancelBtn" class="terminal-btn" onclick="cancelAuthFlow()">Cancel</button>
         <button id="loginBtn" class="terminal-btn terminal-btn-primary" onclick="handleLogin()">Log in</button>
         <button id="registerBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handleRegister()">Register</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Username Edit Modal -->
+  <div id="usernameEditModal" class="modal">
+    <div class="modal-content modal-content--narrow">
+      <div class="modal-header">
+        <h2 class="modal-title">Edit Username</h2>
+        <button class="modal-close" onclick="closeUsernameEditModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="account-field-group">
+          <label class="account-field-label" for="usernameEditInput">Username</label>
+          <input type="text" id="usernameEditInput" class="terminal-input" 
+                 placeholder="Enter new username" 
+                 pattern="^[a-zA-Z0-9_]{3,30}$" 
+                 title="3-30 alphanumeric characters or underscores"
+                 maxlength="30"
+                 onkeydown="if(event.key==='Enter'){saveUsername();} else if(event.key==='Escape'){closeUsernameEditModal();}"
+                 data-1p-ignore>
+          <p class="terminal-text-tiny terminal-text-dim">3-30 characters: letters, numbers, underscores</p>
+          <p class="terminal-text-tiny terminal-text-error is-hidden" id="usernameEditError"></p>
+        </div>
+      </div>
+      <div class="modal-footer modal-footer-end">
+        <button class="terminal-btn" onclick="closeUsernameEditModal()">Cancel</button>
+        <button class="terminal-btn terminal-btn-primary" onclick="saveUsername()" id="saveUsernameBtn">Save</button>
       </div>
     </div>
   </div>

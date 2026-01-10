@@ -11122,171 +11122,26 @@ function closePasswordResetModal(animate = true) {
 }
 
 // ========================================
-// ACCOUNT MANAGEMENT MODAL
+// USERNAME EDIT MODAL
 // ========================================
 
 /**
- * Open the account management modal.
- * Shows current user's username and email.
- * Fetches fresh profile data to ensure username is up-to-date.
+ * Open the username edit modal.
  */
-async function openAccountModal() {
-    const modal = document.getElementById('accountModal');
-    if (!modal) return;
-    
-    // Show modal immediately with cached data
-    let user = window.AuthService ? window.AuthService.getCurrentUser() : null;
-    if (!user) return;
-    
-    // Populate account info with cached data first
-    const usernameEl = document.getElementById('accountUsername');
-    const emailEl = document.getElementById('accountEmail');
-    
-    if (usernameEl) {
-        usernameEl.textContent = user.username ? `@${user.username}` : 'Loading...';
-    }
-    if (emailEl) {
-        emailEl.textContent = user.email || 'Loading...';
-    }
-    
-    modal.classList.add('show');
-    syncAuthFlowDim();
-    
-    // Fetch fresh profile in background to ensure username is up-to-date
-    try {
-        const freshProfile = await window.AuthService.fetchProfile();
-        if (freshProfile) {
-            // Update local storage with fresh data
-            window.AuthService.setCurrentUser(freshProfile);
-            user = freshProfile;
-            
-            // Update display
-            if (usernameEl) {
-                usernameEl.textContent = user.username ? `@${user.username}` : 'Not set';
-            }
-            if (emailEl) {
-                emailEl.textContent = user.email || 'Not set';
-            }
-            
-            // Also update the header
-            updateAuthUI();
-        } else {
-            // fetchProfile returned null - show cached data or "Not set"
-            if (usernameEl) {
-                usernameEl.textContent = user.username ? `@${user.username}` : 'Not set';
-            }
-            if (emailEl) {
-                emailEl.textContent = user.email || 'Not set';
-            }
-        }
-    } catch (err) {
-        console.error('Failed to refresh profile:', err);
-        // Keep showing cached data, just update "Loading..." to "Not set"
-        if (usernameEl) {
-            usernameEl.textContent = user.username ? `@${user.username}` : 'Not set';
-        }
-        if (emailEl) {
-            emailEl.textContent = user.email || 'Not set';
-        }
-    }
-}
-
-/**
- * Close the account management modal.
- * @param {boolean} [animate=true] - Whether to animate the close
- * @returns {Promise|void} Returns a Promise if animated
- */
-function closeAccountModal(animate = true) {
-    const modal = document.getElementById('accountModal');
-    if (!modal) return;
-    
-    // Reset to display mode when closing
-    cancelUsernameEdit();
-    
-    if (animate) {
-        return animateModalClose(modal);
-    } else {
-        modal.classList.remove('show');
-        syncAuthFlowDim();
-    }
-}
-
-/**
- * Animate transition between account modal modes (like spell edit modal transitions).
- * @param {HTMLElement} outgoing - The element to hide
- * @param {HTMLElement} incoming - The element to show
- * @param {Function} [onComplete] - Callback after transition completes
- */
-function animateAccountModeSwap(outgoing, incoming, onComplete) {
-    const modalContent = outgoing.closest('.modal-content');
-    if (!modalContent) {
-        // Fallback: just swap visibility
-        outgoing.classList.add('is-hidden');
-        incoming.classList.remove('is-hidden');
-        if (onComplete) onComplete();
-        return;
-    }
-    
-    const startHeight = modalContent.offsetHeight;
-    
-    // Phase 1: Fade out current content
-    modalContent.style.overflow = 'hidden';
-    modalContent.style.height = startHeight + 'px';
-    modalContent.style.transition = 'opacity 0.15s ease-out';
-    modalContent.style.opacity = '0';
-    
-    setTimeout(() => {
-        // Swap visibility
-        outgoing.classList.add('is-hidden');
-        incoming.classList.remove('is-hidden');
-        
-        // Measure new height
-        modalContent.style.height = 'auto';
-        const endHeight = modalContent.offsetHeight;
-        
-        // Reset to start height for animation
-        modalContent.style.height = startHeight + 'px';
-        
-        // Force reflow
-        void modalContent.offsetHeight;
-        
-        // Phase 2: Animate height and fade in
-        modalContent.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease-out 0.1s';
-        modalContent.style.height = endHeight + 'px';
-        modalContent.style.opacity = '1';
-        
-        setTimeout(() => {
-            // Clean up
-            modalContent.style.height = '';
-            modalContent.style.overflow = '';
-            modalContent.style.transition = '';
-            if (onComplete) onComplete();
-        }, 350);
-    }, 150);
-}
-
-/**
- * Enter username edit mode in the account modal with smooth transition.
- */
-function enterUsernameEditMode() {
-    const displayMode = document.getElementById('usernameDisplayMode');
-    const editMode = document.getElementById('usernameEditMode');
+function openUsernameEditModal() {
+    const modal = document.getElementById('usernameEditModal');
     const input = document.getElementById('usernameEditInput');
     const errorEl = document.getElementById('usernameEditError');
-    const editEmailEl = document.getElementById('accountEmailEdit');
     
-    if (!displayMode || !editMode || !input) return;
+    if (!modal) return;
     
     // Get current username
     const user = window.AuthService ? window.AuthService.getCurrentUser() : null;
     if (!user) return;
     
     // Pre-fill with current username (without @)
-    input.value = user.username || '';
-    
-    // Sync email to edit view
-    if (editEmailEl) {
-        editEmailEl.textContent = user.email || '';
+    if (input) {
+        input.value = user.username || '';
     }
     
     // Clear any previous error
@@ -11295,23 +11150,28 @@ function enterUsernameEditMode() {
         errorEl.classList.add('is-hidden');
     }
     
-    // Animate transition
-    animateAccountModeSwap(displayMode, editMode, () => {
-        input.focus();
-        input.select();
-    });
+    // Show modal
+    modal.classList.add('show');
+    syncAuthFlowDim();
+    
+    // Focus input after a brief delay for animation
+    setTimeout(() => {
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 100);
 }
 
 /**
- * Cancel username edit and return to display mode with smooth transition.
+ * Close the username edit modal.
  */
-function cancelUsernameEdit() {
-    const displayMode = document.getElementById('usernameDisplayMode');
-    const editMode = document.getElementById('usernameEditMode');
+function closeUsernameEditModal() {
+    const modal = document.getElementById('usernameEditModal');
     const input = document.getElementById('usernameEditInput');
     const errorEl = document.getElementById('usernameEditError');
     
-    if (!displayMode || !editMode) return;
+    if (!modal) return;
     
     // Clear input and error
     if (input) input.value = '';
@@ -11320,8 +11180,21 @@ function cancelUsernameEdit() {
         errorEl.classList.add('is-hidden');
     }
     
-    // Animate transition
-    animateAccountModeSwap(editMode, displayMode);
+    // Animate close
+    animateModalClose(modal);
+}
+
+// Legacy aliases for backwards compatibility
+function openAccountModal() {
+    // No-op - account info is now in overflow menu
+}
+
+function closeAccountModal() {
+    // No-op - account info is now in overflow menu
+}
+
+function cancelUsernameEdit() {
+    closeUsernameEditModal();
 }
 
 /**
@@ -11378,17 +11251,11 @@ async function saveUsername() {
             return;
         }
         
-        // Success - update display and return to display mode
-        const accountUsernameEl = document.getElementById('accountUsername');
-        if (accountUsernameEl) {
-            accountUsernameEl.textContent = `@${newUsername}`;
-        }
-        
-        // Update header
+        // Success - update header and overflow menu
         updateAuthUI();
         
-        // Return to display mode
-        cancelUsernameEdit();
+        // Close the modal
+        closeUsernameEditModal();
         
         // Show success notification
         showNotification('Username updated successfully', 'success');
@@ -11596,7 +11463,10 @@ function updateAuthUI() {
     const overflowAuthIcon = document.getElementById('overflowAuthIcon');
     const overflowAuthLabel = document.getElementById('overflowAuthLabel');
     const overflowCreateAccountBtn = document.getElementById('overflowCreateAccountBtn');
-    const overflowAccountBtn = document.getElementById('overflowAccountBtn');
+    const overflowAccountHeader = document.getElementById('overflowAccountHeader');
+    const overflowAccountSeparator = document.getElementById('overflowAccountSeparator');
+    const overflowUsername = document.getElementById('overflowUsername');
+    const overflowEmail = document.getElementById('overflowEmail');
     
     // If the header shell isn't present (e.g., in some embedded contexts),
     // safely bail out.
@@ -11610,19 +11480,18 @@ function updateAuthUI() {
         // Show username if available, fall back to email
         const displayName = user?.username ? `@${user.username}` : (user?.email || 'Logged In');
         userStatusText.textContent = displayName;
-        // Make username clickable to open account modal
-        userStatusText.style.cursor = 'pointer';
-        userStatusText.onclick = openAccountModal;
-        userStatusText.title = 'Manage account';
         
         authBtn.textContent = 'Log out';
         authBtn.onclick = handleLogout;
         
-        // Update overflow menu
+        // Update overflow menu - show account header
+        if (overflowAccountHeader) overflowAccountHeader.classList.remove('is-hidden');
+        if (overflowAccountSeparator) overflowAccountSeparator.classList.remove('is-hidden');
+        if (overflowUsername) overflowUsername.textContent = user?.username ? `@${user.username}` : 'Not set';
+        if (overflowEmail) overflowEmail.textContent = user?.email || '';
         if (overflowAuthIcon) overflowAuthIcon.textContent = '←';
         if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log out';
         if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.add('is-hidden');
-        if (overflowAccountBtn) overflowAccountBtn.classList.remove('is-hidden');
 
         // Hide guest notice when logged in
         if (guestNotice) {
@@ -11631,9 +11500,6 @@ function updateAuthUI() {
     } else {
         userStatusIcon.textContent = '▣';
         userStatusText.textContent = 'Guest Mode';
-        userStatusText.style.cursor = 'default';
-        userStatusText.onclick = null;
-        userStatusText.title = '';
         
         authBtn.textContent = 'LOG IN';
         authBtn.onclick = () => {
@@ -11641,11 +11507,12 @@ function updateAuthUI() {
             showAuthModal();
         };
         
-        // Update overflow menu
+        // Update overflow menu - hide account header
+        if (overflowAccountHeader) overflowAccountHeader.classList.add('is-hidden');
+        if (overflowAccountSeparator) overflowAccountSeparator.classList.add('is-hidden');
         if (overflowAuthIcon) overflowAuthIcon.textContent = '→';
         if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log In';
         if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.remove('is-hidden');
-        if (overflowAccountBtn) overflowAccountBtn.classList.add('is-hidden');
 
         // Don't show guest notice by default - only when user makes changes
         // (handled by maybeShowGuestNotice() function)

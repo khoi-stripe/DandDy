@@ -71,44 +71,67 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
     return alignmentMap[alignment] || null;
   },
 
-  // Make authenticated API request
-  async _apiRequest(endpoint, options = {}) {
+  // Make authenticated API request with automatic retry for transient failures
+  async _apiRequest(endpoint, options = {}, retries = 2) {
     const token = AuthService.getToken();
     if (!token) {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...options.headers,
-      },
-    });
+    let lastError;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          ...options,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            ...options.headers,
+          },
+        });
 
-    if (response.status === 401) {
-      // Token expired or invalid – handle unexpected logout and notify user
-      AuthService.handleUnexpectedLogout?.('character_api_401');
-      throw new Error('Your session has expired. Please log in again.');
+        if (response.status === 401) {
+          // Token expired or invalid – handle unexpected logout and notify user
+          AuthService.handleUnexpectedLogout?.('character_api_401');
+          throw new Error('Your session has expired. Please log in again.');
+        }
+
+        // Retry on 5xx server errors (cold start, transient issues)
+        if (response.status >= 500 && attempt < retries) {
+          console.warn(`[API] Server error ${response.status} on ${endpoint}, retrying (${attempt + 1}/${retries})...`);
+          await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+          continue;
+        }
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+          const detail =
+            typeof error.detail === 'string'
+              ? error.detail
+              : JSON.stringify(error.detail || error);
+          console.error('API error response:', error);
+          throw new Error(detail || `API error: ${response.status}`);
+        }
+
+        // Handle 204 No Content
+        if (response.status === 204) {
+          return null;
+        }
+
+        return await response.json();
+      } catch (err) {
+        lastError = err;
+        // Retry on network errors (Failed to fetch - often CORS/cold start issues)
+        const isNetworkError = err.message === 'Failed to fetch' || err.name === 'TypeError';
+        if (isNetworkError && attempt < retries) {
+          console.warn(`[API] Network error on ${endpoint}, retrying (${attempt + 1}/${retries})...`);
+          await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+          continue;
+        }
+        throw err;
+      }
     }
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-      const detail =
-        typeof error.detail === 'string'
-          ? error.detail
-          : JSON.stringify(error.detail || error);
-      console.error('API error response:', error);
-      throw new Error(detail || `API error: ${response.status}`);
-    }
-
-    // Handle 204 No Content
-    if (response.status === 204) {
-      return null;
-    }
-
-    return await response.json();
+    throw lastError;
   },
 
   // Helper to get portrait mode query param based on user preference
@@ -762,8 +785,8 @@ const CampaignAPI = (window.CampaignAPI = {
   // HELPER METHODS
   // ========================================
   
-  // Make authenticated API request (reuses pattern from CharacterCloudStorage)
-  async _apiRequest(endpoint, options = {}) {
+  // Make authenticated API request with automatic retry for transient failures
+  async _apiRequest(endpoint, options = {}, retries = 2) {
     const { API_BASE_URL } = window.DanddyConfig || {};
     const token = window.AuthService?.getToken();
     
@@ -771,34 +794,57 @@ const CampaignAPI = (window.CampaignAPI = {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...options.headers,
-      },
-    });
+    let lastError;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          ...options,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            ...options.headers,
+          },
+        });
 
-    if (response.status === 401) {
-      window.AuthService?.handleUnexpectedLogout?.('campaign_api_401');
-      throw new Error('Your session has expired. Please log in again.');
+        if (response.status === 401) {
+          window.AuthService?.handleUnexpectedLogout?.('campaign_api_401');
+          throw new Error('Your session has expired. Please log in again.');
+        }
+
+        // Retry on 5xx server errors (cold start, transient issues)
+        if (response.status >= 500 && attempt < retries) {
+          console.warn(`[CampaignAPI] Server error ${response.status} on ${endpoint}, retrying (${attempt + 1}/${retries})...`);
+          await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+          continue;
+        }
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+          const detail = typeof error.detail === 'string'
+            ? error.detail
+            : JSON.stringify(error.detail || error);
+          console.error('Campaign API error:', error);
+          throw new Error(detail || `API error: ${response.status}`);
+        }
+
+        if (response.status === 204) {
+          return null;
+        }
+
+        return await response.json();
+      } catch (err) {
+        lastError = err;
+        // Retry on network errors (Failed to fetch - often CORS/cold start issues)
+        const isNetworkError = err.message === 'Failed to fetch' || err.name === 'TypeError';
+        if (isNetworkError && attempt < retries) {
+          console.warn(`[CampaignAPI] Network error on ${endpoint}, retrying (${attempt + 1}/${retries})...`);
+          await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+          continue;
+        }
+        throw err;
+      }
     }
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-      const detail = typeof error.detail === 'string'
-        ? error.detail
-        : JSON.stringify(error.detail || error);
-      console.error('Campaign API error:', error);
-      throw new Error(detail || `API error: ${response.status}`);
-    }
-
-    if (response.status === 204) {
-      return null;
-    }
-
-    return await response.json();
+    throw lastError;
   },
 
   // ========================================

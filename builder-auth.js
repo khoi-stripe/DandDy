@@ -436,9 +436,6 @@ const AuthUI = (window.AuthUI = {
       const displayName = user?.username ? `@${user.username}` : (user?.email || 'Logged In');
       userStatusText.textContent = displayName;
       if (userStatusIcon) userStatusIcon.textContent = '☁';
-      userStatusText.style.cursor = 'pointer';
-      userStatusText.onclick = typeof openAccountModal === 'function' ? openAccountModal : null;
-      userStatusText.title = 'Manage account';
     }
     
     if (authBtn) {
@@ -455,15 +452,21 @@ const AuthUI = (window.AuthUI = {
       };
     }
     
-    // Update overflow menu auth label
+    // Update overflow menu - show account header
+    const overflowAccountHeader = document.getElementById('overflowAccountHeader');
+    const overflowAccountSeparator = document.getElementById('overflowAccountSeparator');
+    const overflowUsername = document.getElementById('overflowUsername');
+    const overflowEmail = document.getElementById('overflowEmail');
+    if (overflowAccountHeader) overflowAccountHeader.classList.remove('is-hidden');
+    if (overflowAccountSeparator) overflowAccountSeparator.classList.remove('is-hidden');
+    if (overflowUsername) overflowUsername.textContent = user?.username ? `@${user.username}` : 'Not set';
+    if (overflowEmail) overflowEmail.textContent = user?.email || '';
+    
     const overflowIcon = document.getElementById('overflowAuthIcon');
     const overflowLabel = document.getElementById('overflowAuthLabel');
     if (overflowIcon) overflowIcon.textContent = '←';
     if (overflowLabel) overflowLabel.textContent = 'Log Out';
     
-    // Show account option in overflow
-    const overflowAccountBtn = document.getElementById('overflowAccountBtn');
-    if (overflowAccountBtn) overflowAccountBtn.classList.remove('is-hidden');
     const overflowCreateAccountBtn = document.getElementById('overflowCreateAccountBtn');
     if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.add('is-hidden');
   },
@@ -477,9 +480,6 @@ const AuthUI = (window.AuthUI = {
     if (userStatusText) {
       userStatusText.textContent = 'Guest Mode';
       if (userStatusIcon) userStatusIcon.textContent = '▣';
-      userStatusText.style.cursor = 'default';
-      userStatusText.onclick = null;
-      userStatusText.title = '';
     }
     
     if (authBtn) {
@@ -501,15 +501,18 @@ const AuthUI = (window.AuthUI = {
       };
     }
     
-    // Update overflow menu auth label
+    // Update overflow menu - hide account header
+    const overflowAccountHeader = document.getElementById('overflowAccountHeader');
+    const overflowAccountSeparator = document.getElementById('overflowAccountSeparator');
+    if (overflowAccountHeader) overflowAccountHeader.classList.add('is-hidden');
+    if (overflowAccountSeparator) overflowAccountSeparator.classList.add('is-hidden');
+    
     const overflowIcon = document.getElementById('overflowAuthIcon');
     const overflowLabel = document.getElementById('overflowAuthLabel');
     if (overflowIcon) overflowIcon.textContent = '→';
     if (overflowLabel) overflowLabel.textContent = 'Log In';
     
-    // Hide account option, show create account in overflow
-    const overflowAccountBtn = document.getElementById('overflowAccountBtn');
-    if (overflowAccountBtn) overflowAccountBtn.classList.add('is-hidden');
+    // Show create account in overflow
     const overflowCreateAccountBtn = document.getElementById('overflowCreateAccountBtn');
     if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.remove('is-hidden');
   },
