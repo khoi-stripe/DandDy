@@ -960,16 +960,28 @@ const ExpandedView = (window.ExpandedView = {
             campaignGrid.style.setProperty('--sheet-column-width', `${sheetWidth}px`);
         }
     },
+
+    /** Debounced column width update to avoid repeated reflows on resize */
+    _scheduleColumnWidthUpdate() {
+        if (this._resizeRaf) {
+            cancelAnimationFrame(this._resizeRaf);
+        }
+        this._resizeRaf = requestAnimationFrame(() => {
+            this._resizeRaf = null;
+            this._updateColumnWidths();
+        });
+    },
     
     /** Handle viewport resize - recalculate column widths if expanded */
     _onResize: null, // Will hold the bound resize handler
+    _resizeRaf: null,
     
     _setupResizeListener() {
         if (this._onResize) return; // Already set up
         
         this._onResize = () => {
             if (this.isExpanded()) {
-                this._updateColumnWidths();
+                this._scheduleColumnWidthUpdate();
             }
         };
         window.addEventListener('resize', this._onResize);
@@ -979,6 +991,10 @@ const ExpandedView = (window.ExpandedView = {
         if (this._onResize) {
             window.removeEventListener('resize', this._onResize);
             this._onResize = null;
+        }
+        if (this._resizeRaf) {
+            cancelAnimationFrame(this._resizeRaf);
+            this._resizeRaf = null;
         }
     },
 
