@@ -807,9 +807,9 @@ const CharacterNavBar = (window.CharacterNavBar = {
         // Also add padding to sheet to create space for nav
         requestAnimationFrame(() => {
             navBar.classList.add('is-visible');
-            // Measure actual nav bar height to set precise padding
+            // Measure actual nav bar height to set precise padding + 16px gap
             const navHeight = navBar.offsetHeight;
-            sheetWrapper.style.paddingTop = `${navHeight}px`;
+            sheetWrapper.style.paddingTop = `${navHeight + 16}px`;
         });
     },
 
@@ -1429,6 +1429,9 @@ const ExpandedView = (window.ExpandedView = {
                 return 0;
             });
             
+            // Store members for party navigation in the modal
+            CampaignUI._cachedPartyMembers = sortedMembers;
+            
             // Helper to render a single party member as a card
             const renderMemberCard = (m) => {
                 const char = m.character;
@@ -1447,11 +1450,9 @@ const ExpandedView = (window.ExpandedView = {
                     : '';
                 
                 if (char) {
-                    // Member with character - show character card
-                    const clickHandler = isOtherUser 
-                        ? `onclick="CampaignUI.viewPartyMemberSheet(${char.id})"` 
-                        : '';
-                    const clickableClass = isOtherUser ? 'party-card--clickable' : '';
+                    // Member with character - show character card (clickable for all members including self)
+                    const clickHandler = `onclick="CampaignUI.viewPartyMemberSheet(${char.id})"`;
+                    const clickableClass = 'party-card--clickable';
                     const charName = Utils.escapeHtml(char.name || 'Unnamed');
                     const charInfo = `Lvl ${char.level || '?'} ${char.character_class || ''}`.trim();
                     
@@ -3457,11 +3458,30 @@ const CampaignUI = (window.CampaignUI = {
     // VIEW PARTY MEMBER CHARACTER SHEET
     // ========================================
     
+    // Party members list for navigation (set when modal opens)
+    _partyMembersList: [],
+    _currentPartyMemberIndex: 0,
+    _cachedPartyMembers: [], // Set by _renderCampaignArea when party is displayed
+    
     /**
      * View a party member's character sheet in a modal (view-only)
      * @param {number} characterId - The character ID to view
+     * @param {Array} [partyMembers] - Optional list of party members for navigation
      */
-    async viewPartyMemberSheet(characterId) {
+    async viewPartyMemberSheet(characterId, partyMembers = null) {
+        // Use provided party members, or fall back to cached members from campaign rendering
+        const membersToUse = partyMembers || this._cachedPartyMembers || [];
+        
+        // Store party members for navigation if we have any
+        if (membersToUse.length > 0) {
+            // Filter to only members with characters assigned
+            this._partyMembersList = membersToUse.filter(m => m.character_id);
+            // Find current index
+            this._currentPartyMemberIndex = this._partyMembersList.findIndex(
+                m => String(m.character_id) === String(characterId)
+            );
+            if (this._currentPartyMemberIndex === -1) this._currentPartyMemberIndex = 0;
+        }
         // Remove any existing modal first to ensure fresh state
         const existingModal = document.getElementById('partyMemberSheetModal');
         if (existingModal) {
@@ -3527,7 +3547,37 @@ const CampaignUI = (window.CampaignUI = {
                         ? `<div class="party-member-modal-email">${Utils.escapeHtml(backendCharacter.owner_email)}</div>` 
                         : '';
                     
+                    // Build navigation bar if we have multiple party members
+                    let navHtml = '';
+                    if (this._partyMembersList.length > 1) {
+                        const prevMember = this._partyMembersList[
+                            (this._currentPartyMemberIndex - 1 + this._partyMembersList.length) % this._partyMembersList.length
+                        ];
+                        const nextMember = this._partyMembersList[
+                            (this._currentPartyMemberIndex + 1) % this._partyMembersList.length
+                        ];
+                        const prevName = prevMember?.character?.name || 'Previous';
+                        const nextName = nextMember?.character?.name || 'Next';
+                        const current = this._currentPartyMemberIndex + 1;
+                        const total = this._partyMembersList.length;
+                        
+                        navHtml = `
+                            <div class="party-member-nav">
+                                <button class="party-nav-btn party-nav-prev" onclick="CampaignUI.prevPartyMember()" title="${Utils.escapeHtml(prevName)}">
+                                    <span class="party-nav-arrow">←</span>
+                                    <span class="party-nav-name">${Utils.escapeHtml(prevName)}</span>
+                                </button>
+                                <span class="party-nav-count">${current}/${total}</span>
+                                <button class="party-nav-btn party-nav-next" onclick="CampaignUI.nextPartyMember()" title="${Utils.escapeHtml(nextName)}">
+                                    <span class="party-nav-name">${Utils.escapeHtml(nextName)}</span>
+                                    <span class="party-nav-arrow">→</span>
+                                </button>
+                            </div>
+                        `;
+                    }
+                    
                     modalContent.innerHTML = `
+                        ${navHtml}
                         <div class="modal-header">
                             <div class="party-member-modal-title-group">
                                 <h2 class="modal-title">${Utils.escapeHtml(character.name)}</h2>
@@ -3574,6 +3624,163 @@ const CampaignUI = (window.CampaignUI = {
         const modal = document.getElementById('partyMemberSheetModal');
         if (modal) {
             animateModalClose(modal, { removeOnClose: true });
+        }
+        // Clear navigation state
+        this._partyMembersList = [];
+        this._currentPartyMemberIndex = 0;
+    },
+    
+    /** Navigate to previous party member */
+    prevPartyMember() {
+        if (this._partyMembersList.length <= 1) return;
+        this._currentPartyMemberIndex = 
+            (this._currentPartyMemberIndex - 1 + this._partyMembersList.length) % this._partyMembersList.length;
+        const member = this._partyMembersList[this._currentPartyMemberIndex];
+        if (member?.character_id) {
+            this._updatePartyMemberContent(member.character_id);
+        }
+    },
+    
+    /** Navigate to next party member */
+    nextPartyMember() {
+        if (this._partyMembersList.length <= 1) return;
+        this._currentPartyMemberIndex = 
+            (this._currentPartyMemberIndex + 1) % this._partyMembersList.length;
+        const member = this._partyMembersList[this._currentPartyMemberIndex];
+        if (member?.character_id) {
+            this._updatePartyMemberContent(member.character_id);
+        }
+    },
+    
+    /** Update party member modal content without re-animating the modal */
+    async _updatePartyMemberContent(characterId) {
+        const modal = document.getElementById('partyMemberSheetModal');
+        if (!modal) return;
+        
+        const modalBody = modal.querySelector('.party-member-sheet-body');
+        const modalHeader = modal.querySelector('.modal-header');
+        const navBar = modal.querySelector('.party-member-nav');
+        
+        // Preserve modal body height during loading to prevent jumping
+        let savedHeight = null;
+        if (modalBody) {
+            savedHeight = modalBody.offsetHeight;
+            modalBody.style.minHeight = `${savedHeight}px`;
+        }
+        
+        // Show loading spinner in body
+        if (modalBody) {
+            modalBody.innerHTML = `
+                <div class="party-member-sheet-loading">
+                    <div class="panel-loading-cube-container">
+                        <div class="panel-loading-cube">
+                            <i></i><i></i><i></i><i></i><i></i><i></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        try {
+            // Fetch the full character data via API
+            const backendCharacter = await CampaignAPI._apiRequest(`/characters/${characterId}`);
+            
+            if (!backendCharacter) {
+                throw new Error('Character not found');
+            }
+            
+            // Convert from backend snake_case to frontend camelCase format
+            const character = window.DanddyCharacterMapper 
+                ? window.DanddyCharacterMapper.fromBackendToBuilder(backendCharacter)
+                : backendCharacter;
+            
+            // Render the character sheet in view-only mode
+            const sheetHtml = CharacterSheet.render(character, {
+                context: 'manager',
+                showPortrait: true,
+                onRename: false,
+                onEdit: false,
+                onDelete: false,
+                onGeneratePortrait: false,
+                onPrint: false,
+                onShare: false,
+                onLeave: false,
+                isShared: false,
+                hasCollaborators: false,
+                hideOverflowMenu: true,
+                hideHeader: true,
+            });
+            
+            // Update header with new character name
+            if (modalHeader) {
+                const titleGroup = modalHeader.querySelector('.party-member-modal-title-group');
+                if (titleGroup) {
+                    const ownerEmail = backendCharacter.owner_email 
+                        ? `<div class="party-member-modal-email">${Utils.escapeHtml(backendCharacter.owner_email)}</div>` 
+                        : '';
+                    titleGroup.innerHTML = `
+                        <h2 class="modal-title">${Utils.escapeHtml(character.name)}</h2>
+                        ${ownerEmail}
+                    `;
+                }
+            }
+            
+            // Update nav bar with new prev/next names and count
+            if (navBar && this._partyMembersList.length > 1) {
+                const prevMember = this._partyMembersList[
+                    (this._currentPartyMemberIndex - 1 + this._partyMembersList.length) % this._partyMembersList.length
+                ];
+                const nextMember = this._partyMembersList[
+                    (this._currentPartyMemberIndex + 1) % this._partyMembersList.length
+                ];
+                const prevName = prevMember?.character?.name || 'Previous';
+                const nextName = nextMember?.character?.name || 'Next';
+                const current = this._currentPartyMemberIndex + 1;
+                const total = this._partyMembersList.length;
+                
+                const prevBtn = navBar.querySelector('.party-nav-prev');
+                const nextBtn = navBar.querySelector('.party-nav-next');
+                const countEl = navBar.querySelector('.party-nav-count');
+                
+                if (prevBtn) {
+                    prevBtn.title = prevName;
+                    const nameEl = prevBtn.querySelector('.party-nav-name');
+                    if (nameEl) nameEl.textContent = prevName;
+                }
+                if (nextBtn) {
+                    nextBtn.title = nextName;
+                    const nameEl = nextBtn.querySelector('.party-nav-name');
+                    if (nameEl) nameEl.textContent = nextName;
+                }
+                if (countEl) {
+                    countEl.textContent = `${current}/${total}`;
+                }
+            }
+            
+            // Update body with new character sheet
+            if (modalBody) {
+                modalBody.innerHTML = `
+                    <div class="character-sheet">
+                        ${sheetHtml}
+                    </div>
+                `;
+                // Clear min-height after content is loaded
+                modalBody.style.minHeight = '';
+            }
+            
+            // Populate ASCII portrait after rendering
+            CharacterSheet.populatePortrait(character);
+            
+        } catch (error) {
+            console.error('Failed to load party member character:', error);
+            if (modalBody) {
+                modalBody.innerHTML = `
+                    <p class="terminal-text-dim">Failed to load character sheet.</p>
+                    <p class="terminal-text-small terminal-text-dim">${Utils.escapeHtml(error.message || 'Unknown error')}</p>
+                `;
+                // Clear min-height on error too
+                modalBody.style.minHeight = '';
+            }
         }
     },
 

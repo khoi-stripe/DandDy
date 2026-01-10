@@ -94,6 +94,7 @@
 .sheet-scroll-wrapper,
 .sheet__content {
     position: relative; /* For expand loading overlay positioning */
+    z-index: 1; /* Below nav bar (z-index: 10) */
     flex: 1 1 0;
     display: flex;
     flex-direction: column;
@@ -399,16 +400,15 @@ div.sheet__sidebar.ui-theme-pink {
 .sheet__nav {
     display: none;
     position: absolute;
-    top: 32px; /* Match panel padding */
-    left: 32px; /* Match panel padding */
-    right: 32px; /* Match panel padding */
+    top: 40px;
+    left: 40px;
+    right: 40px;
     z-index: 10;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 16px;
+    padding: 2px 16px;
     background: var(--ui-bg-translucent, rgba(0, 0, 0, 0.3));
-    /* Bottom border acts as top border for sheet-scroll-wrapper when nav is visible */
-    border-bottom: 1px solid var(--ui-dim-color);
+    border-radius: 2px;
     /* Animation properties */
     opacity: 0;
     transform: translateY(-8px);
@@ -689,6 +689,26 @@ div.sheet__sidebar.ui-theme-pink {
     overflow: visible;
     /* Top border to separate from character sheet */
     border-top: 1px solid var(--ui-border-color, var(--ui-dim-color));
+    /* Position context for torn edge pseudo-element */
+    position: relative;
+}
+
+/* Decorative torn edge at bottom of campaign area */
+.campaign-area::after {
+    content: "";
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: 
+        conic-gradient(
+            from -45deg at 50% 100%,
+            var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg))) 90deg,
+            transparent 90deg
+        );
+    background-size: 8px 100%;
+    background-repeat: repeat-x;
 }
 
 .campaign-area-header {
@@ -1532,6 +1552,7 @@ div.sheet__sidebar.ui-theme-pink {
     align-items: flex-start;
     gap: var(--spacing-sm);
     flex-shrink: 0;
+    padding-top: 8px;
 }
 
 .party-member-modal-title-group {
@@ -1598,6 +1619,65 @@ div.sheet__sidebar.ui-theme-pink {
 
 .party-member-sheet-body .ascii-portrait {
     color: var(--ui-fg-color);
+}
+
+/* Party member navigation bar - matches CharacterNavBar style */
+.party-member-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    padding: 2px 16px;
+    margin: 8px;
+    background: var(--ui-bg-translucent, rgba(0, 0, 0, 0.3));
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.party-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: var(--ui-dim-color);
+    font-family: var(--font-terminal);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    padding: 4px 0;
+    transition: color var(--transition-speed);
+    max-width: 120px;
+}
+
+.party-nav-btn:hover {
+    color: var(--ui-fg-color);
+}
+
+.party-nav-btn:hover .party-nav-name {
+    text-decoration: underline;
+}
+
+.party-nav-arrow {
+    color: var(--ui-dim-color);
+    font-size: var(--font-size-base);
+    flex-shrink: 0;
+}
+
+.party-nav-name {
+    color: var(--ui-dim-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.party-nav-count {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: var(--font-size-sm);
+    color: var(--ui-dim-color);
+    font-family: var(--font-terminal);
+    white-space: nowrap;
 }
 
 /* Loading state for party member sheet modal */
