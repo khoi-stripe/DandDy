@@ -5444,7 +5444,7 @@ const UI = {
             if (showOriginalImage) {
                 // Show original image (onload adds is-loaded class for fade-in effect)
                 thumbnailHtml = `<div class="card-thumbnail card-thumbnail--image" id="card-thumb-${character.id}">
-                    <img src="${Utils.escapeHtml(originalPortraitUrl)}" alt="${name}" loading="lazy" onload="this.classList.add('is-loaded')" />
+                    <img src="${Utils.escapeHtml(originalPortraitUrl)}" alt="${name}" loading="lazy" decoding="async" width="600" height="800" onload="this.classList.add('is-loaded')" />
                 </div>`;
             } else if (hasAsciiPortrait) {
                 // Show ASCII art (content will be populated after render)
