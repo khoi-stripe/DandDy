@@ -807,9 +807,10 @@ const CharacterNavBar = (window.CharacterNavBar = {
         // Also add padding to sheet to create space for nav
         requestAnimationFrame(() => {
             navBar.classList.add('is-visible');
-            // Measure actual nav bar height to set precise padding + 24px gap
+            // Measure actual nav bar height to set precise padding + 8px gap
+            // (sheet-title-header has 16px top padding for total 24px visual gap)
             const navHeight = navBar.offsetHeight;
-            sheetWrapper.style.paddingTop = `${navHeight + 24}px`;
+            sheetWrapper.style.paddingTop = `${navHeight + 8}px`;
         });
     },
 
