@@ -4195,6 +4195,10 @@ const MobileView = {
     /** Swipe tracking state */
     _touchStartX: 0,
     _touchStartY: 0,
+
+    /** Mobile campaign lazy-load state */
+    _mobileCampaignLoaded: false,
+    _mobileCampaignObserver: null,
     _touchCurrentX: 0,
     _touchCurrentY: 0,
     _isSwiping: false,
@@ -4450,6 +4454,11 @@ const MobileView = {
         const existingMobileStatusRow = document.getElementById('mobileSheetStatusRow');
         if (existingHeader) existingHeader.remove();
         if (existingMobileStatusRow) existingMobileStatusRow.remove();
+        if (this._mobileCampaignObserver) {
+            this._mobileCampaignObserver.disconnect();
+            this._mobileCampaignObserver = null;
+        }
+        this._mobileCampaignLoaded = false;
         
         if (sourceTitleHeader) {
             const titleHeader = document.createElement('div');
@@ -4486,8 +4495,34 @@ const MobileView = {
         mobileContent += '<div class="mobile-campaign-section" id="mobileCampaignSection"></div>';
         container.innerHTML = mobileContent;
         
-        // Load campaign content async
-        this._loadMobileCampaign(characterId);
+        // Lazy-load campaign section when it nears viewport
+        const campaignSection = document.getElementById('mobileCampaignSection');
+        const loadCampaign = () => {
+            if (this._mobileCampaignLoaded) return;
+            this._mobileCampaignLoaded = true;
+            this._loadMobileCampaign(characterId);
+            if (this._mobileCampaignObserver) {
+                this._mobileCampaignObserver.disconnect();
+                this._mobileCampaignObserver = null;
+            }
+        };
+        if ('IntersectionObserver' in window && campaignSection) {
+            this._mobileCampaignObserver = new IntersectionObserver(
+                (entries) => {
+                    if (entries.some((e) => e.isIntersecting)) {
+                        loadCampaign();
+                    }
+                },
+                {
+                    root: gridPanel,
+                    rootMargin: '128px',
+                    threshold: 0.01
+                }
+            );
+            this._mobileCampaignObserver.observe(campaignSection);
+        } else {
+            loadCampaign();
+        }
         
         // If this was a swipe transition, re-add the loader overlay
         if (isSwipeTransition) {
@@ -4636,6 +4671,7 @@ const MobileView = {
         
         // Refresh the campaign section at the bottom of the sheet
         await this._loadMobileCampaign(characterId);
+        this._mobileCampaignLoaded = true;
         
         // Only scroll to campaign section if explicitly requested
         if (scrollAfter) {
@@ -4739,6 +4775,11 @@ const MobileView = {
         const mobileStatusRow = document.getElementById('mobileSheetStatusRow');
         if (mobileHeader) mobileHeader.remove();
         if (mobileStatusRow) mobileStatusRow.remove();
+        if (this._mobileCampaignObserver) {
+            this._mobileCampaignObserver.disconnect();
+            this._mobileCampaignObserver = null;
+        }
+        this._mobileCampaignLoaded = false;
         
         // Hide "Edit character" in header overflow menu when leaving mobile sheet
         const editCharBtn = document.getElementById('overflowEditCharacterBtn');
