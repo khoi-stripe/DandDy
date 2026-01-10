@@ -1398,16 +1398,35 @@ const ExpandedView = (window.ExpandedView = {
     /** Render the Campaign Area section (top) */
     _renderCampaignArea(characterId, campaignData, pendingInvitationCount = 0, pastCampaignsCount = 0, journalHtml = '') {
         if (!campaignData) {
-            // No campaign - show create button only
+            // No campaign - show create/join buttons
+            const hasInvitations = pendingInvitationCount > 0;
+            
+            if (hasInvitations) {
+                // Has invitations - show invitation message on its own line, then 50/50 buttons
+                return `
+                    <div class="campaign-area">
+                        <div class="campaign-area-header">
+                            <h3 class="campaign-area-title">[ Campaign ]</h3>
+                        </div>
+                        <p class="campaign-area-invitation-notice">${pendingInvitationCount} pending invitation${pendingInvitationCount > 1 ? 's' : ''}</p>
+                        <div class="campaign-area-actions campaign-area-actions--split">
+                            <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJoinModal()">JOIN CAMPAIGN</button>
+                            <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openCreateModal()">CREATE NEW</button>
+                        </div>
+                        ${journalHtml}
+                    </div>
+                `;
+            }
+            
+            // No invitations - show full-width CREATE button
             return `
                 <div class="campaign-area">
-                    <div class="campaign-area-header campaign-area-header--no-campaign">
-                        <h3 class="campaign-area-title">[ Campaign ] <span class="campaign-status-inline">No active campaign.</span></h3>
-                        <div class="campaign-area-actions campaign-area-actions--single">
-                            <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openCreateModal()">
-                                CREATE
-                            </button>
-                        </div>
+                    <div class="campaign-area-header">
+                        <h3 class="campaign-area-title">[ Campaign ]</h3>
+                    </div>
+                    <p class="campaign-area-invitation-notice">No active campaign.</p>
+                    <div class="campaign-area-actions campaign-area-actions--single">
+                        <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openCreateModal()">CREATE NEW</button>
                     </div>
                     ${journalHtml}
                 </div>

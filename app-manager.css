@@ -827,7 +827,7 @@ div.sheet__sidebar.ui-theme-pink {
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-sm);
-    margin: 0 0 32px 0;
+    margin: 0 0 16px 0;
     flex-wrap: wrap;
 }
 
@@ -930,11 +930,30 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* Single action (create only) - full width button */
 .campaign-area-actions--single {
+    display: flex;
     flex-direction: column;
+    margin-bottom: 32px;
 }
 
 .campaign-area-actions--single .terminal-btn {
     width: 100%;
+}
+
+/* 50/50 split buttons when invitations exist */
+.campaign-area-actions--split {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: 32px;
+}
+
+.campaign-area-actions--split .terminal-btn {
+    flex: 1;
+}
+
+/* Invitation notice text */
+.campaign-area-invitation-notice {
+    margin: 0 0 16px 0;
+    color: var(--ui-fg-color);
 }
 
 /* Bottom margin for no-campaign header */
