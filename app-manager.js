@@ -4442,6 +4442,15 @@ const MobileView = {
             titleHeader.innerHTML = sourceTitleHeader.innerHTML;
             container.parentNode.insertBefore(titleHeader, container);
             
+            // Add click handler to title name to scroll back to top when pinned
+            const titleName = titleHeader.querySelector('.sheet-title-name') || titleHeader.querySelector('.sheet-title');
+            if (titleName) {
+                titleName.style.cursor = 'pointer';
+                titleName.addEventListener('click', () => {
+                    gridPanel.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            }
+            
             // Copy status badges from portrait overlay to mobile status row
             if (sourceStatusOverlay) {
                 const statusRow = document.createElement('div');
