@@ -5791,6 +5791,19 @@ async function updateImageQuotaState() {
     }
 }
 
+// Helper to show/hide loading spinner in sheet content (for collapsed view)
+function showSheetLoading(show) {
+    const sheetLoading = document.querySelector('.sheet__loading');
+    const sheetContent = document.querySelector('.sheet__content');
+    if (sheetLoading && sheetContent) {
+        if (show) {
+            sheetContent.classList.add('is-loading');
+        } else {
+            sheetContent.classList.remove('is-loading');
+        }
+    }
+}
+
 async function viewCharacter(id, options = {}) {
     const { 
         fromKeyboard = false, 
@@ -5837,6 +5850,12 @@ async function viewCharacter(id, options = {}) {
     // If we found a lite record (from /characters/lite), we must fetch the full
     // character before rendering the sheet; otherwise many sections will be blank.
     const _isLiteRecord = !!(character && character._isLite);
+    
+    // Show loading spinner if we need to fetch data (lite record or no cache hit)
+    const needsAsyncLoad = _isLiteRecord || !character;
+    if (needsAsyncLoad) {
+        showSheetLoading(true);
+    }
     if (_isLiteRecord) {
         try {
             const full = await CharacterStorage.getById(id);
@@ -5897,6 +5916,9 @@ async function viewCharacter(id, options = {}) {
     if (character) {
         // Auto-recalculate level-dependent stats if they appear outdated
         character = await autoRecalculateLevelStats(character);
+        
+        // Hide loading spinner before rendering
+        showSheetLoading(false);
         
         // Debug: Log the character data being used to render the sheet
         if (window.DEBUG_PORTRAITS) {
@@ -5975,6 +5997,9 @@ async function viewCharacter(id, options = {}) {
                 });
             });
         }
+    } else {
+        // Character not found - hide loading spinner
+        showSheetLoading(false);
     }
 }
 
