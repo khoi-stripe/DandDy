@@ -241,6 +241,7 @@
     flex: 0 0 auto;
     /* Removed border-top - spacing provides enough visual separation */
     margin-top: var(--spacing-lg);
+    margin-bottom: 24px;
     
     /* No default theme tokens - inherits from parent container */
     /* Set theme explicitly on .campaign-panel-slot if different from parent */
@@ -314,6 +315,7 @@ div.sheet__sidebar.ui-theme-pink {
     overflow-x: hidden;
     flex: 1 1 0;
     margin-top: 0;
+    gap: 0; /* Remove gap so borders are flush */
     /* Transition for smooth reveal */
     transition: opacity 0.3s ease 0.1s;
 }
@@ -368,7 +370,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* Sidebar content wrapper - contains the actual campaign panel content */
 .sidebar__content {
-    display: contents;
+    flex: 1 1 auto;
 }
 
 /* Hide sidebar content during expansion to show loading overlay */
@@ -723,34 +725,14 @@ div.sheet__sidebar.ui-theme-pink {
 /* ===== CAMPAIGN AREA (TOP SECTION) ===== */
 .campaign-area {
     padding: 16px var(--spacing-md) var(--spacing-md) var(--spacing-md);
-    margin-top: 4px;
     margin-bottom: 32px;
     background: var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg)));
     /* Allow overflow menu to escape bounds */
     overflow: visible;
-    /* Position context for torn edge pseudo-elements */
     position: relative;
 }
 
-/* Decorative torn edge at top of campaign area (triangles pointing up) */
-.campaign-area::before {
-    content: "";
-    position: absolute;
-    top: -4px;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: 
-        conic-gradient(
-            from 135deg at 50% 0%,
-            var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg))) 90deg,
-            transparent 90deg
-        );
-    background-size: 8px 100%;
-    background-repeat: repeat-x;
-}
-
-/* Decorative torn edge at bottom of campaign area */
+/* Serrated bottom edge on campaign area (visible when scrolling past bottom border) */
 .campaign-area::after {
     content: "";
     position: absolute;
@@ -762,6 +744,50 @@ div.sheet__sidebar.ui-theme-pink {
         conic-gradient(
             from -45deg at 50% 100%,
             var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg))) 90deg,
+            transparent 90deg
+        );
+    background-size: 8px 100%;
+    background-repeat: repeat-x;
+}
+
+/* ===== SIDEBAR DECORATIVE BORDERS (sticky torn edges) ===== */
+/* These use solid black triangles pointing inward to mask scrolling content */
+/* Negative margins make them overlap the campaign content so the serrated edge is always visible */
+.sidebar__border {
+    display: none; /* Hidden by default (collapsed view) */
+    height: 4px;
+    flex-shrink: 0;
+    position: sticky;
+    z-index: 5;
+}
+
+/* Show borders only in expanded view */
+.split-layout.is-sheet-expanded .sidebar__border {
+    display: block;
+}
+
+/* Top border - black triangles pointing DOWN (masks content scrolling up) */
+.sidebar__border--top {
+    top: 0;
+    margin-bottom: -4px; /* Overlap into content below */
+    background: 
+        conic-gradient(
+            from -45deg at 50% 100%,
+            var(--terminal-bg, #0a0a0a) 90deg,
+            transparent 90deg
+        );
+    background-size: 8px 100%;
+    background-repeat: repeat-x;
+}
+
+/* Bottom border - black triangles pointing UP (masks content scrolling down) */
+.sidebar__border--bottom {
+    bottom: 0;
+    margin-top: -4px; /* Overlap into content above */
+    background: 
+        conic-gradient(
+            from 135deg at 50% 0%,
+            var(--terminal-bg, #0a0a0a) 90deg,
             transparent 90deg
         );
     background-size: 8px 100%;
