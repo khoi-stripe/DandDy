@@ -212,12 +212,11 @@
 }
 
 /* In expanded view, use side-by-side 2-column grid */
+/* grid-template-columns is overridden in the media query below with var(--sheet-column-width) 1fr */
 .split-layout.is-sheet-expanded .sheet-campaign-grid,
 .split-layout.is-sheet-expanded .sheet__layout {
     display: grid;
-    grid-template-columns: 1fr 1fr;
     overflow: hidden;
-    /* No transition on grid-template-columns - sheet maintains fixed width during transitions */
 }
 
 /* In expanded view, character sheet gets its own scroll back */
@@ -4446,7 +4445,9 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     /* Sheet column width is calculated by JS to match minimized view: (50% of split-layout) - 66px.
        Campaign panel takes remaining space with 1fr. */
     .split-layout.is-sheet-expanded .sheet-campaign-grid,
-    .split-layout.is-collapsing .sheet-campaign-grid {
+    .split-layout.is-sheet-expanded .sheet__layout,
+    .split-layout.is-collapsing .sheet-campaign-grid,
+    .split-layout.is-collapsing .sheet__layout {
         grid-template-columns: var(--sheet-column-width) 1fr !important;
     }
     
