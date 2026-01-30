@@ -960,13 +960,25 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 /* ===== CAMPAIGN SKELETON LOADERS ===== */
-.campaign-skeleton {
-    animation: skeleton-pulse 1.5s ease-in-out infinite;
+/* Don't animate campaign-area container directly - it would affect the serrated edge */
+/* Instead, animate only the inner skeleton elements */
+.campaign-area.campaign-skeleton {
+    /* No animation on container - keeps serrated edge at full opacity */
 }
 
 @keyframes skeleton-pulse {
     0%, 100% { opacity: 0.3; }
     50% { opacity: 0.6; }
+}
+
+/* Apply pulse animation to skeleton content elements */
+.campaign-skeleton .skeleton-line,
+.campaign-skeleton .skeleton-thumbnail,
+.campaign-skeleton .campaign-area-header,
+.campaign-skeleton .campaign-area-info,
+.campaign-skeleton .campaign-area-party,
+.campaign-skeleton .journal-section {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
 
 .skeleton-line {
@@ -2847,7 +2859,7 @@ input.search-input:focus {
 
 .search-actions {
     display: flex;
-    align-items: center;
+    align-items: stretch; /* Match search input height via stretch */
     gap: var(--spacing-sm);
     flex-shrink: 0;
 }
@@ -2861,12 +2873,13 @@ input.search-input:focus {
 .grid-new-character-btn {
     white-space: nowrap;
     /* Match sort button padding and font-size */
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-xs) var(--spacing-sm);
     font-size: var(--font-size-base);
-    /* Match sort button height behavior */
+    /* Stretch to match search input height from parent */
     height: auto;
     display: inline-flex;
     align-items: center;
+    box-sizing: border-box;
 }
 
 /* Show quota tooltip on hover for create new button.
@@ -2897,7 +2910,8 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 
 .sort-trigger-wrap {
     position: relative;
-    display: inline-block;
+    display: flex;
+    align-items: stretch;
 }
 
 .search-sort-btn {
@@ -2908,14 +2922,15 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     gap: 4px;
     justify-content: space-between;
     white-space: nowrap;
-    /* Match search input padding and font-size to maintain consistent height */
-    padding: var(--spacing-sm) var(--spacing-md);
+    /* Match search input padding and font-size */
+    padding: var(--spacing-xs) var(--spacing-sm);
     font-size: var(--font-size-base);
     /* Fixed width sized for longest label "Date modified" to prevent layout shift
        Override width: 100% from .selector-trigger */
     width: 140px;
-    /* Override fixed height from .terminal-btn-small so it matches search input height */
+    /* Stretch to match search input height from parent */
     height: auto;
+    box-sizing: border-box;
 }
 
 .panel-character-grid .search-sort-btn:hover {
